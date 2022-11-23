@@ -5,9 +5,7 @@ import {
   importRemoteModule,
   Module,
 } from '@helpers/imports/importRemoteModule.js';
-import { useHasOneMixin } from '@kc/HasOneMixin.js';
 
-useHasOneMixin;
 export interface IKernel {
   runImports: (queue?: Promise<IKernelModule>[]) => Promise<IKernel>;
   start: () => Promise<void>;

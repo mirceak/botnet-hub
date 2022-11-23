@@ -24,8 +24,7 @@
       "@helpers/*": ["./src/helpers/*"],
       "@kernel/*": ["./src/kernel/*"],
       "@database/*": ["./src/database/*"],
-      "@remote/*": ["./src/remote/*"],
-      "@kc/*": ["./src/kernel/composables/*"]
+      "@remote/*": ["./src/remote/*"]
     }
   },
   "typedocOptions": {

@@ -14,7 +14,9 @@
     "test": "set NODE_OPTIONS=es-module-specifier-resolution=node && set NODE_OPTIONS=--experimental-vm-modules && jest --coverage",
     "lint": "eslint . --ext .ts --ext .mts",
     "prettier": "prettier --config .prettierrc --write .",
-    "test:watch": "set NODE_OPTIONS=--experimental-vm-modules && jest --watchAll --coverage"
+    "test:watch": "set NODE_OPTIONS=--experimental-vm-modules && jest --watchAll --coverage",
+    "husky:pre:commit": "yarn prettier && yarn tsc-build && yarn lint",
+    "preinstall": "husky install"
   },
   "dependencies": {
     "express": "^5.0.0-beta.1",
@@ -31,6 +33,7 @@
     "eslint": "^8.27.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-jest": "^27.1.5",
+    "husky": "^8.0.2",
     "jest": "^29.3.1",
     "nodemon": "^2.0.20",
     "prettier": "~2.7.1",
