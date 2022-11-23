@@ -1,4 +1,4 @@
-const { sayHey, Delays } = await import('./example.js');
+import { sayHey, Delays } from '@src/exampleTest/example.js';
 const { useFakeTimers, spyOn, runOnlyPendingTimers } = import.meta.jest;
 
 describe('sayHey function', () => {
@@ -7,7 +7,7 @@ describe('sayHey function', () => {
   let consoleLogSpy: jest.SpyInstance;
   let timeoutSpy: jest.SpyInstance;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     useFakeTimers();
     timeoutSpy = spyOn(global, 'setTimeout');
     consoleLogSpy = spyOn(global.console, 'log');

@@ -1,3 +1,4 @@
+import { jest as jestGlobals } from '@jest/globals';
 const { spyOn } = import.meta.jest;
 
 describe('greeter function', () => {
@@ -5,7 +6,24 @@ describe('greeter function', () => {
 
   beforeAll(async () => {
     consoleLogSpy = spyOn(global.console, 'log');
-    await import('./main.js');
+    jestGlobals.unstable_mockModule('@kernel/Kernel.js', () => ({
+      useKernel() {
+        return {
+          async runImports() {
+            return {
+              start() {},
+            };
+          },
+        };
+      },
+    }));
+    import('@kernel/Kernel.js');
+
+    await import('@src/main.js');
+  });
+  afterAll(() => {
+    consoleLogSpy.mockRestore();
+    jestGlobals.resetModules();
   });
 
   it('logs "start" into the console', () => {
