@@ -1,8 +1,9 @@
 import { type Script as ScriptModel } from '@database/entities/Script.js';
-import { SourceTextModule, createContext, type Context } from 'node:vm';
+import { SourceTextModule, createContext } from 'node:vm';
 import crypto from 'crypto';
-import { IKernel } from '@src/kernel/Kernel.js';
-const modules: Record<string, Module> = {};
+import { type IKernelGlobals } from '@src/kernel/Kernel.js';
+
+const modules: string[] = [];
 
 export type linker = (specifier: string) => Promise<void>;
 
@@ -11,42 +12,46 @@ export interface Module {
   evaluate: () => Promise<void>;
 }
 
-const defaultLinker = (specifier: string) => {
-  throw new Error(`Unable to resolve dependency: ${specifier}`);
+const defaultLinker = () => {
+  throw new Error(`Use async imports instead!`);
 };
 
 export const importRemoteModule = async (
   moduleInstance: ScriptModel,
   context: {
     [x: string]: unknown;
-    kernel?: IKernel;
-    linker?: (
-      specifier: string,
-      referencingModule?: { context: Context },
-    ) => Promise<void>;
+    kernelGlobals?: IKernelGlobals;
   },
   refreshCopy = false,
-): Promise<Module | void> => {
+): Promise<void> => {
   const moduleHash =
     crypto.createHash('sha256').update(moduleInstance.code).digest('hex') +
     moduleInstance.name;
 
-  if (refreshCopy || !modules[moduleHash]) {
+  if (refreshCopy || modules.indexOf(moduleHash) === -1) {
     const compiled = new SourceTextModule(moduleInstance.code, {
       identifier: `Remote Module: "${moduleInstance.name}.js"`,
       context: createContext(Object.assign(context, globalContext)),
+      async importModuleDynamically(specifier) {
+        return import(specifier);
+      },
     });
-    await compiled.link(context.linker || defaultLinker);
-    modules[moduleHash] = compiled;
-    context.kernel.globals.remoteModules.push(compiled);
-    await modules[moduleHash].evaluate();
+    await compiled.link(defaultLinker);
+    context.kernelGlobals.remoteModules.push(compiled);
+    await compiled.evaluate();
+    modules.push(moduleHash);
   } else {
-    await modules[moduleHash].evaluate();
+    throw new Error('Module already imported');
   }
-  return modules[moduleHash];
 };
 
 const globalContext = {
-  importRemoteModule,
+  Object: {
+    ...Object,
+    prototype: {},
+    getPrototypeOf() {
+      return this.prototype;
+    },
+  },
   console,
 };

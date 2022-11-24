@@ -6,7 +6,7 @@
 
 await import('@kernel/Kernel.js').then(async (kernel) => {
   await kernel
-    .useKernel()
+    .getKernel()
     .runImports()
     .then(async (kernel) => {
       await kernel.start();

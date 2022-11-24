@@ -32,6 +32,6 @@ export const init: IKernelModuleInit = async (context) => {
       name: { type: DataTypes.STRING },
       code: { type: DataTypes.STRING },
     },
-    { sequelize: context.globals.sequelize, modelName: 'script' },
+    { sequelize: context.kernelGlobals.sequelize, modelName: 'script' },
   );
 };

@@ -73,6 +73,6 @@ export const init: IKernelModuleInit = async (context) => {
         ),
       },
     },
-    { sequelize: context.globals.sequelize, modelName: 'guard' },
+    { sequelize: context.kernelGlobals.sequelize, modelName: 'guard' },
   );
 };

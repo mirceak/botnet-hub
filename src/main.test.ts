@@ -7,7 +7,7 @@ describe('greeter function', () => {
   beforeAll(async () => {
     consoleLogSpy = spyOn(global.console, 'log');
     jestGlobals.unstable_mockModule('@kernel/Kernel.js', () => ({
-      useKernel() {
+      getKernel() {
         return {
           async runImports() {
             return {

@@ -19,6 +19,7 @@
     "noUnusedParameters": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
+    "skipLibCheck": true,
     "paths": {
       "@src/*": ["./src/*"],
       "@helpers/*": ["./src/helpers/*"],
@@ -36,5 +37,5 @@
     "out": "docs"
   },
   "include": ["src/**/*"],
-  "exclude": ["src/exampleTest/**/*", "src/**/*.test.ts"]
+  "exclude": ["src/exampleTest/**/*", "src/**/*.test.ts", "node_modules/**/*"]
 }

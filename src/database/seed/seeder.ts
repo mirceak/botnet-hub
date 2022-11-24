@@ -11,7 +11,9 @@ const loadSeederModule = async (moduleBasePath: string, moduleName: string) => {
   }).then(async (composable) => {
     await composable.scriptEntity.createEntity({
       name: moduleBasePath + '/' + moduleName,
-      code: getFileContentsSync(`database/seed/remote/modules/mainRemote.js`),
+      code: getFileContentsSync(
+        `build/database/seed/remote/${moduleBasePath}/${moduleName}.js`,
+      ),
     });
   });
 };
@@ -29,7 +31,7 @@ export const init: IKernelModuleInit = async (context) => {
   Composable.hasOne(Script);
 
   //syncModels
-  await context.globals.sequelize.sync();
+  await context.kernelGlobals.sequelize.sync();
 
   //seedEntities;
   await Entity.create({
@@ -47,4 +49,5 @@ export const init: IKernelModuleInit = async (context) => {
 
   //seedRemoteKernel;
   await loadSeederModule('modules', 'mainRemote');
+  await loadSeederModule('modules/backend/express', 'frontendServer');
 };

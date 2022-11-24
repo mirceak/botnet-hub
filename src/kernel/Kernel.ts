@@ -3,18 +3,30 @@ import { type Sequelize } from 'sequelize';
 import { Composable } from '@database/entities/Composable.js';
 import {
   importRemoteModule,
-  Module,
+  type Module,
 } from '@helpers/imports/importRemoteModule.js';
+import { Script } from '@database/entities/Script.js';
+import { Context } from 'node:vm';
 
 export interface IKernel {
   runImports: (queue?: Promise<IKernelModule>[]) => Promise<IKernel>;
   start: () => Promise<void>;
-  globals: IKernelGlobals;
+  kernelGlobals: IKernelGlobals;
 }
 
 export interface IKernelGlobals {
   modules: IKernelModule[];
   remoteModules: Module[];
+  importModule: <T>(path: string) => Promise<T>;
+  loadRemoteModule: (name: string) => Promise<IRemoteModuleModel>;
+  loadAndImportRemoteModule: (
+    name: string,
+    context?: Context,
+  ) => Promise<IRemoteModuleModel>;
+  importRemoteModule: (
+    remoteModuleModel: IRemoteModuleModel,
+    context?: Context,
+  ) => Promise<void>;
   express?: Express;
   sequelize?: Sequelize;
 }
@@ -23,48 +35,89 @@ export interface IKernelModule {
   init: IKernelModuleInit;
 }
 
+export interface IRemoteModuleModel {
+  script?: Script;
+  composable?: Composable;
+}
+
 export type IKernelModuleInit = (context: IKernel) => Promise<void>;
 
-const kernel: IKernel = ((loadQueue: Promise<IKernelModule>[]): IKernel => {
+const defaultModules = [
+  import('@database/database.js'),
+  import('@remote/server/server.js'),
+  import('@database/seed/seeder.js'),
+];
+
+const composableScriptCache: Record<string, IRemoteModuleModel> = {};
+
+const useKernel = (loadQueue: Promise<IKernelModule>[]): IKernel => {
   return {
     async runImports(queue = loadQueue) {
       if (queue.length === 0) {
         throw new Error('Load Queue Empty');
       }
       for (const currentImport of queue) {
-        kernel.globals.modules.push(await currentImport);
-        await kernel.globals.modules[kernel.globals.modules.length - 1].init(
-          kernel,
-        );
+        kernel.kernelGlobals.modules.push(await currentImport);
+        await kernel.kernelGlobals.modules[
+          kernel.kernelGlobals.modules.length - 1
+        ].init(kernel);
       }
       queue.splice(0, queue.length);
       return this;
     },
     async start() {
-      await Composable.findOne({
-        where: {
-          name: 'mainRemote',
-        },
-      }).then(async (composable) => {
-        return await importRemoteModule(
-          await composable.scriptEntity.getEntity(),
-          { kernel },
-        );
-      });
+      await this.kernelGlobals.loadAndImportRemoteModule('mainRemote');
     },
-    globals: {
+    kernelGlobals: {
+      async importModule<T>(path: string): Promise<T> {
+        return import(path);
+      },
+      async loadAndImportRemoteModule(
+        name,
+        context,
+      ): Promise<IRemoteModuleModel> {
+        const remoteModuleModel = await this.loadRemoteModule(name);
+        await this.importRemoteModule(remoteModuleModel, context);
+        return remoteModuleModel;
+      },
+      async loadRemoteModule(name: string): Promise<IRemoteModuleModel> {
+        if (!composableScriptCache[name]) {
+          const composable = await Composable.findOne({
+            where: {
+              name,
+            },
+          });
+          composableScriptCache[name] = {
+            composable,
+            script: await composable.scriptEntity.getEntity(),
+          };
+        }
+        return composableScriptCache[name];
+      },
+      async importRemoteModule(
+        remoteModuleModel: IRemoteModuleModel,
+        context,
+      ): Promise<void> {
+        return await importRemoteModule(
+          remoteModuleModel.script,
+          Object.assign(
+            {
+              kernelGlobals: kernel.kernelGlobals,
+            },
+            context,
+          ),
+        );
+      },
       modules: [],
       remoteModules: [],
     },
   };
-})([
-  import('@database/database.js'),
-  import('@remote/server/server.js'),
-  import('@database/seed/seeder.js'),
-]);
+};
 
-export const useKernel = () => {
-  if (kernel.globals.modules?.length)
+const kernel: IKernel = useKernel(defaultModules);
+
+export const getKernel = () => {
+  if (kernel.kernelGlobals.modules?.length)
     throw new Error('Restricted access. Use injection system!');
   return kernel;
 };

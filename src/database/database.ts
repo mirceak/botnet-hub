@@ -2,7 +2,7 @@ import { Sequelize } from 'sequelize';
 import { type IKernelModuleInit } from '@kernel/Kernel.js';
 
 export const init: IKernelModuleInit = async (context) => {
-  context.globals.sequelize = new Sequelize('sqlite::memory:', {
+  context.kernelGlobals.sequelize = new Sequelize('sqlite::memory:', {
     typeValidation: true,
   });
   await context.runImports([

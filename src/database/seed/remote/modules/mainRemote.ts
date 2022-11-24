@@ -1,9 +1,19 @@
-const PORT = 3000;
+//load the front-end
+await kernelGlobals.loadAndImportRemoteModule('frontendServer', {
+  Object: {
+    ...Object,
 
-await new Promise((resolve) => {
-  kernel.globals.express.listen(PORT, () => {
-    console.log('Server listening on PORT', PORT);
-
-    resolve(null);
-  });
+    //avoids prototype injections from untrusted code
+    prototype: {
+      get() {
+        throw new Error('Object prototyping disabled for security reasons');
+      },
+      set() {
+        throw new Error('Object prototyping disabled for security reasons');
+      },
+    },
+    getPrototypeOf() {
+      throw new Error('Object prototyping disabled for security reasons');
+    },
+  },
 });
