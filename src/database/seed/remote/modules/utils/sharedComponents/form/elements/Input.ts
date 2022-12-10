@@ -14,7 +14,7 @@ export const useComponent = (HTMLElementClass: IHTMLElementClass) => {
     connectedCallback() {
       const inputPropAttribute = this.getAttribute('@inputProp');
       const placeholderAttribute = this.getAttribute('placeholder');
-      const parentScope = this.store.componentScopes.get(this.parentNode);
+      const getParentScope = this.store.componentScopes.get(this.parentNode);
 
       if (!HTMLElementClass._hydrating) {
         this.innerHTML = `
@@ -23,7 +23,9 @@ export const useComponent = (HTMLElementClass: IHTMLElementClass) => {
       }
 
       this.children[0].addEventListener('input', (e) => {
-        parentScope[inputPropAttribute] = (e.target as HTMLInputElement).value;
+        getParentScope()[inputPropAttribute] = (
+          e.target as HTMLInputElement
+        ).value;
       });
     }
   };

@@ -13,12 +13,12 @@ export const useComponent = (HTMLElementClass: IHTMLElementClass) => {
 
     connectedCallback() {
       const storeRefProp = this.getAttribute('@contentProp');
-      const parentScope = this.store.componentScopes.get(this.parentNode);
+      const getParentScope = this.store.componentScopes.get(this.parentNode);
 
       const renderCompute = {
-        props: [() => parentScope[storeRefProp]],
+        props: [() => getParentScope()?.[storeRefProp]],
         computed: () => {
-          const text = parentScope?.[storeRefProp];
+          const text = getParentScope()?.[storeRefProp];
           if (!HTMLElementClass._hydrating) {
             this.innerHTML = `
             <h1>${text}</h1>
@@ -31,6 +31,8 @@ export const useComponent = (HTMLElementClass: IHTMLElementClass) => {
         renderCompute.props,
         renderCompute.computed,
       );
+
+      renderCompute.computed();
     }
   };
 };

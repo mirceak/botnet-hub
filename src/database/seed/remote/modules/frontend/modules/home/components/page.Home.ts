@@ -18,8 +18,8 @@ export const useComponent = (HTMLElementClass: IHTMLElementClass) => {
     }
 
     connectedCallback() {
-      const localScope = this.store.data.modules?.home;
-      this.store.componentScopes.set(this, localScope);
+      const getLocalScope = () => this.store.data.modules?.home;
+      this.store.componentScopes.set(this, getLocalScope);
 
       if (!HTMLElementClass._hydrating) {
         this.innerHTML = `
@@ -27,17 +27,6 @@ export const useComponent = (HTMLElementClass: IHTMLElementClass) => {
 <input-component @inputProp="nameInput" placeholder="Enter Your Name"></input-component>
 `;
       }
-
-      delete this.store.data.modules;
-      this.store.data.modules = {
-        home: {
-          title: 'Welcome',
-          titleWithName: null as string | null,
-          nameInput: null as string | null,
-        },
-      };
-
-      localScope.title = 'Hey ther2e!';
     }
   };
 };

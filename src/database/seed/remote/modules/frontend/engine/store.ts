@@ -37,6 +37,8 @@ const startComputing = (storeProxyState: IStoreProxyState) => {
     titleWithNameCompute.props,
     titleWithNameCompute.computed,
   );
+
+  titleWithNameCompute.computed();
 };
 
 export const useProxyState = () => {
