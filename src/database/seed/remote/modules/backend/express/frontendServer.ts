@@ -1,52 +1,63 @@
 const PORT = 3000;
+const { default: express } = await import('express');
+const { default: bodyParser } = await import('body-parser');
+const { default: cors } = await import('cors');
+const { default: morgan } = await import('morgan');
+const { default: compression } = await import('compression');
+const { default: qs } = await import('qs');
 
-const { createSSRApp, ref } = await import('vue');
-const { renderToString } = await import('vue/server-renderer');
+const app = express();
 
-kernelGlobals.express.get('/', async (...[, res]) => {
-  const app = createSSRApp({
-    setup: () => {
-      const count = ref(3);
+app.use(express.json());
+app.use(cors());
+app.use(
+  bodyParser.urlencoded({
+    limit: '10mb',
+    extended: true,
+    parameterLimit: 10000,
+  }),
+);
+app.use(morgan('dev'));
+app.use(compression());
+app.use(express.urlencoded({ extended: false }));
+app.set('query parser', (str: string) => qs.parse(str));
 
-      return { count };
-    },
-    template: `<button @click="count++">{{ count }}</button>`,
-  });
-  renderToString(app).then((html) => {
-    res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Vue SSR Example</title>
-      </head>
-      <body>
-        <div id="app">${html}</div>
-        
-        <script type="module">
-        import { createSSRApp, ref } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+app.get('/favicon.ico', (...[, res]) => {
+  res.send('');
+});
+app.get('/@remoteModules/:path(.*)', async (...[req, res]) => {
+  res.type('text/javascript');
+  res.send(
+    (await kernelGlobals.loadRemoteModule(req.url.replace('/', ''))).script
+      .code,
+  );
+});
+app.get('/node_modules/:path(.*)', async (...[req, res]) => {
+  res.type('text/javascript');
+  res.send(kernelGlobals.getFileContentsSync('.' + req.url));
+});
 
-        const app = createSSRApp({
-          setup: () => {
-            const count = ref(3)  
-              
-            return { count };
-          },
-          template: \`<button @click="count++">{{ count }}</button>\`,
-        })
-        
-        // mounting an SSR app on the client assumes
-        // the HTML was pre-rendered and will perform
-        // hydration instead of mounting new DOM nodes.
-        app.mount('#app')
-        </script>
-      </body>
-    </html>
-    `);
-  });
+app.get('/(.*)', async (...[req, res]) => {
+  //if this is not a module/css/html file request it should return either ssr or the app component (for simple spa)
+  if (req.query.SSR) {
+    return await kernelGlobals.backendWorkers.jsdom.runJob({
+      payload: { reqUrl: req.url },
+      async callback(data: string) {
+        res.send(data);
+      },
+    });
+  }
+  return res.send(`<!DOCTYPE html>
+  <html xmlns="http://www.w3.org/1999/html">
+  <body>
+  <main-component/>
+  <script type="module" src="/@remoteModules/frontend/engine/components/Main.js"></script>
+  </body>
+  </html>`);
 });
 
 await new Promise((resolve) => {
-  kernelGlobals.express.listen(PORT, () => {
+  app.listen(PORT, () => {
     console.log('Server listening on PORT', PORT);
 
     resolve(null);

@@ -7,13 +7,28 @@ export const init: IKernelModuleInit = async (context) => {
   });
   await context.runImports([
     import('@database/entities/Script.js'),
-    import('@database/entities/Composable.js'),
+    import('@database/entities/RemoteModule.js'),
     import('@database/entities/Guard.js'),
     import('@database/entities/Entity.js'),
   ]);
 };
 
+//move express in mainRemote.ts (not a bot functionality)
+//rename remoteModule entity to remoteModule entity
+
+//add webComponent entity
+//add webTemplate entity
+//add webModule entity
+//add webStyle entity
+
+//web components
+//components declare what components get used to fill in slots
+
+//web page
+//contains the router logic, minimum components required to activate static html and the relevant css
+//layout component
+//input field
+
 //add routes for express static
-//add puppeteer for ssr
 //add routes for front-end
 //add routes for api

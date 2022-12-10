@@ -8,31 +8,34 @@ import { type IKernelModuleInit } from '@src/kernel/Kernel.js';
 import {
   type HasManyMixin,
   useHasManyMixin,
-} from '@kernel/composables/HasManyMixin.js';
+} from '@database/entities/mixins/HasManyMixin.js';
 import {
   type HasOneMixin,
   useHasOneMixin,
-} from '@kernel/composables/HasOneMixin.js';
-import { type Composable } from './Composable.js';
+} from '@database/entities/mixins/HasOneMixin.js';
+import { type RemoteModule } from './RemoteModule.js';
 
 export class Guard extends Model<
-  InferAttributes<Guard, { omit: 'guardEntities' | 'composableEntity' }>,
-  InferCreationAttributes<Guard, { omit: 'guardEntities' | 'composableEntity' }>
+  InferAttributes<Guard, { omit: 'guardEntities' | 'remoteModuleEntity' }>,
+  InferCreationAttributes<
+    Guard,
+    { omit: 'guardEntities' | 'remoteModuleEntity' }
+  >
 > {
   declare name: string;
   declare roles: Roles[];
   declare permissions: Permissions[];
 
   declare guardEntities?: HasManyMixin<Guard>;
-  declare composableEntity?: HasOneMixin<Composable>;
+  declare remoteModuleEntity?: HasOneMixin<RemoteModule>;
 
   constructor(...attrs: unknown[]) {
     super(...attrs);
 
     this.guardEntities = useHasManyMixin<Guard, Guard>(this, 'GuardGuard');
-    this.composableEntity = useHasOneMixin<Guard, Composable>(
+    this.remoteModuleEntity = useHasOneMixin<Guard, RemoteModule>(
       this,
-      'Composable',
+      'remoteModule',
     );
   }
 }

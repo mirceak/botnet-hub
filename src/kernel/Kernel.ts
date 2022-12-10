@@ -1,12 +1,12 @@
-import { type Express } from 'express';
 import { type Sequelize } from 'sequelize';
-import { Composable } from '@database/entities/Composable.js';
+import { RemoteModule } from '@database/entities/RemoteModule.js';
 import {
   importRemoteModule,
   type Module,
 } from '@helpers/imports/importRemoteModule.js';
 import { Script } from '@database/entities/Script.js';
 import { Context } from 'node:vm';
+import { getFileContentsSync } from '@helpers/imports/io.js';
 
 export interface IKernel {
   runImports: (queue?: Promise<IKernelModule>[]) => Promise<IKernel>;
@@ -14,21 +14,33 @@ export interface IKernel {
   kernelGlobals: IKernelGlobals;
 }
 
+export interface IKernelBackendWorkerLoad {
+  payload: unknown;
+  callback: (data: unknown) => Promise<void>;
+}
+
+export interface IKernelBackendWorker {
+  runJob: (load: IKernelBackendWorkerLoad) => Promise<void>;
+}
+
 export interface IKernelGlobals {
   modules: IKernelModule[];
-  remoteModules: Module[];
-  importModule: <T>(path: string) => Promise<T>;
+  remoteModules: Record<string, Module>;
   loadRemoteModule: (name: string) => Promise<IRemoteModuleModel>;
-  loadAndImportRemoteModule: (
-    name: string,
-    context?: Context,
-  ) => Promise<IRemoteModuleModel>;
+  getFileContentsSync: (filePath: string) => string;
   importRemoteModule: (
     remoteModuleModel: IRemoteModuleModel,
     context?: Context,
-  ) => Promise<void>;
-  express?: Express;
+    returnModule?: true,
+  ) => Promise<Record<string, unknown>>;
+  loadAndImportRemoteModule: (
+    name: string,
+    context?: Context,
+    returnModule?: true,
+  ) => Promise<Record<string, unknown>>;
   sequelize?: Sequelize;
+  backendWorkers: Record<string, IKernelBackendWorker>;
+  exports?: Record<string, unknown>;
 }
 
 export interface IKernelModule {
@@ -37,18 +49,17 @@ export interface IKernelModule {
 
 export interface IRemoteModuleModel {
   script?: Script;
-  composable?: Composable;
+  remoteModule?: RemoteModule;
 }
 
 export type IKernelModuleInit = (context: IKernel) => Promise<void>;
 
 const defaultModules = [
   import('@database/database.js'),
-  import('@remote/server/server.js'),
   import('@database/seed/seeder.js'),
 ];
 
-const composableScriptCache: Record<string, IRemoteModuleModel> = {};
+const remoteModuleScriptCache: Record<string, IRemoteModuleModel> = {};
 
 const useKernel = (loadQueue: Promise<IKernelModule>[]): IKernel => {
   return {
@@ -66,39 +77,43 @@ const useKernel = (loadQueue: Promise<IKernelModule>[]): IKernel => {
       return this;
     },
     async start() {
-      await this.kernelGlobals.loadAndImportRemoteModule('mainRemote');
+      await this.kernelGlobals.loadAndImportRemoteModule(
+        '@remoteModules/mainRemote.js',
+      );
     },
     kernelGlobals: {
-      async importModule<T>(path: string): Promise<T> {
-        return import(path);
-      },
       async loadAndImportRemoteModule(
         name,
         context,
-      ): Promise<IRemoteModuleModel> {
+        returnModule,
+      ): Promise<Record<string, unknown>> {
         const remoteModuleModel = await this.loadRemoteModule(name);
-        await this.importRemoteModule(remoteModuleModel, context);
-        return remoteModuleModel;
+        return await this.importRemoteModule(
+          remoteModuleModel,
+          context,
+          returnModule,
+        );
       },
       async loadRemoteModule(name: string): Promise<IRemoteModuleModel> {
-        if (!composableScriptCache[name]) {
-          const composable = await Composable.findOne({
+        if (!remoteModuleScriptCache[name]) {
+          const remoteModule = await RemoteModule.findOne({
             where: {
               name,
             },
           });
-          composableScriptCache[name] = {
-            composable,
-            script: await composable.scriptEntity.getEntity(),
+          remoteModuleScriptCache[name] = {
+            remoteModule,
+            script: await remoteModule.scriptEntity.getEntity(),
           };
         }
-        return composableScriptCache[name];
+        return remoteModuleScriptCache[name];
       },
       async importRemoteModule(
         remoteModuleModel: IRemoteModuleModel,
         context,
-      ): Promise<void> {
-        return await importRemoteModule(
+        returnModule,
+      ): Promise<Record<string, unknown>> {
+        return (await importRemoteModule(
           remoteModuleModel.script,
           Object.assign(
             {
@@ -106,10 +121,13 @@ const useKernel = (loadQueue: Promise<IKernelModule>[]): IKernel => {
             },
             context,
           ),
-        );
+          returnModule,
+        )) as Record<string, unknown>;
       },
       modules: [],
-      remoteModules: [],
+      remoteModules: {},
+      backendWorkers: {},
+      getFileContentsSync,
     },
   };
 };

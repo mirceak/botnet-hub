@@ -1,19 +1,5 @@
-//load the front-end
-await kernelGlobals.loadAndImportRemoteModule('frontendServer', {
-  Object: {
-    ...Object,
+const cluster = await import('cluster');
+await import('@remoteModules/workers/backend/jsdom/jsdomWorker.js');
 
-    //avoids prototype injections from untrusted code
-    prototype: {
-      get() {
-        throw new Error('Object prototyping disabled for security reasons');
-      },
-      set() {
-        throw new Error('Object prototyping disabled for security reasons');
-      },
-    },
-    getPrototypeOf() {
-      throw new Error('Object prototyping disabled for security reasons');
-    },
-  },
-});
+if (cluster.default.isPrimary)
+  await import('@remoteModules/backend/express/frontendServer.js');

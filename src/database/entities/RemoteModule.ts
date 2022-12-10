@@ -9,17 +9,17 @@ import { type Guard } from './Guard.js';
 import {
   type HasManyMixin,
   useHasManyMixin,
-} from '@kernel/composables/HasManyMixin.js';
+} from '@database/entities/mixins/HasManyMixin.js';
 import {
   type HasOneMixin,
   useHasOneMixin,
-} from '@kernel/composables/HasOneMixin.js';
+} from '@database/entities/mixins/HasOneMixin.js';
 import { type Script } from './Script.js';
 
-export class Composable extends Model<
-  InferAttributes<Composable, { omit: 'scriptEntity' | 'guardEntities' }>,
+export class RemoteModule extends Model<
+  InferAttributes<RemoteModule, { omit: 'scriptEntity' | 'guardEntities' }>,
   InferCreationAttributes<
-    Composable,
+    RemoteModule,
     { omit: 'scriptEntity' | 'guardEntities' }
   >
 > {
@@ -30,16 +30,16 @@ export class Composable extends Model<
 
   constructor(...attrs: unknown[]) {
     super(...attrs);
-    this.guardEntities = useHasManyMixin<Composable, Guard>(this, 'Guard');
-    this.scriptEntity = useHasOneMixin<Composable, Script>(this, 'Script');
+    this.guardEntities = useHasManyMixin<RemoteModule, Guard>(this, 'Guard');
+    this.scriptEntity = useHasOneMixin<RemoteModule, Script>(this, 'Script');
   }
 }
 
 export const init: IKernelModuleInit = async (context) => {
-  await Composable.init(
+  await RemoteModule.init(
     {
       name: { type: DataTypes.STRING },
     },
-    { sequelize: context.kernelGlobals.sequelize, modelName: 'composable' },
+    { sequelize: context.kernelGlobals.sequelize, modelName: 'remoteModule' },
   );
 };

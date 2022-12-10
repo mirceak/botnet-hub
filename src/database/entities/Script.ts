@@ -9,7 +9,7 @@ import { type Guard } from './Guard.js';
 import {
   type HasManyMixin,
   useHasManyMixin,
-} from '@kernel/composables/HasManyMixin.js';
+} from '@database/entities/mixins/HasManyMixin.js';
 
 export class Script extends Model<
   InferAttributes<Script, { omit: 'guardEntities' }>,

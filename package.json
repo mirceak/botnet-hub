@@ -16,27 +16,33 @@
     "prettier": "prettier --config .prettierrc --write .",
     "test:watch": "set NODE_OPTIONS=--experimental-vm-modules && jest --watchAll --coverage",
     "husky:pre:commit": "yarn prettier && yarn tsc-build && yarn lint",
-    "preinstall": "husky install"
+    "postinstall": "husky install"
   },
   "dependencies": {
     "express": "^5.0.0-beta.1",
-    "sequelize": "^6.25.5",
+    "jsdom": "^20.0.3",
+    "sequelize": "^6.26.0",
     "sqlite3": "^5.1.2",
-    "vue": "^3.2.45"
+    "path-to-regexp": "^6.2.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.14",
     "@types/jest": "^29.2.2",
+    "@types/jsdom": "^20.0.1",
     "@types/node": "^18.11.9",
+    "@types/sequelize": "^4.28.14",
     "@typescript-eslint/eslint-plugin": "^5.42.1",
     "@typescript-eslint/parser": "^5.42.1",
-    "@vue/server-renderer": "^3.2.45",
+    "body-parser": "^1.20.1",
+    "compression": "^1.7.4",
     "concurrently": "^7.6.0",
+    "cors": "^2.8.5",
     "eslint": "^8.27.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-jest": "^27.1.5",
     "husky": "^8.0.2",
     "jest": "^29.3.1",
+    "morgan": "^1.10.0",
     "nodemon": "^2.0.20",
     "prettier": "~2.7.1",
     "ts-jest": "^29.0.3",
