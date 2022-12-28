@@ -2,6 +2,7 @@ import {
   DataTypes,
   type InferAttributes,
   type InferCreationAttributes,
+  type Sequelize,
   Model,
 } from 'sequelize';
 import { type IKernelModuleInit } from '@src/kernel/Kernel.js';
@@ -28,7 +29,7 @@ export class RemoteModule extends Model<
   declare guardEntities?: HasManyMixin<Guard>;
   declare scriptEntity?: HasOneMixin<Script>;
 
-  constructor(...attrs: unknown[]) {
+  constructor(...attrs: never[]) {
     super(...attrs);
     this.guardEntities = useHasManyMixin<RemoteModule, Guard>(this, 'Guard');
     this.scriptEntity = useHasOneMixin<RemoteModule, Script>(this, 'Script');
@@ -40,6 +41,9 @@ export const init: IKernelModuleInit = async (context) => {
     {
       name: { type: DataTypes.STRING },
     },
-    { sequelize: context.kernelGlobals.sequelize, modelName: 'remoteModule' },
+    {
+      sequelize: context.kernelGlobals.sequelize as Sequelize,
+      modelName: 'remoteModule',
+    },
   );
 };

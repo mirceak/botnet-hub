@@ -1,27 +1,33 @@
-const { ProxyObject } = await import(
-  '@remoteModules/utils/reactivity/objectProxy.js'
-);
+import type { ProxyObject as IProxyObject } from '@remoteModules/utils/reactivity/objectProxy.js';
+import type { Router } from '@remoteModules/frontend/engine/router.js';
+import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
 
-const useState = () => ({
-  modules: {
-    home: {
-      title: 'Welcome',
-      titleWithName: null as string | null,
-      nameInput: null as string | null,
-    },
-  },
-});
+interface HomeModuleState {
+  title?: string;
+  titleWithName?: string;
+  nameInput?: string;
+}
 
-const startComputing = (storeProxyState: IStoreProxyState) => {
+class State {
+  router?: Router;
+  home: HomeModuleState = {
+    title: 'Welcome',
+  };
+}
+
+const useState = () => new State();
+
+const startComputing = (storeProxyState: ReturnType<typeof useProxyState>) => {
   let count = 0;
-  const homeModule = storeProxyState.data.modules.home;
+  const homeModule = () => storeProxyState.data.home;
   const titleWithNameCompute = {
-    props: [() => homeModule.title, () => homeModule.nameInput],
+    props: [() => storeProxyState.data.home?.nameInput],
     computed() {
-      homeModule.titleWithName =
-        homeModule.title +
-        ' ' +
-        (homeModule.nameInput ? homeModule.nameInput + '!' + count : '');
+      const home = homeModule();
+      if (home) {
+        home.titleWithName =
+          home.title + (home.nameInput ? ' ' + home.nameInput + '!' : '!');
+      }
     },
   };
   setInterval(() => {
@@ -41,18 +47,25 @@ const startComputing = (storeProxyState: IStoreProxyState) => {
   titleWithNameCompute.computed();
 };
 
-export const useProxyState = () => {
+export const useProxyState = (
+  ProxyObject: typeof IProxyObject,
+): ReturnType<typeof IProxyObject<ReturnType<typeof useState>>> => {
   return ProxyObject(useState());
 };
 
-export const useStore = () => {
-  const proxyObject = useProxyState();
+export const useStore = async (mainScope: IHTMLElementsScope) => {
+  const { ProxyObject } = await mainScope.loadModule(
+    () => import('@remoteModules/utils/reactivity/objectProxy.js'),
+  );
+  const proxyObject = await useProxyState(ProxyObject);
   startComputing(proxyObject);
   return {
-    ...proxyObject,
-    componentScopes: new WeakMap(),
+    data: proxyObject.data,
+    registerOnChangeCallback: proxyObject.registerOnChangeCallback,
+    unRegisterOnChangeCallback: proxyObject.unRegisterOnChangeCallback,
   };
 };
 
-export type IStore = ReturnType<typeof useStore>;
-export type IStoreProxyState = ReturnType<typeof useProxyState>;
+export type IStore = Parameters<
+  NonNullable<Parameters<ReturnType<typeof useStore>['then']>[0]>
+>[0];

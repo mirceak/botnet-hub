@@ -3,6 +3,7 @@ import {
   type InferAttributes,
   type InferCreationAttributes,
   Model,
+  type Sequelize,
 } from 'sequelize';
 import { type IKernelModuleInit } from '@src/kernel/Kernel.js';
 import {
@@ -29,7 +30,7 @@ export class Guard extends Model<
   declare guardEntities?: HasManyMixin<Guard>;
   declare remoteModuleEntity?: HasOneMixin<RemoteModule>;
 
-  constructor(...attrs: unknown[]) {
+  constructor(...attrs: never[]) {
     super(...attrs);
 
     this.guardEntities = useHasManyMixin<Guard, Guard>(this, 'GuardGuard');
@@ -76,6 +77,9 @@ export const init: IKernelModuleInit = async (context) => {
         ),
       },
     },
-    { sequelize: context.kernelGlobals.sequelize, modelName: 'guard' },
+    {
+      sequelize: context.kernelGlobals.sequelize as Sequelize,
+      modelName: 'guard',
+    },
   );
 };

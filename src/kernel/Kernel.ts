@@ -16,7 +16,7 @@ export interface IKernel {
 
 export interface IKernelBackendWorkerLoad {
   payload: unknown;
-  callback: (data: unknown) => Promise<void>;
+  callback?: (data: string) => Promise<void>;
 }
 
 export interface IKernelBackendWorker {
@@ -101,10 +101,12 @@ const useKernel = (loadQueue: Promise<IKernelModule>[]): IKernel => {
               name,
             },
           });
-          remoteModuleScriptCache[name] = {
-            remoteModule,
-            script: await remoteModule.scriptEntity.getEntity(),
-          };
+          if (remoteModule) {
+            remoteModuleScriptCache[name] = {
+              remoteModule,
+              script: await remoteModule.scriptEntity?.getEntity(),
+            };
+          }
         }
         return remoteModuleScriptCache[name];
       },
@@ -114,7 +116,7 @@ const useKernel = (loadQueue: Promise<IKernelModule>[]): IKernel => {
         returnModule,
       ): Promise<Record<string, unknown>> {
         return (await importRemoteModule(
-          remoteModuleModel.script,
+          remoteModuleModel.script as Script,
           Object.assign(
             {
               kernelGlobals: kernel.kernelGlobals,

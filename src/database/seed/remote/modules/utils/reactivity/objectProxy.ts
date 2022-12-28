@@ -10,8 +10,8 @@ type IOptions<T> = {
   registeringNestedOnChangeCallback: boolean;
   reRegisteringOnChangeCallback: boolean;
   unRegisteringOnChangeCallback: boolean;
-  callbackToRegister: CallableFunction | undefined;
-  propsCallbackToRegister: CallableFunction[] | undefined;
+  callbackToRegister?: CallableFunction;
+  propsCallbackToRegister?: CallableFunction[];
   registerOnChangeCallback: (
     propsCallbacks: CallableFunction[],
     callback: CallableFunction,
@@ -39,20 +39,39 @@ const registerWatchedProxy = <ProxyMap extends IWeakMap>(
     options.watchedProxiesMap.set(obj, (watchers = new Map()));
   }
 
-  let callbacks = watchers.get(prop);
-  if (!callbacks) {
+  let callbacksPacks = watchers.get(prop);
+  if (!callbacksPacks) {
     if (options.unRegisteringOnChangeCallback) {
       return;
     }
-    watchers.set(prop, (callbacks = [new Set(), new Set(), new Set()]));
+    watchers.set(prop, (callbacksPacks = [new Set(), new Set()]));
   }
 
   if (options.unRegisteringOnChangeCallback) {
-    callbacks[0].delete(options.propsCallbackToRegister);
-    return callbacks[1].delete(options.callbackToRegister);
+    callbacksPacks[0].delete(options.propsCallbackToRegister);
+    return callbacksPacks[1].delete(options.callbackToRegister);
   }
-  callbacks[0].add(options.propsCallbackToRegister);
-  callbacks[1].add(options.callbackToRegister);
+  callbacksPacks[0].add(options.propsCallbackToRegister);
+  callbacksPacks[1].add(options.callbackToRegister);
+  if (
+    options.propsCallbackToRegister &&
+    Object.keys(options.propsCallbackToRegister).indexOf('_oldValues') === -1
+  ) {
+    /*must keep the same reference to the old values across the tree*/
+    const values = [] as unknown[];
+    const oldPropsCallbackToRegister = options.propsCallbackToRegister;
+    const callbackToRegister = options.callbackToRegister;
+    options.propsCallbackToRegister = undefined;
+    options.callbackToRegister = undefined;
+    Object.keys(oldPropsCallbackToRegister).forEach((key) => {
+      if (!isNaN(+key)) values.push(oldPropsCallbackToRegister[+key]());
+    });
+    (
+      oldPropsCallbackToRegister as unknown as Record<string, unknown>
+    )._oldValues = values;
+    options.propsCallbackToRegister = oldPropsCallbackToRegister;
+    options.callbackToRegister = callbackToRegister;
+  }
 };
 
 const triggerWatchers = <ProxyMap extends IWeakMap>(
@@ -71,7 +90,24 @@ const triggerWatchers = <ProxyMap extends IWeakMap>(
       for (let i = 0; i < callbacks.length; i++) {
         if (options.reRegisteringOnChangeCallback) {
           options.registerOnChangeCallback(propCallbacks[i], callbacks[i]);
-        } else {
+        }
+        let foundChange = false;
+        const newValues = [] as unknown[];
+        Object.keys(propCallbacks[i]).forEach((key, index) => {
+          if (!isNaN(+key)) {
+            const newValue = propCallbacks[i][key]();
+            if (newValue !== propCallbacks[i]['_oldValues'][index]) {
+              foundChange = true;
+            }
+            newValues.push(newValue);
+          }
+        });
+        if (foundChange) {
+          propCallbacks[i]._oldValues.splice(
+            0,
+            propCallbacks[i]._oldValues.length,
+            ...newValues,
+          );
           callbacks[i]();
         }
       }
@@ -104,6 +140,9 @@ const handler = <
         );
         this._proxySet.set(prop, obj[prop]);
       }
+      if (options.callbackToRegister) {
+        registerWatchedProxy(this, prop, options);
+      }
       return this._proxySet.get(prop);
     }
 
@@ -131,14 +170,19 @@ const handler = <
     if (isObject(value)) {
       /* keep all previous references alive. removing this would replace references to existing variables invalidating existing watchers using external variables to reference the tree*/
       if (this._proxySet.has(prop)) {
-        if (obj[prop]) {
+        if (obj[prop] != null) {
           /* we are replacing the existing values of the proxy tree we're currently on*/
           Object.assign(obj[prop], value);
         } else {
-          /* the object was probably deleted and reassigned and we're creating a new proxy tree but keeping the old one alive to keep the pre-existing references alive */
+          /* the object deleted and reassigned, and we're creating a new proxy tree but keeping the old one alive to keep the pre-existing references alive */
           Reflect.set(obj, prop, value, receiver);
+          this._proxySet.set(
+            prop,
+            new Proxy(value, handler(options, this, prop as unknown as string)),
+          );
         }
       } else {
+        /* we're assigning a new proxy entirely or the previous value was removed using the ".__removeTree" property having all existing proxies removed */
         Reflect.set(
           obj,
           prop,
@@ -154,8 +198,9 @@ const handler = <
 
     if (options.watchedProxiesMap.get(this)) {
       triggerWatchers(this, prop, options);
-      options.reRegisteringOnChangeCallback = false;
     }
+
+    options.reRegisteringOnChangeCallback = false;
 
     return true;
   },
@@ -184,7 +229,13 @@ const handler = <
     return true;
   },
 });
-export const ProxyObject = <ObjectState>(obj: ObjectState) => {
+
+/*If an object's structure is like a two-dimensional tree, a ProxyObject's structure is like a three-dimensional tree where it's main structure mirrors the original object's and some branches have depth because we need multiple instances of the same structures.*/
+/*The ProxyObject is built dynamically whenever it is accessed. This means that it does not initially have the original object's structure but that it is also limited by it.*/
+/*Whenever a branch of the tree is reassigned (a nested property that is an object) the ProxyObject will keep it's old branch and just update the values to reflect the changes. This is done to prevent references to the tree being lost.*/
+/*Whenever a branch of the tree is removed (a nested property that is an object) the ProxyObject's branch will still exist because we still have references that watch the old branch instance. If the branch gets reassigned a new value, a new ProxyObject branch will get created but the old one will still exist as ghost branches.*/
+/*Ghost branches (duplicated branches) can be removed by unregistering the watchers that referenced them*/
+export const ProxyObject = <T>(obj: T) => {
   const options = {
     watchedProxiesMap: new WeakMap(),
     registeringNestedOnChangeCallback: false,
@@ -198,7 +249,9 @@ export const ProxyObject = <ObjectState>(obj: ObjectState) => {
     ) {
       options.callbackToRegister = callback;
       options.propsCallbackToRegister = propsCallbacks;
-      Object.values(propsCallbacks).forEach((prop) => prop());
+      Object.keys(propsCallbacks).forEach((key) => {
+        if (!isNaN(+key)) propsCallbacks[+key]();
+      });
       options.callbackToRegister = undefined;
       options.propsCallbackToRegister = undefined;
     },
@@ -207,16 +260,13 @@ export const ProxyObject = <ObjectState>(obj: ObjectState) => {
       callback: CallableFunction,
     ) {
       options.unRegisteringOnChangeCallback = true;
-      options.callbackToRegister = callback;
-      options.propsCallbackToRegister = propsCallbacks;
-      Object.values(propsCallbacks).forEach((prop) => prop());
-      options.callbackToRegister = undefined;
-      options.propsCallbackToRegister = undefined;
+      this.registerOnChangeCallback(propsCallbacks, callback);
       options.unRegisteringOnChangeCallback = false;
     },
   };
   return {
-    data: new Proxy(obj, handler(options, undefined, 'root')) as ObjectState,
+    /*need to make this entire object a proxy and protect data from deletion as well as make sure new entries */
+    data: new Proxy(obj, handler(options, undefined, 'root')) as T,
     registerOnChangeCallback: options.registerOnChangeCallback,
     unRegisterOnChangeCallback: options.unRegisterOnChangeCallback,
   };

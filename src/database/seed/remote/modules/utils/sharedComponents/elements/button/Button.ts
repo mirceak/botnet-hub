@@ -2,12 +2,12 @@ import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/componen
 
 export const staticScope = {
   registered: false,
-  componentName: 'input-component',
+  componentName: 'button-component',
 };
 
 interface ILocalScope {
-  onInput: (value: string) => void;
-  placeholder: string;
+  onClick: (value: string) => void;
+  label?: string;
 }
 
 export const useComponent = (scope: ILocalScope) => {
@@ -18,36 +18,37 @@ export const useComponent = (scope: ILocalScope) => {
 };
 
 const initComponent = (mainScope: IHTMLElementsScope) => {
-  return class InputComponent extends window.HTMLElement {
-    private onInput?: EventListenerOrEventListenerObject;
+  return class ButtonComponent extends window.HTMLElement {
+    private onClick?: EventListenerOrEventListenerObject;
     constructor() {
       super();
     }
 
     init(scope: ILocalScope) {
-      this.onInput = (e: Event) => {
-        scope.onInput((e.target as HTMLInputElement).value);
+      this.onClick = (e: Event) => {
+        scope.onClick((e.target as HTMLInputElement).value);
       };
 
       if (!mainScope.hydrating) {
         this.innerHTML = `
-          <input placeholder="${scope.placeholder}"/>
+          <button>${scope.label}</button>
         `;
       }
 
-      this.children[0].addEventListener('input', this.onInput);
+      this.children[0].addEventListener('click', this.onClick);
     }
 
     disconnectedCallback() {
       if (this.children[0]) {
         this.children[0].removeEventListener(
-          'input',
-          this.onInput as NonNullable<typeof this.onInput>,
+          'click',
+          this.onClick as NonNullable<typeof this.onClick>,
         );
       }
     }
   };
 };
+
 export const registerComponent = async (mainScope: IHTMLElementsScope) => {
   if (staticScope.registered) {
     if (!mainScope.SSR) {
@@ -60,7 +61,7 @@ export const registerComponent = async (mainScope: IHTMLElementsScope) => {
   if (!staticScope.registered) {
     window.customElements.define(
       staticScope.componentName,
-      initComponent(mainScope),
+      initComponent(mainScope) as CustomElementConstructor,
     );
   }
 

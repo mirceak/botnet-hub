@@ -1,7 +1,10 @@
-import type { DOMWindow } from 'jsdom';
-
 declare global {
-  interface Window extends Window, DOMWindow {
-    appWindow: Window;
+  interface Window {
+    loadModule: <T>(importer: () => Promise<T>) => Promise<T>;
+    SSR: boolean;
+    _shouldHydrate: boolean;
+    pathname?: string;
+    onHTMLReady?: CallableFunction;
   }
 }
+export {};

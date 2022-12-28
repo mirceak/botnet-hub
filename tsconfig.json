@@ -10,6 +10,7 @@
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
     "allowJs": true,
+    "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,

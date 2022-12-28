@@ -23,18 +23,23 @@ app.use(express.urlencoded({ extended: false }));
 app.set('query parser', (str: string) => qs.parse(str));
 
 app.get('/favicon.ico', (...[, res]) => {
-  res.send('');
+  res.set('Cache-control', 'public, max-age=2592000').send('');
 });
 app.get('/@remoteModules/:path(.*)', async (...[req, res]) => {
   res.type('text/javascript');
-  res.send(
-    (await kernelGlobals.loadRemoteModule(req.url.replace('/', ''))).script
-      .code,
-  );
+  const data = (await kernelGlobals.loadRemoteModule(req.url.replace('/', '')))
+    .script?.code as string;
+  res.set('Cache-control', 'public, max-age=2592000').send(data);
 });
 app.get('/node_modules/:path(.*)', async (...[req, res]) => {
   res.type('text/javascript');
-  res.send(kernelGlobals.getFileContentsSync('.' + req.url));
+  res
+    .set('Cache-control', 'public, max-age=2592000')
+    .send(
+      kernelGlobals
+        .getFileContentsSync('.' + req.url)
+        .replaceAll(/^\/\/# sourceMappingURL=.*$/gm, ''),
+    );
 });
 
 app.get('/(.*)', async (...[req, res]) => {

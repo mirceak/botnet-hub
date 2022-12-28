@@ -26,7 +26,7 @@ export const init: IKernelModuleInit = async (context) => {
 
 //web page
 //contains the router logic, minimum components required to activate static html and the relevant css
-//layout component
+//layouts component
 //input field
 
 //add routes for express static

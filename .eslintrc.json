@@ -17,8 +17,5 @@
     "plugin:@typescript-eslint/recommended",
     "plugin:jest/recommended",
     "prettier"
-  ],
-  "rules": {
-    "no-async-promise-executor": "off"
-  }
+  ]
 }
