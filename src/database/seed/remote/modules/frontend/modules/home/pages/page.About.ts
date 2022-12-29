@@ -65,7 +65,7 @@ const getClass = (
 
     async init() {
       await mainScope.asyncHydrationCallback(async () => {
-        await mainScope.asyncLoadComponentTemplate({
+        mainScope.asyncLoadComponentTemplate({
           target: this,
           components: [
             DynamicHtmlView.then(({ useComponent }) =>

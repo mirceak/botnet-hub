@@ -16,12 +16,13 @@ export interface IHTMLComponent {
   registerComponents?: CallableFunction;
   useComponent: CallableFunction;
   componentName: string;
-  indexInParent?: number;
+  indexInParent: number;
   useScopedCss?: (idIndex: number) => string;
 }
 
 export abstract class AHTMLComponent {
   scopedCssIdIndex = 0;
+  indexInParent = -1;
   registerComponent(
     componentName: string,
     component: CustomElementConstructor,
@@ -109,9 +110,7 @@ class HTMLElementsScope {
     return component as ReturnType<T['getInstance']>;
   };
 
-  asyncLoadComponentTemplate = async (
-    template: IHTMLElementComponentTemplate,
-  ) => {
+  asyncLoadComponentTemplate = (template: IHTMLElementComponentTemplate) => {
     for (let i = 0; i < template.components.length; i++) {
       if (template.components[i]) {
         const component = template.components[i];
@@ -168,7 +167,7 @@ class HTMLElementsScope {
           if (appendIndex < 0) {
             if (
               _index === index ||
-              (child.indexInParent! >= index && index >= _index)
+              (child.indexInParent >= index && index >= _index)
             ) {
               appendIndex = _index;
             }
@@ -282,7 +281,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
             ];
 
             if (!mainScope.hydrating) {
-              await mainScope.asyncLoadComponentTemplate({
+              mainScope.asyncLoadComponentTemplate({
                 target: this,
                 components: [
                   RouterView.then((component) => component.useComponent()),
