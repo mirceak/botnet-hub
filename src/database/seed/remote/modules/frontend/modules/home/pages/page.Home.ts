@@ -1,71 +1,64 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  IHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
-export const staticScope = {
-  registered: false,
-  componentName: 'home-component',
-  scssIndex: 0,
-  scss() {
-    const style = `<style staticScope lang="sass">
-home-component {
-  input-component {
-    input {
-      padding: 6px 12px;
-      font-size: 16px;
-      font-weight: 400;
-      line-height: 1.5;
-      color: #212529;
-      background-color: #fff;
-      background-clip: padding-box;
-      border: 1px solid #ced4da;
-      appearance: none;
-      border-radius: 4px;
-      transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-    &:focus{
+const scopedCss = `
+<style staticScope lang="sass">
+  home-component {
+    input-component {
+      input {
+        padding: 6px 12px;
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 1.5;
         color: #212529;
         background-color: #fff;
-        border-color: #86b7fe;
-        outline: 0;
-        box-shadow: 0 0 0 0.25rem rgb(13 110 253 / 25%);
-      }            
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        appearance: none;
+        border-radius: 4px;
+        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+      &:focus{
+          color: #212529;
+          background-color: #fff;
+          border-color: #86b7fe;
+          outline: 0;
+          box-shadow: 0 0 0 0.25rem rgb(13 110 253 / 25%);
+        }            
+      }
     }
   }
-}
-</style staticScope>
-  `;
-    return style.replace(
-      '<style staticScope',
-      `<style staticScope=${this.scssIndex++}`,
-    );
-  },
-};
+</style staticScope>`;
 
-export const useComponent = () => {
+const getComponents = (mainScope: IHTMLElementsScope) => {
   return {
-    componentName: staticScope.componentName,
-  };
-};
-
-const initComponent = (mainScope: IHTMLElementsScope) => {
-  const [DynamicHtmlView, Input, Button] = [
-    mainScope.asyncRegisterComponent(
+    DynamicHtmlView: mainScope.asyncRegisterComponent(
       () =>
         import(
           '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
         ),
     ),
-    mainScope.asyncRegisterComponent(
+    Input: mainScope.asyncRegisterComponent(
       () =>
         import('@remoteModules/utils/sharedComponents/form/elements/Input.js'),
     ),
-    mainScope.asyncRegisterComponent(
+    Button: mainScope.asyncRegisterComponent(
       () =>
         import(
           '@remoteModules/utils/sharedComponents/elements/button/Button.js'
         ),
     ),
-  ];
+  };
+};
 
-  return class HomeComponent extends window.HTMLElement {
+const getClass = (
+  mainScope: IHTMLElementsScope,
+  instance: ReturnType<typeof getSingleton>,
+) => {
+  const { DynamicHtmlView, Input, Button } = instance.registerComponents();
+
+  return class Component extends window.HTMLElement {
     constructor() {
       super();
     }
@@ -91,7 +84,7 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
             DynamicHtmlView.then(({ useComponent }) =>
               useComponent({
                 contentGetter() {
-                  return staticScope.scss();
+                  return instance.useScopedCss();
                 },
                 noWatcher: true,
                 instant: true,
@@ -104,21 +97,40 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
   };
 };
 
-export const registerComponent = async (mainScope: IHTMLElementsScope) => {
-  if (staticScope.registered) {
-    if (!mainScope.SSR) {
-      return;
-    } else {
-      initComponent(mainScope);
+const getSingleton = (mainScope: IHTMLElementsScope) => {
+  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+    componentName = 'home-component';
+
+    initComponent = (mainScope: IHTMLElementsScope) => {
+      if (!window.customElements.get(this.componentName)) {
+        this.registerComponent(this.componentName, getClass(mainScope, this));
+      }
+    };
+
+    registerComponents = () => {
+      return getComponents(mainScope);
+    };
+
+    useComponent = () => {
+      return this.getComponentScope(this.componentName);
+    };
+
+    useScopedCss = () => {
+      return this.getScopedCss(scopedCss);
+    };
+  }
+
+  return new Instance();
+};
+
+let componentInstance: ReturnType<typeof getSingleton>;
+
+export const getInstance = (mainScope: IHTMLElementsScope) => {
+  if (!componentInstance || window.SSR) {
+    if (!componentInstance) {
+      componentInstance = getSingleton(mainScope);
     }
+    componentInstance.initComponent(mainScope);
   }
-
-  if (!staticScope.registered) {
-    window.customElements.define(
-      staticScope.componentName,
-      initComponent(mainScope),
-    );
-  }
-
-  staticScope.registered = true;
+  return componentInstance;
 };

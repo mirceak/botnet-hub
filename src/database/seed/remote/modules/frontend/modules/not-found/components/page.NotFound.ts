@@ -1,22 +1,14 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  IHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 const templateHtml = `
 <h1>Page not found!</h1>
 `;
 
-export const staticScope = {
-  registered: false,
-  componentName: 'not-found-component',
-};
-
-export const useComponent = () => {
-  return {
-    componentName: staticScope.componentName,
-  };
-};
-
-const initComponent = (mainScope: IHTMLElementsScope) => {
-  return class NotFoundComponent extends window.HTMLElement {
+const getClass = (mainScope: IHTMLElementsScope) => {
+  return class Component extends window.HTMLElement {
     constructor() {
       super();
     }
@@ -31,21 +23,32 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
   };
 };
 
-export const registerComponent = async (mainScope: IHTMLElementsScope) => {
-  if (staticScope.registered) {
-    if (!mainScope.SSR) {
-      return;
-    } else {
-      initComponent(mainScope);
+const getSingleton = (mainScope: IHTMLElementsScope) => {
+  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+    componentName = 'not-found-component';
+
+    initComponent = (mainScope: IHTMLElementsScope) => {
+      if (!window.customElements.get(this.componentName)) {
+        this.registerComponent(this.componentName, getClass(mainScope));
+      }
+    };
+
+    useComponent = () => {
+      return this.getComponentScope(this.componentName);
+    };
+  }
+
+  return new Instance();
+};
+
+let componentInstance: ReturnType<typeof getSingleton>;
+
+export const getInstance = (mainScope: IHTMLElementsScope) => {
+  if (!componentInstance || window.SSR) {
+    if (!componentInstance) {
+      componentInstance = getSingleton(mainScope);
     }
+    componentInstance.initComponent(mainScope);
   }
-
-  if (!staticScope.registered) {
-    window.customElements.define(
-      staticScope.componentName,
-      initComponent(mainScope),
-    );
-  }
-
-  staticScope.registered = true;
+  return componentInstance;
 };

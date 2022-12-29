@@ -1,27 +1,26 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  IHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
-export const staticScope = {
-  registered: false,
-  componentName: 'proxy-router-view-component',
-};
-
-export const useComponent = () => {
+const getComponents = (mainScope: IHTMLElementsScope) => {
   return {
-    componentName: staticScope.componentName,
-  };
-};
-
-export const initComponent = (mainScope: IHTMLElementsScope) => {
-  const [RouterView] = [
-    mainScope.asyncRegisterComponent(
+    RouterView: mainScope.asyncRegisterComponent(
       () =>
         import(
           '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
         ),
     ),
-  ];
+  };
+};
 
-  return class ProxyRouterViewComponent extends window.HTMLElement {
+const getClass = (
+  mainScope: IHTMLElementsScope,
+  instance: ReturnType<typeof getSingleton>,
+) => {
+  const { RouterView } = instance.registerComponents();
+
+  return class Component extends window.HTMLElement {
     constructor() {
       super();
     }
@@ -37,21 +36,36 @@ export const initComponent = (mainScope: IHTMLElementsScope) => {
   };
 };
 
-export const registerComponent = async (mainScope: IHTMLElementsScope) => {
-  if (staticScope.registered) {
-    if (!mainScope.SSR) {
-      return;
-    } else {
-      initComponent(mainScope);
+const getSingleton = (mainScope: IHTMLElementsScope) => {
+  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+    componentName = 'proxy-router-view-component';
+
+    initComponent = (mainScope: IHTMLElementsScope) => {
+      if (!window.customElements.get(this.componentName)) {
+        this.registerComponent(this.componentName, getClass(mainScope, this));
+      }
+    };
+
+    registerComponents = () => {
+      return getComponents(mainScope);
+    };
+
+    useComponent = () => {
+      return this.getComponentScope(this.componentName);
+    };
+  }
+
+  return new Instance();
+};
+
+let componentInstance: ReturnType<typeof getSingleton>;
+
+export const getInstance = (mainScope: IHTMLElementsScope) => {
+  if (!componentInstance || window.SSR) {
+    if (!componentInstance) {
+      componentInstance = getSingleton(mainScope);
     }
+    componentInstance.initComponent(mainScope);
   }
-
-  if (!staticScope.registered) {
-    window.customElements.define(
-      staticScope.componentName,
-      initComponent(mainScope),
-    );
-  }
-
-  staticScope.registered = true;
+  return componentInstance;
 };

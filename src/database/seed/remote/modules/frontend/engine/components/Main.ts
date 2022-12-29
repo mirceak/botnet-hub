@@ -1,25 +1,70 @@
 import type { IStore } from '@remoteModules/frontend/engine/store.js';
 import type { Router } from '@remoteModules/frontend/engine/router.js';
 
-export interface IComponent {
-  registerComponent: (mainScope: HTMLElementsScope) => Promise<void> | void;
-  staticScope: {
-    componentName: string;
-    registered: boolean;
+export type HTMLComponent = InstanceType<typeof AHTMLComponent> &
+  IHTMLComponent;
+
+export type HTMLComponentModule = {
+  getInstance: (mainScope: IHTMLElementsScope) => unknown;
+};
+
+export interface IHTMLComponent {
+  initComponent: (mainScope: IHTMLElementsScope) => void;
+  registerComponents?: CallableFunction;
+  useComponent: CallableFunction;
+  componentName: string;
+  useScopedCss?: (idIndex: number) => string;
+}
+
+export abstract class AHTMLComponent {
+  scopedCssIdIndex = 0;
+  registerComponent(
+    componentName: string,
+    component: CustomElementConstructor,
+  ) {
+    window.customElements.define(componentName, component);
+  }
+  getScopedCss(css: string) {
+    return css.replace(
+      '<style staticScope',
+      `<style staticScope=${this.scopedCssIdIndex++}`,
+    );
+  }
+  public getComponentScope = <T>(componentName: string, _scope?: T) => {
+    const scope = {
+      ..._scope,
+      componentName: componentName,
+    };
+    return scope as typeof scope & T;
   };
+}
+
+export interface HTMLElementComponent
+  extends InstanceType<typeof window.HTMLElement> {
+  init: CallableFunction;
 }
 
 export interface IHTMLElementComponentStaticScope {
   componentName: string;
-  scope: unknown;
 }
 
-export interface IHTMLElementTemplate {
+export interface IHTMLElementComponentTemplate {
   components: (
     | Promise<IHTMLElementComponentStaticScope>
     | IHTMLElementComponentStaticScope
     | undefined
   )[];
+
+  target: InstanceType<typeof window.HTMLElement>;
+}
+
+export interface IHTMLElementComponentTemplate {
+  components: (
+    | Promise<IHTMLElementComponentStaticScope>
+    | IHTMLElementComponentStaticScope
+    | undefined
+  )[];
+
   target: InstanceType<typeof window.HTMLElement>;
 }
 
@@ -36,11 +81,13 @@ class HTMLElementsScope {
   store!: IStore;
   router!: Router;
 
+  HTMLComponent = AHTMLComponent;
+
   componentHydrationCallbacks = new Set();
 
   /*we need to detect the moment all of our async components have been added to the dom, so we can signal that serverside rendering has truly ended*/
-  asyncHydrationCallback = async (
-    callback: () => Promise<unknown>,
+  asyncHydrationCallback = async <T>(
+    callback: () => Promise<T>,
     symbol = Symbol(),
   ) => {
     if (this.SSR || this.hydrating) {
@@ -51,52 +98,60 @@ class HTMLElementsScope {
 
     if (this.SSR || this.hydrating) {
       this.componentHydrationCallbacks.delete(symbol);
-      await this.asyncInstantiationConnectionFinishedCallback?.();
+      await this.asyncInstantiationConnectionFinishedCallback();
     }
   };
 
   /*we also need to wait for all components to get registered so that we know what modules we need to put in the __modulesLoadedWithSSR array*/
-  asyncRegisterComponent = async <T extends IComponent>(
+  asyncRegisterComponent = async <T extends HTMLComponentModule>(
     importer: () => Promise<T>,
-  ): Promise<T> => {
-    let component: IComponent | undefined;
+  ) => {
+    let component;
     await this.asyncHydrationCallback(async () => {
-      component = (await this.loadModule(importer)) as IComponent;
-      if (
-        !window.customElements.get(component.staticScope.componentName) ||
-        this.SSR
-      ) {
-        await component.registerComponent(this);
+      component = (await (
+        await this.loadModule(importer)
+      ).getInstance(this)) as HTMLComponent;
+      if (!window.customElements.get(component.componentName) || this.SSR) {
+        await component.initComponent(this);
       }
-
-      return component;
     });
-    return component as T;
+    return component as ReturnType<T['getInstance']>;
   };
 
-  asyncLoadComponentTemplate = async (template: IHTMLElementTemplate) => {
+  asyncLoadComponentTemplate = async (
+    template: IHTMLElementComponentTemplate,
+  ) => {
     for (let i = 0; i < template.components.length; i++) {
       if (template.components[i]) {
-        const component = await template.components[i];
+        const component = template.components[i];
         if (component) {
-          this.asyncHydrationCallback(async () => {
-            return await window.customElements
-              .whenDefined(component.componentName)
-              .then(async () => {
-                if (!this.hydrating || this.SSR) {
-                  this.appendComponent(
-                    template.target,
-                    component.componentName,
-                    i,
-                  );
-                }
-                return (
-                  template.target.children[i] as unknown as Record<
-                    'init',
-                    (scope: unknown) => Promise<void>
-                  >
-                )?.init(component.scope);
-              });
+          await this.asyncHydrationCallback(async () => {
+            const componentScope = await component;
+            if (componentScope) {
+              return window.customElements
+                .whenDefined(componentScope.componentName)
+                .then(async () => {
+                  if (componentScope && (!this.hydrating || this.SSR)) {
+                    return (
+                      this.appendComponent(
+                        template.target,
+                        componentScope.componentName,
+                        i,
+                      ) as unknown as Record<
+                        'init',
+                        (scope: unknown) => Promise<void>
+                      >
+                    )?.init(componentScope);
+                  }
+
+                  return (
+                    template.target.children[i] as unknown as Record<
+                      'init',
+                      (scope: unknown) => Promise<void>
+                    >
+                  )?.init(componentScope);
+                });
+            }
           });
         }
       }
@@ -132,7 +187,7 @@ class HTMLElementsScope {
       .pop() as string;
     if (path.includes('node_modules')) {
       path = '@' + path;
-    } else {
+    } else if (!path.includes('@remoteModules/')) {
       path = '@remoteModules/' + path;
     }
 
@@ -210,7 +265,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                 )
                 .then((component) => {
                   if (window.SSR) {
-                    component.staticScope.routerViewRegister.clear();
+                    component.routerViewRegister.clear();
                   }
                   return component;
                 }),
@@ -220,7 +275,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
               await mainScope.asyncLoadComponentTemplate({
                 target: this,
                 components: [
-                  RouterView.then(({ useComponent }) => useComponent?.()),
+                  RouterView.then((component) => component.useComponent()),
                 ],
               });
             }

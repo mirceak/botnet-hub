@@ -1,33 +1,30 @@
 import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import { IHTMLComponent } from '@remoteModules/frontend/engine/components/Main.js';
 
-export const staticScope = {
-  registered: false,
-  componentName: 'layout-main-component',
-};
-
-export const useComponent = () => {
+const getComponents = (mainScope: IHTMLElementsScope) => {
   return {
-    componentName: staticScope.componentName,
-  };
-};
-
-const initComponent = (mainScope: IHTMLElementsScope) => {
-  const [DynamicHtmlView, RouterView] = [
-    mainScope.asyncRegisterComponent(
+    DynamicHtmlView: mainScope.asyncRegisterComponent(
       () =>
         import(
           '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
         ),
     ),
-    mainScope.asyncRegisterComponent(
+    RouterView: mainScope.asyncRegisterComponent(
       () =>
         import(
           '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
         ),
     ),
-  ];
+  };
+};
 
-  return class NotFoundComponent extends window.HTMLElement {
+const getClass = (
+  mainScope: IHTMLElementsScope,
+  instance: ReturnType<typeof getSingleton>,
+) => {
+  const { DynamicHtmlView, RouterView } = instance.registerComponents();
+
+  return class Component extends window.HTMLElement {
     constructor() {
       super();
     }
@@ -46,7 +43,7 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
                 },
               }),
             ),
-            RouterView.then(({ useComponent }) => useComponent?.()),
+            RouterView.then(({ useComponent }) => useComponent()),
           ],
         });
       });
@@ -54,21 +51,38 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
   };
 };
 
-export const registerComponent = async (mainScope: IHTMLElementsScope) => {
-  if (staticScope.registered) {
-    if (!mainScope.SSR) {
-      return;
-    } else {
-      initComponent(mainScope);
+const getSingleton = (mainScope: IHTMLElementsScope) => {
+  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+    componentName = 'layout-main-component';
+
+    initComponent = (mainScope: IHTMLElementsScope) => {
+      if (!window.customElements.get(this.componentName)) {
+        this.registerComponent(this.componentName, getClass(mainScope, this));
+      } else if (window.SSR) {
+        this.registerComponents();
+      }
+    };
+
+    registerComponents = () => {
+      return getComponents(mainScope);
+    };
+
+    useComponent = () => {
+      return this.getComponentScope(this.componentName);
+    };
+  }
+
+  return new Instance();
+};
+
+let componentInstance: ReturnType<typeof getSingleton>;
+
+export const getInstance = (mainScope: IHTMLElementsScope) => {
+  if (!componentInstance || window.SSR) {
+    if (!componentInstance) {
+      componentInstance = getSingleton(mainScope);
     }
+    componentInstance.initComponent(mainScope);
   }
-
-  if (!staticScope.registered) {
-    window.customElements.define(
-      staticScope.componentName,
-      initComponent(mainScope),
-    );
-  }
-
-  staticScope.registered = true;
+  return componentInstance;
 };

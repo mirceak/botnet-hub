@@ -1,24 +1,13 @@
 import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
-
-export const staticScope = {
-  registered: false,
-  componentName: 'input-component',
-};
+import { IHTMLComponent } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   onInput: (value: string) => void;
   placeholder: string;
 }
 
-export const useComponent = (scope: ILocalScope) => {
-  return {
-    componentName: staticScope.componentName,
-    scope,
-  };
-};
-
-const initComponent = (mainScope: IHTMLElementsScope) => {
-  return class InputComponent extends window.HTMLElement {
+const getClass = (mainScope: IHTMLElementsScope) => {
+  return class Component extends window.HTMLElement {
     private onInput?: EventListenerOrEventListenerObject;
     constructor() {
       super();
@@ -48,21 +37,33 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
     }
   };
 };
-export const registerComponent = async (mainScope: IHTMLElementsScope) => {
-  if (staticScope.registered) {
-    if (!mainScope.SSR) {
-      return;
-    } else {
-      initComponent(mainScope);
+
+const getSingleton = (mainScope: IHTMLElementsScope) => {
+  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+    componentName = 'input-component';
+
+    initComponent = (mainScope: IHTMLElementsScope) => {
+      if (!window.customElements.get(this.componentName)) {
+        this.registerComponent(this.componentName, getClass(mainScope));
+      }
+    };
+
+    useComponent = (scope: ILocalScope) => {
+      return this.getComponentScope<ILocalScope>(this.componentName, scope);
+    };
+  }
+
+  return new Instance();
+};
+
+let componentInstance: ReturnType<typeof getSingleton>;
+
+export const getInstance = (mainScope: IHTMLElementsScope) => {
+  if (!componentInstance || window.SSR) {
+    if (!componentInstance) {
+      componentInstance = getSingleton(mainScope);
     }
+    componentInstance.initComponent(mainScope);
   }
-
-  if (!staticScope.registered) {
-    window.customElements.define(
-      staticScope.componentName,
-      initComponent(mainScope),
-    );
-  }
-
-  staticScope.registered = true;
+  return componentInstance;
 };

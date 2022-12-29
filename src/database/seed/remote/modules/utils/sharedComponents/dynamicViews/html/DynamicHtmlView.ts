@@ -1,4 +1,5 @@
 import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import { IHTMLComponent } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   contentGetter: () => string | undefined;
@@ -6,20 +7,8 @@ interface ILocalScope {
   instant?: boolean;
 }
 
-export const staticScope = {
-  registered: false,
-  componentName: 'dynamic-html-view-component',
-};
-
-export const useComponent = (scope: ILocalScope) => {
-  return {
-    componentName: staticScope.componentName,
-    scope,
-  };
-};
-
-const initComponent = (mainScope: IHTMLElementsScope) => {
-  return class DynamicHtmlViewComponent extends window.HTMLElement {
+const getClass = (mainScope: IHTMLElementsScope) => {
+  return class Component extends window.HTMLElement {
     private computeRender?: {
       props: CallableFunction[];
       computed: CallableFunction;
@@ -34,7 +23,7 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
         this.innerHTML = `${value}`;
       };
 
-      if (!scope?.noWatcher) {
+      if (!scope.noWatcher) {
         this.computeRender = {
           props: [() => scope.contentGetter()],
           computed: () => {
@@ -51,7 +40,7 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
         }
       }
 
-      if (scope?.instant && !mainScope.hydrating) {
+      if (scope.instant && !mainScope.hydrating) {
         renderWatch(scope.contentGetter());
       }
     }
@@ -66,21 +55,33 @@ const initComponent = (mainScope: IHTMLElementsScope) => {
     }
   };
 };
-export const registerComponent = async (mainScope: IHTMLElementsScope) => {
-  if (staticScope.registered) {
-    if (!mainScope.SSR) {
-      return;
-    } else {
-      initComponent(mainScope);
+
+const getSingleton = (mainScope: IHTMLElementsScope) => {
+  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+    componentName = 'dynamic-html-view-component';
+
+    initComponent = (mainScope: IHTMLElementsScope) => {
+      if (!window.customElements.get(this.componentName)) {
+        this.registerComponent(this.componentName, getClass(mainScope));
+      }
+    };
+
+    useComponent = (scope: ILocalScope) => {
+      return this.getComponentScope<ILocalScope>(this.componentName, scope);
+    };
+  }
+
+  return new Instance();
+};
+
+let componentInstance: ReturnType<typeof getSingleton>;
+
+export const getInstance = (mainScope: IHTMLElementsScope) => {
+  if (!componentInstance || window.SSR) {
+    if (!componentInstance) {
+      componentInstance = getSingleton(mainScope);
     }
+    componentInstance.initComponent(mainScope);
   }
-
-  if (!staticScope.registered) {
-    window.customElements.define(
-      staticScope.componentName,
-      initComponent(mainScope),
-    );
-  }
-
-  staticScope.registered = true;
+  return componentInstance;
 };

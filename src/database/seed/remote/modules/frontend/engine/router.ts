@@ -1,5 +1,7 @@
-import type { IComponent } from '@remoteModules/frontend/engine/components/Main.js';
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  IHTMLElementsScope,
+  HTMLComponentModule,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 /*TODO: add styling*/
 /*TODO: add children to template components*/
@@ -8,12 +10,16 @@ export interface Route {
   path: string;
   name?: string;
   redirect?: string;
-  component?: () => Promise<IComponent>;
+  component?: () => unknown;
   params?: Record<string, string[]>;
   children?: Route[];
   parent?: Route;
   computedPath?: string;
   _symbol?: symbol;
+}
+
+export interface IRoute extends Route {
+  component: <T extends HTMLComponentModule>() => Promise<T>;
 }
 
 export interface Router {
@@ -135,7 +141,6 @@ const Page404Component = (mainScope: IHTMLElementsScope) => async () =>
         '@remoteModules/frontend/modules/not-found/components/page.NotFound.js'
       ),
   );
-
 export const useRoutes = async (
   mainScope: IHTMLElementsScope,
 ): Promise<Route[]> => [
