@@ -4,6 +4,9 @@ import type { Router } from '@remoteModules/frontend/engine/router.js';
 export type HTMLComponent = InstanceType<typeof AHTMLComponent> &
   IHTMLComponent;
 
+export type InstancedHTMLComponent = HTMLComponent &
+  InstanceType<typeof window.HTMLElement>;
+
 export type HTMLComponentModule = {
   getInstance: (mainScope: IHTMLElementsScope) => unknown;
 };
@@ -13,6 +16,7 @@ export interface IHTMLComponent {
   registerComponents?: CallableFunction;
   useComponent: CallableFunction;
   componentName: string;
+  indexInParent?: number;
   useScopedCss?: (idIndex: number) => string;
 }
 
@@ -46,16 +50,6 @@ export interface HTMLElementComponent
 
 export interface IHTMLElementComponentStaticScope {
   componentName: string;
-}
-
-export interface IHTMLElementComponentTemplate {
-  components: (
-    | Promise<IHTMLElementComponentStaticScope>
-    | IHTMLElementComponentStaticScope
-    | undefined
-  )[];
-
-  target: InstanceType<typeof window.HTMLElement>;
 }
 
 export interface IHTMLElementComponentTemplate {
@@ -111,9 +105,6 @@ class HTMLElementsScope {
       component = (await (
         await this.loadModule(importer)
       ).getInstance(this)) as HTMLComponent;
-      if (!window.customElements.get(component.componentName) || this.SSR) {
-        await component.initComponent(this);
-      }
     });
     return component as ReturnType<T['getInstance']>;
   };
@@ -125,13 +116,13 @@ class HTMLElementsScope {
       if (template.components[i]) {
         const component = template.components[i];
         if (component) {
-          await this.asyncHydrationCallback(async () => {
-            const componentScope = await component;
+          this.asyncHydrationCallback(async () => {
+            const componentScope = await template.components[i];
             if (componentScope) {
-              return window.customElements
+              return await window.customElements
                 .whenDefined(componentScope.componentName)
                 .then(async () => {
-                  if (componentScope && (!this.hydrating || this.SSR)) {
+                  if (!this.hydrating || this.SSR) {
                     return (
                       this.appendComponent(
                         template.target,
@@ -161,15 +152,33 @@ class HTMLElementsScope {
   appendComponent = (
     target: InstanceType<typeof window.HTMLElement>,
     tag: string,
-    index?: number,
+    index: number,
   ): HTMLElement | undefined => {
-    const componentConstructor = window.customElements.get(tag);
+    const componentConstructor = window.customElements.get(
+      tag,
+    ) as unknown as new () => HTMLComponent &
+      InstanceType<typeof window.HTMLElement>;
     if (componentConstructor) {
       const component = new componentConstructor();
-      if (typeof index === 'number' && target.children.length > index) {
-        target.insertBefore(component, target.children[index]);
+      component.indexInParent = index;
+
+      let appendIndex = -1;
+      [...(target.children as unknown as InstancedHTMLComponent[])].forEach(
+        (child, _index) => {
+          if (appendIndex < 0) {
+            if (
+              _index === index ||
+              (child.indexInParent! >= index && index >= _index)
+            ) {
+              appendIndex = _index;
+            }
+          }
+        },
+      );
+      if (appendIndex < 0) {
+        target.appendChild(component);
       } else {
-        target.append(component);
+        target.insertBefore(component, target.children[appendIndex]);
       }
       return component;
     }
@@ -224,6 +233,7 @@ class HTMLElementsScope {
   async asyncInstantiationConnectionFinishedCallback() {
     if (this.componentHydrationCallbacks.size === 0) {
       if (window.onHTMLReady) {
+        /*used by SSR to signal everything loaded and page is rendered completely*/
         window.onHTMLReady();
       } else {
         this.hydrated = true;

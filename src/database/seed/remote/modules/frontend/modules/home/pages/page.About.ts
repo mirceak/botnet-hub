@@ -106,6 +106,8 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
     initComponent = (mainScope: IHTMLElementsScope) => {
       if (!window.customElements.get(this.componentName)) {
         this.registerComponent(this.componentName, getClass(mainScope, this));
+      } else if (mainScope.SSR) {
+        this.registerComponents();
       }
     };
 
@@ -127,12 +129,12 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
 
 let componentInstance: ReturnType<typeof getSingleton>;
 
-export const getInstance = (mainScope: IHTMLElementsScope) => {
+export const getInstance = async (mainScope: IHTMLElementsScope) => {
   if (!componentInstance || window.SSR) {
     if (!componentInstance) {
       componentInstance = getSingleton(mainScope);
     }
-    componentInstance.initComponent(mainScope);
+    await componentInstance.initComponent(mainScope);
   }
   return componentInstance;
 };

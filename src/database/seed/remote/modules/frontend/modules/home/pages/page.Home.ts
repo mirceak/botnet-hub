@@ -104,6 +104,8 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
     initComponent = (mainScope: IHTMLElementsScope) => {
       if (!window.customElements.get(this.componentName)) {
         this.registerComponent(this.componentName, getClass(mainScope, this));
+      } else if (mainScope.SSR) {
+        this.registerComponents();
       }
     };
 
