@@ -3,8 +3,6 @@ import type {
   HTMLComponentModule,
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-/*TODO: add styling*/
-/*TODO: add children to template components*/
 /*TODO: add event listener for browser history navigation*/
 export interface Route {
   path: string;

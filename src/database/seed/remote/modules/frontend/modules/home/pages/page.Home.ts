@@ -49,6 +49,12 @@ const getComponents = (mainScope: IHTMLElementsScope) => {
           '@remoteModules/utils/sharedComponents/elements/button/Button.js'
         ),
     ),
+    TemplateList: mainScope.asyncRegisterComponent(
+      () =>
+        import(
+          '@remoteModules/utils/sharedComponents/dynamicViews/template/TemplateListView.js'
+        ),
+    ),
   };
 };
 
@@ -56,42 +62,58 @@ const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>,
 ) => {
-  const { DynamicHtmlView, Input, Button } = instance.registerComponents();
+  const { DynamicHtmlView, Input, Button, TemplateList } =
+    instance.registerComponents();
 
   return class Component extends window.HTMLElement {
     constructor() {
       super();
     }
 
-    async init() {
-      await mainScope.asyncHydrationCallback(async () => {
-        mainScope.asyncLoadComponentTemplate({
-          target: this,
-          components: [
-            Input.then(({ useComponent }) =>
-              useComponent({
-                onInput: (value: string) =>
-                  (mainScope.store.data.home.nameInput = value),
-                placeholder: 'Enter Your Name',
-              }),
-            ),
-            Button.then(({ useComponent }) =>
-              useComponent({
-                onClick: () => mainScope.router.push('about'),
-                label: 'Go To About',
-              }),
-            ),
-            DynamicHtmlView.then(({ useComponent }) =>
-              useComponent({
-                contentGetter() {
-                  return instance.useScopedCss();
-                },
-                noWatcher: true,
-                instant: true,
-              }),
-            ),
-          ],
-        });
+    init() {
+      mainScope.asyncLoadComponentTemplate({
+        target: this,
+        components: [
+          Input.then(({ useComponent }) =>
+            useComponent({
+              onInput: (value: string) =>
+                (mainScope.store.data.home.nameInput = value),
+              placeholder: 'Enter Your Name',
+            }),
+          ),
+          Button.then(({ useComponent }) =>
+            useComponent({
+              onClick: () => mainScope.router.push('about'),
+              label: 'Go To About',
+            }),
+          ),
+          TemplateList.then(({ useComponent }) =>
+            useComponent({
+              contentGetter: () => {
+                return [
+                  DynamicHtmlView.then(({ useComponent }) =>
+                    useComponent?.({
+                      contentGetter() {
+                        return `
+                          <small>Consider this scoped</small>
+                        `;
+                      },
+                    }),
+                  ),
+                ];
+              },
+            }),
+          ),
+          DynamicHtmlView.then(({ useComponent }) =>
+            useComponent({
+              contentGetter() {
+                return instance.useScopedCss();
+              },
+              noWatcher: true,
+              instant: true,
+            }),
+          ),
+        ],
       });
     }
   };
@@ -127,7 +149,7 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
 
 let componentInstance: ReturnType<typeof getSingleton>;
 
-export const getInstance = (mainScope: IHTMLElementsScope) => {
+export default (mainScope: IHTMLElementsScope) => {
   if (!componentInstance || window.SSR) {
     if (!componentInstance) {
       componentInstance = getSingleton(mainScope);

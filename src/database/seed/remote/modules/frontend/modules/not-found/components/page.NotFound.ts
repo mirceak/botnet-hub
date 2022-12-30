@@ -43,7 +43,7 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
 
 let componentInstance: ReturnType<typeof getSingleton>;
 
-export const getInstance = (mainScope: IHTMLElementsScope) => {
+export default (mainScope: IHTMLElementsScope) => {
   if (!componentInstance || window.SSR) {
     if (!componentInstance) {
       componentInstance = getSingleton(mainScope);

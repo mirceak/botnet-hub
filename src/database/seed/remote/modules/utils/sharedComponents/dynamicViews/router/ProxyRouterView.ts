@@ -25,12 +25,10 @@ const getClass = (
       super();
     }
 
-    async init() {
-      await mainScope.asyncHydrationCallback(async () => {
-        mainScope.asyncLoadComponentTemplate({
-          target: this,
-          components: [RouterView.then(({ useComponent }) => useComponent?.())],
-        });
+    init() {
+      mainScope.asyncLoadComponentTemplate({
+        target: this,
+        components: [RouterView.then(({ useComponent }) => useComponent?.())],
       });
     }
   };
@@ -62,7 +60,7 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
 
 let componentInstance: ReturnType<typeof getSingleton>;
 
-export const getInstance = (mainScope: IHTMLElementsScope) => {
+export default (mainScope: IHTMLElementsScope) => {
   if (!componentInstance || window.SSR) {
     if (!componentInstance) {
       componentInstance = getSingleton(mainScope);

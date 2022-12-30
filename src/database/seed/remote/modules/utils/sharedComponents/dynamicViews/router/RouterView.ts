@@ -24,7 +24,7 @@ const getClass = (
       }
     }
 
-    async init(scope?: ILocalScope) {
+    init(scope?: ILocalScope) {
       if (mainScope.hydrating && !scope?.fromConstructor) {
         /*avoid adding the route's component twice when hydrating SSR*/
         return;
@@ -36,29 +36,27 @@ const getClass = (
       ) {
         throw new Error('router-view has no matching route');
       }
-      await mainScope.asyncHydrationCallback(async () => {
-        this._index = instance.routerViewRegister.size;
-        this.setAttribute('id', `${this._index}`);
-        instance.routerViewRegister.add(this._index);
-        const route = mainScope.router?.matchedRoutes?.[
-          matchedRoutesLength - (this._index as number) - 1
-        ] as IRoute;
-        if (route) {
-          const RouteComponent = mainScope.asyncRegisterComponent(
-            route.component,
-          ) as Promise<IHTMLComponent>;
+      this._index = instance.routerViewRegister.size;
+      this.setAttribute('id', `${this._index}`);
+      instance.routerViewRegister.add(this._index);
+      const route = mainScope.router?.matchedRoutes?.[
+        matchedRoutesLength - (this._index as number) - 1
+      ] as IRoute;
+      if (route) {
+        const RouteComponent = mainScope.asyncRegisterComponent(
+          route.component,
+        ) as Promise<IHTMLComponent>;
 
-          mainScope.asyncLoadComponentTemplate({
-            target: this,
-            components: [
-              RouteComponent.then(
-                (component) =>
-                  component.useComponent() as IHTMLElementComponentStaticScope,
-              ),
-            ],
-          });
-        }
-      });
+        mainScope.asyncLoadComponentTemplate({
+          target: this,
+          components: [
+            RouteComponent.then(
+              (component) =>
+                component.useComponent() as IHTMLElementComponentStaticScope,
+            ),
+          ],
+        });
+      }
     }
 
     disconnectedCallback() {
@@ -90,7 +88,7 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
 
 let componentInstance: ReturnType<typeof getSingleton>;
 
-export const getInstance = (mainScope: IHTMLElementsScope) => {
+export default (mainScope: IHTMLElementsScope) => {
   if (!componentInstance || window.SSR) {
     if (!componentInstance) {
       componentInstance = getSingleton(mainScope);

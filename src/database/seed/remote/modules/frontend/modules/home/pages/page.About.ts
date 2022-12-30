@@ -63,37 +63,35 @@ const getClass = (
       super();
     }
 
-    async init() {
-      await mainScope.asyncHydrationCallback(async () => {
-        mainScope.asyncLoadComponentTemplate({
-          target: this,
-          components: [
-            DynamicHtmlView.then(({ useComponent }) =>
-              useComponent?.({
-                contentGetter() {
-                  return `
+    init() {
+      mainScope.asyncLoadComponentTemplate({
+        target: this,
+        components: [
+          DynamicHtmlView.then(({ useComponent }) =>
+            useComponent?.({
+              contentGetter() {
+                return `
                     <h1>About Page</h1>
                   `;
-                },
-              }),
-            ),
-            Button.then(({ useComponent }) =>
-              useComponent({
-                onClick: () => mainScope.router.push('home'),
-                label: 'Go To Home',
-              }),
-            ),
-            DynamicHtmlView.then(({ useComponent }) =>
-              useComponent({
-                contentGetter() {
-                  return instance.useScopedCss();
-                },
-                noWatcher: true,
-                instant: true,
-              }),
-            ),
-          ],
-        });
+              },
+            }),
+          ),
+          Button.then(({ useComponent }) =>
+            useComponent({
+              onClick: () => mainScope.router.push('home'),
+              label: 'Go To Home',
+            }),
+          ),
+          DynamicHtmlView.then(({ useComponent }) =>
+            useComponent({
+              contentGetter() {
+                return instance.useScopedCss();
+              },
+              noWatcher: true,
+              instant: true,
+            }),
+          ),
+        ],
       });
     }
   };
@@ -129,12 +127,12 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
 
 let componentInstance: ReturnType<typeof getSingleton>;
 
-export const getInstance = async (mainScope: IHTMLElementsScope) => {
+export default (mainScope: IHTMLElementsScope) => {
   if (!componentInstance || window.SSR) {
     if (!componentInstance) {
       componentInstance = getSingleton(mainScope);
     }
-    await componentInstance.initComponent(mainScope);
+    componentInstance.initComponent(mainScope);
   }
   return componentInstance;
 };

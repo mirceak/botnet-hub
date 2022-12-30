@@ -1,8 +1,11 @@
 import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
-import { IHTMLComponent } from '@remoteModules/frontend/engine/components/Main.js';
+import {
+  IHTMLComponent,
+  IHTMLElementComponentTemplate,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
-  contentGetter: () => string | undefined;
+  contentGetter: () => IHTMLElementComponentTemplate['components'];
   noWatcher?: boolean;
   instant?: boolean;
 }
@@ -19,8 +22,13 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     }
 
     init(scope: ILocalScope) {
-      const renderWatch = (value?: string) => {
-        this.innerHTML = `${value}`;
+      const renderWatch = (
+        value: IHTMLElementComponentTemplate['components'],
+      ) => {
+        mainScope.asyncLoadComponentTemplate({
+          target: this,
+          components: value,
+        });
       };
 
       if (!scope.noWatcher) {
@@ -58,7 +66,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
   class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
-    componentName = 'dynamic-html-view-component';
+    componentName = 'template-list-view-component';
 
     initComponent = (mainScope: IHTMLElementsScope) => {
       if (!window.customElements.get(this.componentName)) {
