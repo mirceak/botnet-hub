@@ -1,8 +1,5 @@
 import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
-import {
-  IHTMLComponent,
-  IHTMLElementComponentTemplate,
-} from '@remoteModules/frontend/engine/components/Main.js';
+import { IHTMLElementComponentTemplate } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   contentGetter: () => IHTMLElementComponentTemplate['components'];
@@ -65,7 +62,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 };
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+  class Instance extends mainScope.HTMLComponent {
     componentName = 'template-list-view-component';
 
     initComponent = (mainScope: IHTMLElementsScope) => {

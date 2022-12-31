@@ -1,7 +1,4 @@
-import type {
-  IHTMLComponent,
-  IHTMLElementsScope,
-} from '@remoteModules/frontend/engine/components/Main.js';
+import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
 
 const templateHtml = `
 <h1>Page not found!</h1>
@@ -24,7 +21,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 };
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+  class Instance extends mainScope.HTMLComponent {
     componentName = 'not-found-component';
 
     initComponent = (mainScope: IHTMLElementsScope) => {

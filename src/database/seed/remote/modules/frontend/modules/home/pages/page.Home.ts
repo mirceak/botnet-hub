@@ -1,7 +1,4 @@
-import type {
-  IHTMLComponent,
-  IHTMLElementsScope,
-} from '@remoteModules/frontend/engine/components/Main.js';
+import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
 
 const scopedCss = `
 <style staticScope lang="sass">
@@ -89,19 +86,19 @@ const getClass = (
           ),
           TemplateList.then(({ useComponent }) =>
             useComponent({
-              contentGetter: () => {
-                return [
-                  DynamicHtmlView.then(({ useComponent }) =>
-                    useComponent?.({
-                      contentGetter() {
-                        return `
+              contentGetter: () => [
+                DynamicHtmlView.then(({ useComponent }) =>
+                  useComponent?.({
+                    contentGetter() {
+                      return `
                           <small>Consider this scoped</small>
                         `;
-                      },
-                    }),
-                  ),
-                ];
-              },
+                    },
+                  }),
+                ),
+              ],
+              noWatcher: true,
+              instant: true,
             }),
           ),
           DynamicHtmlView.then(({ useComponent }) =>
@@ -120,7 +117,7 @@ const getClass = (
 };
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+  class Instance extends mainScope.HTMLComponent {
     componentName = 'home-component';
 
     initComponent = (mainScope: IHTMLElementsScope) => {

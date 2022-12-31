@@ -18,7 +18,7 @@ class State {
 const useState = () => new State();
 
 const startComputing = (storeProxyState: ReturnType<typeof useProxyState>) => {
-  let count = 0;
+  // let count = 0;
   const homeModule = () => storeProxyState.data.home;
   const titleWithNameCompute = {
     props: [() => storeProxyState.data.home?.nameInput],
@@ -30,15 +30,15 @@ const startComputing = (storeProxyState: ReturnType<typeof useProxyState>) => {
       }
     },
   };
-  setInterval(() => {
-    count++;
-    if (count === 3) {
-      storeProxyState.unRegisterOnChangeCallback(
-        titleWithNameCompute.props,
-        titleWithNameCompute.computed,
-      );
-    }
-  }, 1000);
+  // setInterval(() => {
+  //   count++;
+  //   if (count === 3) {
+  //     storeProxyState.unRegisterOnChangeCallback(
+  //       titleWithNameCompute.props,
+  //       titleWithNameCompute.computed,
+  //     );
+  //   }
+  // }, 1000);
   storeProxyState.registerOnChangeCallback(
     titleWithNameCompute.props,
     titleWithNameCompute.computed,

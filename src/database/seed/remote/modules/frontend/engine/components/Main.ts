@@ -13,11 +13,10 @@ export type HTMLComponentModule = {
 
 export interface IHTMLComponent {
   initComponent: (mainScope: IHTMLElementsScope) => void;
-  registerComponents?: CallableFunction;
   useComponent: CallableFunction;
   componentName: string;
-  indexInParent: number;
   useScopedCss?: (idIndex: number) => string;
+  indexInParent: number;
 }
 
 export interface HTMLElementComponent
@@ -41,7 +40,7 @@ export interface IHTMLElementComponentTemplate {
 
 export type IHTMLElementsScope = InstanceType<typeof HTMLElementsScope>;
 
-export abstract class AHTMLComponent {
+export abstract class AHTMLComponent implements IHTMLComponent {
   scopedCssIdIndex = 0;
   indexInParent = -1;
   registerComponent(
@@ -63,6 +62,12 @@ export abstract class AHTMLComponent {
     };
     return scope as typeof scope & T;
   };
+
+  abstract componentName: string;
+
+  abstract initComponent(mainScope: IHTMLElementsScope): void;
+
+  abstract useComponent(scope?: unknown): void;
 }
 
 class HTMLElementsScope {
@@ -269,7 +274,6 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
           .loadModule(() => import('@remoteModules/frontend/engine/router.js'))
           .then(async ({ useRouter }) => {
             mainScope.router = await useRouter(mainScope);
-            mainScope.store.data.router = mainScope.router;
 
             const [RouterView] = [
               mainScope

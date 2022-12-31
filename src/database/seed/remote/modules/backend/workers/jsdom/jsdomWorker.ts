@@ -97,7 +97,6 @@ ${mainModuleScript.script?.code
         data: htmlBody,
       });
     };
-    dom.window.document.body.innerHTML = '';
     dom.window.document.body.innerHTML = '<main-component>';
   };
 

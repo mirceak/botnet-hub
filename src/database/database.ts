@@ -14,20 +14,13 @@ export const init: IKernelModuleInit = async (context) => {
 };
 
 //move express in mainRemote.ts (not a bot functionality)
-//rename remoteModule entity to remoteModule entity
 
 //add webComponent entity
-//add webTemplate entity
 //add webModule entity
 //add webStyle entity
 
 //web components
 //components declare what components get used to fill in slots
-
-//web page
-//contains the router logic, minimum components required to activate static html and the relevant css
-//layouts component
-//input field
 
 //add routes for express static
 //add routes for front-end

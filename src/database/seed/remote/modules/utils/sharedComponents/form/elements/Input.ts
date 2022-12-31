@@ -1,5 +1,4 @@
 import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
-import { IHTMLComponent } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   onInput: (value: string) => void;
@@ -39,7 +38,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 };
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+  class Instance extends mainScope.HTMLComponent {
     componentName = 'input-component';
 
     initComponent = (mainScope: IHTMLElementsScope) => {

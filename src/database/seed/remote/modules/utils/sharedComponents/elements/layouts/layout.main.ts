@@ -1,5 +1,4 @@
 import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
-import { IHTMLComponent } from '@remoteModules/frontend/engine/components/Main.js';
 
 const getComponents = (mainScope: IHTMLElementsScope) => {
   return {
@@ -50,7 +49,7 @@ const getClass = (
 };
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+  class Instance extends mainScope.HTMLComponent {
     componentName = 'layout-main-component';
 
     initComponent = (mainScope: IHTMLElementsScope) => {

@@ -68,7 +68,7 @@ const getClass = (
 };
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent implements IHTMLComponent {
+  class Instance extends mainScope.HTMLComponent {
     componentName = 'router-view-component';
     routerViewRegister = new Set();
 

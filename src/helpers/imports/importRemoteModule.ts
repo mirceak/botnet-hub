@@ -119,6 +119,7 @@ export const importRemoteModule = async (
 const globalContext = {
   console,
   process,
+  global,
   setInterval,
   setTimeout,
   clearInterval,

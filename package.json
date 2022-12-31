@@ -5,7 +5,7 @@
   "name": "app",
   "scripts": {
     "docs": "typedoc --entryPointStrategy expand ./ --exclude \"**/*+(.+(test|d)).ts\" --exclude \"node_modules/**\" --exclude \"docs/**\" --exclude \"build/**\" --exclude \"src/exampleTest/**\" --exclude \"coverage/**\" --exclude \"./jest.config.mjs\"",
-    "start": "nodemon --experimental-vm-modules ./build/main.js",
+    "start": "nodemon --expose-gc --experimental-vm-modules ./build/main.js",
     "tsc-alias-watch": "yarn tsc-build && tsc -p tsconfig.json && tsc-alias -w",
     "tsc-build": "set NODE_OPTIONS=es-module-specifier-resolution=node && tsc -p tsconfig.json",
     "tsc-watch": "yarn tsc-build -w",
