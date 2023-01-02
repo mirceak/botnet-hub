@@ -118,7 +118,6 @@ const getClass = (
                 ),
               ],
               noWatcher: true,
-              instant: true,
             }),
           ),
           _DynamicHtmlView.then(({ useComponent }) =>

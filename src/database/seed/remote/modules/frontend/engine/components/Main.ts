@@ -125,7 +125,7 @@ class HTMLElementsScope {
         return reduced;
       }, '');
     }
-    return undefined;
+    return '';
   };
 
   /*whatever async logic running in SSR must register through this method*/

@@ -39,9 +39,9 @@ const getClass = (mainScope: IHTMLElementsScope) => {
       }
     }
 
-    render(scope?: ILocalScope) {
+    render(scope: ILocalScope) {
       this.innerHTML = `
-        <input ${mainScope.getAttributesString(scope) || ''}/>
+        <input ${mainScope.getAttributesString(scope)}/>
       `;
     }
 

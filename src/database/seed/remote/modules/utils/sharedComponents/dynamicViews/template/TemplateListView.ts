@@ -7,7 +7,6 @@ import type {
 interface ILocalScope {
   listGetter: () => IHTMLElementComponentTemplate['components'];
   noWatcher?: boolean;
-  instant?: boolean;
 }
 
 const getClass = (mainScope: IHTMLElementsScope) => {
@@ -36,13 +35,11 @@ const getClass = (mainScope: IHTMLElementsScope) => {
           this.computeRender.props,
           this.computeRender.computed,
         );
-
-        if (!mainScope.hydrating) {
-          this.computeRender.computed();
-        }
       }
 
-      if (scope.instant) {
+      if (!scope.noWatcher) {
+        this.computeRender?.computed();
+      } else {
         this.render(mainScope, scope.listGetter());
       }
     }
