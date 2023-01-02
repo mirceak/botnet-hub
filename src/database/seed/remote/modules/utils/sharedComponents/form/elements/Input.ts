@@ -4,7 +4,7 @@ import type {
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
-  onInput: (value: string) => void;
+  onInput?: (value: string) => void;
   attributes?: IInputElementAttributes;
 }
 
@@ -21,10 +21,6 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 
     constructor() {
       super();
-
-      if (!mainScope.hydrating) {
-        this.render();
-      }
     }
 
     init(scope: ILocalScope) {
@@ -32,13 +28,15 @@ const getClass = (mainScope: IHTMLElementsScope) => {
         this.render(scope);
       }
 
-      this.removeInputListener = mainScope.registerEventListener(
-        this.children[0],
-        'input',
-        (e: InputEvent) => {
-          scope.onInput((e.target as HTMLInputElement).value);
-        },
-      );
+      if (scope.onInput) {
+        this.removeInputListener = mainScope.registerEventListener(
+          this.children[0],
+          'input',
+          (e: InputEvent) => {
+            scope.onInput?.((e.target as HTMLInputElement).value);
+          },
+        );
+      }
     }
 
     render(scope?: ILocalScope) {

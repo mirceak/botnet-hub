@@ -4,7 +4,7 @@ import type {
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
-  onClick: () => void;
+  onClick?: () => void;
   label?: string;
 }
 
@@ -16,10 +16,6 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     private removeOnClickListener?: CallableFunction;
     constructor() {
       super();
-
-      if (!mainScope.hydrating) {
-        this.render();
-      }
     }
 
     init(scope: ILocalScope) {
@@ -27,13 +23,15 @@ const getClass = (mainScope: IHTMLElementsScope) => {
         this.render(scope);
       }
 
-      this.removeOnClickListener = mainScope.registerEventListener(
-        this.children[0],
-        'click',
-        () => {
-          scope.onClick();
-        },
-      );
+      if (scope.onClick) {
+        this.removeOnClickListener = mainScope.registerEventListener(
+          this.children[0],
+          'click',
+          () => {
+            scope.onClick?.();
+          },
+        );
+      }
     }
 
     render(scope?: ILocalScope) {

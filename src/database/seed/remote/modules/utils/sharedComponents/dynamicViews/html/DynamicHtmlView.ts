@@ -1,10 +1,12 @@
 import type {
   InstancedHTMLComponent,
   IHTMLElementsScope,
+  HTMLElementComponentStaticScope,
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   contentGetter: () => string | undefined;
+  scopesGetter?: () => Record<string, HTMLElementComponentStaticScope>;
   noWatcher?: boolean;
   instant?: boolean;
 }
@@ -24,15 +26,11 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     }
 
     init(scope: ILocalScope) {
-      const renderWatch = (value?: string) => {
-        this.innerHTML = `${value}`;
-      };
-
       if (!scope.noWatcher) {
         this.computeRender = {
           props: [() => scope.contentGetter()],
           computed: () => {
-            renderWatch(scope.contentGetter());
+            this.render(scope.contentGetter());
           },
         };
         mainScope.store.registerOnChangeCallback(
@@ -46,8 +44,41 @@ const getClass = (mainScope: IHTMLElementsScope) => {
       }
 
       if (scope.instant && !mainScope.hydrating) {
-        renderWatch(scope.contentGetter());
+        this.render(scope.contentGetter());
       }
+
+      if (scope.scopesGetter) {
+        const scopes = scope.scopesGetter();
+        [...(this.children as unknown as InstancedHTMLComponent[])].forEach(
+          (child) => {
+            if (child.attributes.getNamedItem('x-scope')) {
+              window.customElements
+                .whenDefined(child.tagName.toLowerCase())
+                .then(async () => {
+                  const scopeId =
+                    child.attributes.getNamedItem('x-scope')?.value;
+
+                  if (scopeId) {
+                    const scope = await scopes[scopeId];
+                    if (scope?.componentName === child.tagName.toLowerCase()) {
+                      child.init(scope);
+                    } else {
+                      throw new Error(
+                        `Scope ${scopeId} has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`,
+                      );
+                    }
+                  } else {
+                    throw new Error('ScopeId not provided!');
+                  }
+                });
+            }
+          },
+        );
+      }
+    }
+
+    render(value?: string) {
+      this.innerHTML = `${value}`;
     }
 
     disconnectedCallback() {

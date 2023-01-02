@@ -40,7 +40,6 @@ export interface IHTMLElementComponentStaticScope {
 export interface IHTMLElementComponentTemplate {
   components: HTMLElementComponentStaticScope[];
 
-  scopes?: Record<string, HTMLElementComponentStaticScope>;
   target: InstanceType<typeof window.HTMLElement>;
 }
 

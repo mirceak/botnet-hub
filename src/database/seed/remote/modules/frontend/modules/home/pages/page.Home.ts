@@ -72,17 +72,6 @@ const getClass = (
     init() {
       mainScope.asyncLoadComponentTemplate({
         target: this,
-        scopes: {
-          xInputScope: _Input.then(({ useComponent }) =>
-            useComponent({
-              onInput: (value: string) =>
-                (mainScope.store.data.home.nameInput = value),
-              attributes: {
-                placeholder: 'Enter Your NamezZz',
-              },
-            }),
-          ),
-        },
         components: [
           _Input.then(({ useComponent }) =>
             useComponent({
@@ -104,12 +93,27 @@ const getClass = (
               listGetter: () => [
                 _DynamicHtmlView.then(({ useComponent }) =>
                   useComponent({
-                    contentGetter: () => {
-                      return `
-                          <small>Consider this scoped</small>
-                          <input-component x-scope="xInputScope"></input-component>
-                        `;
-                    },
+                    contentGetter: () => `
+                      <small>Consider this scoped</small>
+                      <input-component x-scope="xInputScope"></input-component>
+                      <button-component x-scope="xButtonScope"></button-component>
+                    `,
+                    scopesGetter: () => ({
+                      xInputScope: _Input.then(({ useComponent }) =>
+                        useComponent({
+                          onInput: (value: string) =>
+                            (mainScope.store.data.home.nameInput = value),
+                          attributes: {
+                            placeholder: 'Enter Yousr Name',
+                          },
+                        }),
+                      ),
+                      xButtonScope: _Button.then(({ useComponent }) =>
+                        useComponent({
+                          label: 'Enter Yossur Name',
+                        }),
+                      ),
+                    }),
                   }),
                 ),
               ],

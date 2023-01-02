@@ -25,20 +25,11 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     }
 
     init(scope: ILocalScope) {
-      const renderWatch = (
-        value: IHTMLElementComponentTemplate['components'],
-      ) => {
-        mainScope.asyncLoadComponentTemplate({
-          target: this,
-          components: value,
-        });
-      };
-
       if (!scope.noWatcher) {
         this.computeRender = {
           props: [() => scope.listGetter()],
           computed: () => {
-            renderWatch(scope.listGetter());
+            this.render(mainScope, scope.listGetter());
           },
         };
         mainScope.store.registerOnChangeCallback(
@@ -51,9 +42,19 @@ const getClass = (mainScope: IHTMLElementsScope) => {
         }
       }
 
-      if (scope.instant && !mainScope.hydrating) {
-        renderWatch(scope.listGetter());
+      if (scope.instant) {
+        this.render(mainScope, scope.listGetter());
       }
+    }
+
+    render(
+      mainScope: IHTMLElementsScope,
+      value: IHTMLElementComponentTemplate['components'],
+    ) {
+      mainScope.asyncLoadComponentTemplate({
+        target: this,
+        components: value,
+      });
     }
 
     disconnectedCallback() {
