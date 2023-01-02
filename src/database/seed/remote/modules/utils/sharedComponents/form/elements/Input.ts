@@ -1,38 +1,54 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  IHTMLElementsScope,
+  InstancedHTMLComponent,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   onInput: (value: string) => void;
+  attributes?: IInputElementAttributes;
+}
+
+interface IInputElementAttributes {
   placeholder: string;
 }
 
 const getClass = (mainScope: IHTMLElementsScope) => {
-  return class Component extends window.HTMLElement {
-    private onInput?: EventListenerOrEventListenerObject;
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
+    private removeInputListener?: CallableFunction;
+
     constructor() {
       super();
+
+      if (!mainScope.hydrating) {
+        this.render();
+      }
     }
 
     init(scope: ILocalScope) {
-      this.onInput = (e: Event) => {
-        scope.onInput((e.target as HTMLInputElement).value);
-      };
-
       if (!mainScope.hydrating) {
-        this.innerHTML = `
-          <input placeholder="${scope.placeholder}"/>
-        `;
+        this.render(scope);
       }
 
-      this.children[0].addEventListener('input', this.onInput);
+      this.removeInputListener = mainScope.registerEventListener(
+        this.children[0],
+        'input',
+        (e: InputEvent) => {
+          scope.onInput((e.target as HTMLInputElement).value);
+        },
+      );
+    }
+
+    render(scope?: ILocalScope) {
+      this.innerHTML = `
+        <input ${mainScope.getAttributesString(scope) || ''}/>
+      `;
     }
 
     disconnectedCallback() {
-      if (this.children[0]) {
-        this.children[0].removeEventListener(
-          'input',
-          this.onInput as NonNullable<typeof this.onInput>,
-        );
-      }
+      this.removeInputListener?.();
     }
   };
 };

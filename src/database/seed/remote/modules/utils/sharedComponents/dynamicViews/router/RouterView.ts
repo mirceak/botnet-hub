@@ -1,9 +1,10 @@
 import type {
   IHTMLElementComponentStaticScope,
   IHTMLElementsScope,
+  InstancedHTMLComponent,
+  IHTMLComponent,
 } from '@remoteModules/frontend/engine/components/Main.js';
-import { IHTMLComponent } from '@remoteModules/frontend/engine/components/Main.js';
-import { IRoute } from '@remoteModules/frontend/engine/router.js';
+import type { IRoute } from '@remoteModules/frontend/engine/router.js';
 
 interface ILocalScope {
   fromConstructor?: boolean;
@@ -13,7 +14,10 @@ const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>,
 ) => {
-  return class Component extends window.HTMLElement {
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
     private _index?: number;
 
     constructor() {

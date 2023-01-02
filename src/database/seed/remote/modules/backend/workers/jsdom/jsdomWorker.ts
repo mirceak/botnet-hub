@@ -40,6 +40,7 @@ if (cluster.isPrimary) {
 </head>
 <body/>
 </html>`;
+  let processId: string;
   const dom = new JSDOM(htm, { runScripts: 'outside-only' });
   dom.window.SSR = true;
 
@@ -57,14 +58,29 @@ if (cluster.isPrimary) {
   const mainModuleScript = await kernelGlobals.loadRemoteModule(
     '@remoteModules/frontend/engine/components/Main.js',
   );
-  // process
-  //   .on('unhandledRejection', (reason, p) => {
-  //     console.trace(reason, 'Unhandled Rejection at Promise', p);
-  //   })
-  //   .on('uncaughtException', (err) => {
-  //     console.trace(err, 'Uncaught Exception thrown');
-  //     process.exit(1);
-  //   });
+
+  dom.window.onHTMLReady = () => {
+    let htmlBody = dom.serialize();
+    dynamicImportWatchers.delete(dynamicImportWatcher);
+    htmlBody = htmlBody.replace(
+      '</body>',
+      `<script type="module">
+${mainModuleScript.script?.code
+  .replace(
+    '__modulesLoadedWithSSR = [];',
+    `__modulesLoadedWithSSR = ${JSON.stringify(dynamicImportWatcher)};`,
+  )
+  .replace('hydrating = window._shouldHydrate;', `hydrating = true;`)
+  .replace('SSR = window.SSR;', `SSR = false;`)}
+</script></body>`,
+    );
+    dynamicImportWatcher.splice(0);
+    process.send?.({
+      id: processId,
+      data: htmlBody,
+    });
+  };
+
   const onMessage = async ({
     payload,
     id,
@@ -76,27 +92,7 @@ if (cluster.isPrimary) {
       dynamicImportWatchers.add(dynamicImportWatcher);
     }
     dom.window.pathname = payload.reqUrl.split('?')[0];
-    dom.window.onHTMLReady = () => {
-      let htmlBody = dom.serialize();
-      dynamicImportWatchers.delete(dynamicImportWatcher);
-      htmlBody = htmlBody.replace(
-        '</body>',
-        `<script type="module">
-${mainModuleScript.script?.code
-  .replace(
-    '__modulesLoadedWithSSR = [];',
-    `__modulesLoadedWithSSR = ${JSON.stringify(dynamicImportWatcher)};`,
-  )
-  .replace('hydrating = window._shouldHydrate;', `hydrating = true;`)
-  .replace('SSR = window.SSR;', `SSR = false;`)}
-</script></body>`,
-      );
-      dynamicImportWatcher.splice(0);
-      process.send?.({
-        id: id,
-        data: htmlBody,
-      });
-    };
+    processId = id;
     dom.window.document.body.innerHTML = '<main-component>';
   };
 

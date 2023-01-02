@@ -19,9 +19,6 @@ export const init: IKernelModuleInit = async (context) => {
 //add webModule entity
 //add webStyle entity
 
-//web components
-//components declare what components get used to fill in slots
-
 //add routes for express static
 //add routes for front-end
 //add routes for api

@@ -1,38 +1,49 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  InstancedHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
-  onClick: (value: string) => void;
+  onClick: () => void;
   label?: string;
 }
 
 const getClass = (mainScope: IHTMLElementsScope) => {
-  return class Component extends window.HTMLElement {
-    private onClick?: EventListenerOrEventListenerObject;
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
+    private removeOnClickListener?: CallableFunction;
     constructor() {
       super();
+
+      if (!mainScope.hydrating) {
+        this.render();
+      }
     }
 
     init(scope: ILocalScope) {
-      this.onClick = (e: Event) => {
-        scope.onClick((e.target as HTMLInputElement).value);
-      };
-
-      if (!mainScope.hydrating) {
-        this.innerHTML = `
-          <button>${scope.label}</button>
-        `;
+      if (!mainScope.hydrating && scope.label) {
+        this.render(scope);
       }
 
-      this.children[0].addEventListener('click', this.onClick);
+      this.removeOnClickListener = mainScope.registerEventListener(
+        this.children[0],
+        'click',
+        () => {
+          scope.onClick();
+        },
+      );
+    }
+
+    render(scope?: ILocalScope) {
+      this.innerHTML = `
+        <button>${scope?.label || ''}</button>
+      `;
     }
 
     disconnectedCallback() {
-      if (this.children[0]) {
-        this.children[0].removeEventListener(
-          'click',
-          this.onClick as NonNullable<typeof this.onClick>,
-        );
-      }
+      this.removeOnClickListener?.();
     }
   };
 };

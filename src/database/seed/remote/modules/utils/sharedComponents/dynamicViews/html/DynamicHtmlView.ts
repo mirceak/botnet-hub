@@ -1,4 +1,7 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  InstancedHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   contentGetter: () => string | undefined;
@@ -7,7 +10,10 @@ interface ILocalScope {
 }
 
 const getClass = (mainScope: IHTMLElementsScope) => {
-  return class Component extends window.HTMLElement {
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
     private computeRender?: {
       props: CallableFunction[];
       computed: CallableFunction;

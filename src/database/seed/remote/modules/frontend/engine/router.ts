@@ -26,6 +26,7 @@ export interface Router {
   redirect: (name: string) => Promise<void>;
   onPopState: (e: PopStateEvent) => void;
   onDestroy: () => Promise<void>;
+  removePopstateListener?: CallableFunction;
   currentRoute?: Route;
   matchedRoutes?: Route[];
 }
@@ -39,7 +40,7 @@ const getRouter = (mainScope: IHTMLElementsScope): Router => {
       return this.push(e.state.name, true);
     },
     async onDestroy() {
-      window.removeEventListener('popstate', this.onPopState.bind(this));
+      this.removePopstateListener?.();
     },
     async push(name, replaceRoute = false) {
       const matched = this.routes.reduce(
@@ -210,8 +211,6 @@ export const useRouter = async (
 
   router.routes.push(...(await useRoutes(mainScope)).map(routeMapper));
 
-  window.addEventListener('popstate', router.onPopState.bind(router));
-
   router.matchedRoutes = router.routes.reduce(
     matchedRoutePathReducer(
       mainScope.SSR ? (window.pathname as string) : window.location.pathname,
@@ -227,6 +226,24 @@ export const useRouter = async (
 
   if (router.currentRoute && router.currentRoute.redirect) {
     await router.redirect(router.currentRoute.redirect);
+  }
+
+  if (!mainScope.SSR) {
+    window.history.replaceState(
+      {
+        name: router.currentRoute.name,
+        computedPath: router.currentRoute.computedPath,
+      },
+      '',
+      (router.currentRoute.computedPath as string) +
+        (window.location.search || ''),
+    );
+
+    router.removePopstateListener = mainScope.registerEventListener(
+      window,
+      'popstate',
+      router.onPopState.bind(router),
+    );
   }
 
   router.ready = true;

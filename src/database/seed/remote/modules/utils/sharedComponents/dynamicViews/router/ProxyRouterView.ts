@@ -1,8 +1,11 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  InstancedHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 const getComponents = (mainScope: IHTMLElementsScope) => {
   return {
-    RouterView: mainScope.asyncRegisterComponent(
+    _RouterView: mainScope.asyncRegisterComponent(
       () =>
         import(
           '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
@@ -15,9 +18,12 @@ const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>,
 ) => {
-  const { RouterView } = instance.registerComponents();
+  const { _RouterView } = instance.registerComponents();
 
-  return class Component extends window.HTMLElement {
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
     constructor() {
       super();
     }
@@ -25,7 +31,7 @@ const getClass = (
     init() {
       mainScope.asyncLoadComponentTemplate({
         target: this,
-        components: [RouterView.then(({ useComponent }) => useComponent?.())],
+        components: [_RouterView.then(({ useComponent }) => useComponent())],
       });
     }
   };

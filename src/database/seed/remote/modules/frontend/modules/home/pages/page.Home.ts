@@ -1,4 +1,7 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  InstancedHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 const scopedCss = `
 <style staticScope lang="sass">
@@ -28,41 +31,40 @@ const scopedCss = `
   }
 </style staticScope>`;
 
-const getComponents = (mainScope: IHTMLElementsScope) => {
-  return {
-    DynamicHtmlView: mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-        ),
-    ),
-    Input: mainScope.asyncRegisterComponent(
-      () =>
-        import('@remoteModules/utils/sharedComponents/form/elements/Input.js'),
-    ),
-    Button: mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/elements/button/Button.js'
-        ),
-    ),
-    TemplateList: mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/dynamicViews/template/TemplateListView.js'
-        ),
-    ),
-  };
-};
+const getComponents = (mainScope: IHTMLElementsScope) => ({
+  _DynamicHtmlView: mainScope.asyncRegisterComponent(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
+      ),
+  ),
+  _Input: mainScope.asyncRegisterComponent(
+    () =>
+      import('@remoteModules/utils/sharedComponents/form/elements/Input.js'),
+  ),
+  _Button: mainScope.asyncRegisterComponent(
+    () =>
+      import('@remoteModules/utils/sharedComponents/elements/button/Button.js'),
+  ),
+  _TemplateList: mainScope.asyncRegisterComponent(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/dynamicViews/template/TemplateListView.js'
+      ),
+  ),
+});
 
 const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>,
 ) => {
-  const { DynamicHtmlView, Input, Button, TemplateList } =
+  const { _DynamicHtmlView, _Input, _Button, _TemplateList } =
     instance.registerComponents();
 
-  return class Component extends window.HTMLElement {
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
     constructor() {
       super();
     }
@@ -70,28 +72,42 @@ const getClass = (
     init() {
       mainScope.asyncLoadComponentTemplate({
         target: this,
-        components: [
-          Input.then(({ useComponent }) =>
+        scopes: {
+          xInputScope: _Input.then(({ useComponent }) =>
             useComponent({
               onInput: (value: string) =>
                 (mainScope.store.data.home.nameInput = value),
-              placeholder: 'Enter Your Name',
+              attributes: {
+                placeholder: 'Enter Your NamezZz',
+              },
             }),
           ),
-          Button.then(({ useComponent }) =>
+        },
+        components: [
+          _Input.then(({ useComponent }) =>
+            useComponent({
+              onInput: (value: string) =>
+                (mainScope.store.data.home.nameInput = value),
+              attributes: {
+                placeholder: 'Enter Your Name',
+              },
+            }),
+          ),
+          _Button.then(({ useComponent }) =>
             useComponent({
               onClick: () => mainScope.router.push('about'),
               label: 'Go To About',
             }),
           ),
-          TemplateList.then(({ useComponent }) =>
+          _TemplateList.then(({ useComponent }) =>
             useComponent({
-              contentGetter: () => [
-                DynamicHtmlView.then(({ useComponent }) =>
-                  useComponent?.({
-                    contentGetter() {
+              listGetter: () => [
+                _DynamicHtmlView.then(({ useComponent }) =>
+                  useComponent({
+                    contentGetter: () => {
                       return `
                           <small>Consider this scoped</small>
+                          <input-component x-scope="xInputScope"></input-component>
                         `;
                     },
                   }),
@@ -101,7 +117,7 @@ const getClass = (
               instant: true,
             }),
           ),
-          DynamicHtmlView.then(({ useComponent }) =>
+          _DynamicHtmlView.then(({ useComponent }) =>
             useComponent({
               contentGetter() {
                 return instance.useScopedCss();

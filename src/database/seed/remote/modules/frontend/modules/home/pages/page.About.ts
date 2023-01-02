@@ -1,5 +1,5 @@
 import type {
-  HTMLElementComponent,
+  InstancedHTMLComponent,
   IHTMLElementsScope,
 } from '@remoteModules/frontend/engine/components/Main.js';
 
@@ -31,32 +31,28 @@ const scopedCss = `
   }
 </style staticScope>`;
 
-const getComponents = (mainScope: IHTMLElementsScope) => {
-  return {
-    DynamicHtmlView: mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-        ),
-    ),
-    Button: mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/elements/button/Button.js'
-        ),
-    ),
-  };
-};
+const getComponents = (mainScope: IHTMLElementsScope) => ({
+  _DynamicHtmlView: mainScope.asyncRegisterComponent(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
+      ),
+  ),
+  _Button: mainScope.asyncRegisterComponent(
+    () =>
+      import('@remoteModules/utils/sharedComponents/elements/button/Button.js'),
+  ),
+});
 
 const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>,
 ) => {
-  const { DynamicHtmlView, Button } = instance.registerComponents();
+  const { _DynamicHtmlView, _Button } = instance.registerComponents();
 
   return class Component
-    extends window.HTMLElement
-    implements HTMLElementComponent
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
   {
     constructor() {
       super();
@@ -66,24 +62,24 @@ const getClass = (
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          DynamicHtmlView.then(({ useComponent }) =>
-            useComponent?.({
-              contentGetter() {
+          _DynamicHtmlView.then(({ useComponent }) =>
+            useComponent({
+              contentGetter: () => {
                 return `
-                    <h1>About Page</h1>
-                  `;
+                  <h1>About Page</h1>
+                `;
               },
             }),
           ),
-          Button.then(({ useComponent }) =>
+          _Button.then(({ useComponent }) =>
             useComponent({
               onClick: () => mainScope.router.push('home'),
               label: 'Go To Home',
             }),
           ),
-          DynamicHtmlView.then(({ useComponent }) =>
+          _DynamicHtmlView.then(({ useComponent }) =>
             useComponent({
-              contentGetter() {
+              contentGetter: () => {
                 return instance.useScopedCss();
               },
               noWatcher: true,

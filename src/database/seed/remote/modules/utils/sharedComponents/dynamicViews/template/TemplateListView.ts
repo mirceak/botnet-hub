@@ -1,14 +1,20 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
-import { IHTMLElementComponentTemplate } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  InstancedHTMLComponent,
+  IHTMLElementComponentTemplate,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
-  contentGetter: () => IHTMLElementComponentTemplate['components'];
+  listGetter: () => IHTMLElementComponentTemplate['components'];
   noWatcher?: boolean;
   instant?: boolean;
 }
 
 const getClass = (mainScope: IHTMLElementsScope) => {
-  return class Component extends window.HTMLElement {
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
     private computeRender?: {
       props: CallableFunction[];
       computed: CallableFunction;
@@ -30,9 +36,9 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 
       if (!scope.noWatcher) {
         this.computeRender = {
-          props: [() => scope.contentGetter()],
+          props: [() => scope.listGetter()],
           computed: () => {
-            renderWatch(scope.contentGetter());
+            renderWatch(scope.listGetter());
           },
         };
         mainScope.store.registerOnChangeCallback(
@@ -46,7 +52,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
       }
 
       if (scope.instant && !mainScope.hydrating) {
-        renderWatch(scope.contentGetter());
+        renderWatch(scope.listGetter());
       }
     }
 

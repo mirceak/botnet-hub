@@ -1,11 +1,17 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  InstancedHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
 const templateHtml = `
 <h1>Page not found!</h1>
 `;
 
 const getClass = (mainScope: IHTMLElementsScope) => {
-  return class Component extends window.HTMLElement {
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
     constructor() {
       super();
     }

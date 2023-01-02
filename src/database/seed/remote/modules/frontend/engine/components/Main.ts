@@ -1,25 +1,34 @@
 import type { IStore } from '@remoteModules/frontend/engine/store.js';
 import type { Router } from '@remoteModules/frontend/engine/router.js';
 
+export type HTMLElementComponentStaticScope =
+  | Promise<IHTMLElementComponentStaticScope>
+  | IHTMLElementComponentStaticScope
+  | undefined;
+
 export type HTMLComponent = InstanceType<typeof AHTMLComponent> &
   IHTMLComponent;
 
-export type InstancedHTMLComponent = HTMLComponent &
-  InstanceType<typeof window.HTMLElement>;
+export type InstancedHTMLComponent = IHTMLElement & IHTMLElementComponent;
 
 export type HTMLComponentModule = {
   default: (mainScope: IHTMLElementsScope) => unknown;
 };
+
+export type IHTMLElementsScope = InstanceType<typeof HTMLElementsScope>;
+
+export interface IHTMLElement {
+  indexInParent?: number;
+}
 
 export interface IHTMLComponent {
   initComponent: (mainScope: IHTMLElementsScope) => void;
   useComponent: CallableFunction;
   componentName: string;
   useScopedCss?: (idIndex: number) => string;
-  indexInParent: number;
 }
 
-export interface HTMLElementComponent
+export interface IHTMLElementComponent
   extends InstanceType<typeof window.HTMLElement> {
   init: CallableFunction;
 }
@@ -29,20 +38,14 @@ export interface IHTMLElementComponentStaticScope {
 }
 
 export interface IHTMLElementComponentTemplate {
-  components: (
-    | Promise<IHTMLElementComponentStaticScope>
-    | IHTMLElementComponentStaticScope
-    | undefined
-  )[];
+  components: HTMLElementComponentStaticScope[];
 
+  scopes?: Record<string, HTMLElementComponentStaticScope>;
   target: InstanceType<typeof window.HTMLElement>;
 }
 
-export type IHTMLElementsScope = InstanceType<typeof HTMLElementsScope>;
-
 export abstract class AHTMLComponent implements IHTMLComponent {
   scopedCssIdIndex = 0;
-  indexInParent = -1;
   registerComponent(
     componentName: string,
     component: CustomElementConstructor,
@@ -70,6 +73,14 @@ export abstract class AHTMLComponent implements IHTMLComponent {
   abstract useComponent(scope?: unknown): void;
 }
 
+abstract class HTMLElement extends window.HTMLElement implements IHTMLElement {
+  protected constructor() {
+    super();
+  }
+
+  indexInParent = -1;
+}
+
 class HTMLElementsScope {
   /*REQUIRED FOR SSR HYDRATION*/
   SSR = window.SSR;
@@ -84,6 +95,39 @@ class HTMLElementsScope {
   HTMLComponent = AHTMLComponent;
 
   componentHydrationCallbacks = new Set();
+
+  HTMLElement = HTMLElement;
+
+  registerEventListener = <T extends Element | Window, E extends Event>(
+    target: T,
+    event: Parameters<T['addEventListener']>[0],
+    callback: (e: E) => void,
+    options?: Parameters<T['addEventListener']>[2],
+  ) => {
+    target.addEventListener(
+      event,
+      callback as EventListenerOrEventListenerObject,
+      options,
+    );
+    return () =>
+      target.removeEventListener(
+        event,
+        callback as EventListenerOrEventListenerObject,
+      );
+  };
+
+  getAttributesString = (scope?: { attributes?: object }) => {
+    if (scope?.attributes) {
+      return Object.keys(scope.attributes).reduce((reduced, current) => {
+        reduced += `${current}${
+          '="' + scope.attributes?.[current as keyof typeof scope.attributes] ||
+          ''
+        }" `;
+        return reduced;
+      }, '');
+    }
+    return undefined;
+  };
 
   /*whatever async logic running in SSR must register through this method*/
   asyncHydrationCallback = async <T>(
@@ -164,13 +208,10 @@ class HTMLElementsScope {
     target: InstanceType<typeof window.HTMLElement>,
     tag: string,
     index: number,
-  ): HTMLElement | undefined => {
-    const componentConstructor = window.customElements.get(
-      tag,
-    ) as unknown as new () => HTMLComponent &
-      InstanceType<typeof window.HTMLElement>;
+  ): InstancedHTMLComponent | undefined => {
+    const componentConstructor = window.customElements.get(tag);
     if (componentConstructor) {
-      const component = new componentConstructor();
+      const component = new componentConstructor() as InstancedHTMLComponent;
       component.indexInParent = index;
 
       let appendIndex = -1;
@@ -179,7 +220,9 @@ class HTMLElementsScope {
           if (appendIndex < 0) {
             if (
               _index === index ||
-              (child.indexInParent >= index && index >= _index)
+              (child.indexInParent != null &&
+                child.indexInParent >= index &&
+                index >= _index)
             ) {
               appendIndex = _index;
             }
@@ -305,6 +348,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
 
     async disconnectedCallback() {
       await mainScope.router.onDestroy();
+      await mainScope.store.onDestroy();
     }
   };
 };

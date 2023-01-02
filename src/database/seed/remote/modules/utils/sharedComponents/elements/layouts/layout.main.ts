@@ -1,29 +1,33 @@
-import type { IHTMLElementsScope } from '@remoteModules/frontend/engine/components/Main.js';
+import type {
+  InstancedHTMLComponent,
+  IHTMLElementsScope,
+} from '@remoteModules/frontend/engine/components/Main.js';
 
-const getComponents = (mainScope: IHTMLElementsScope) => {
-  return {
-    DynamicHtmlView: mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-        ),
-    ),
-    RouterView: mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-        ),
-    ),
-  };
-};
+const getComponents = (mainScope: IHTMLElementsScope) => ({
+  _DynamicHtmlView: mainScope.asyncRegisterComponent(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
+      ),
+  ),
+  _RouterView: mainScope.asyncRegisterComponent(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+      ),
+  ),
+});
 
 const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>,
 ) => {
-  const { DynamicHtmlView, RouterView } = instance.registerComponents();
+  const { _DynamicHtmlView, _RouterView } = instance.registerComponents();
 
-  return class Component extends window.HTMLElement {
+  return class Component
+    extends mainScope.HTMLElement
+    implements InstancedHTMLComponent
+  {
     constructor() {
       super();
     }
@@ -32,16 +36,16 @@ const getClass = (
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          DynamicHtmlView.then(({ useComponent }) =>
-            useComponent?.({
-              contentGetter() {
+          _DynamicHtmlView.then(({ useComponent }) =>
+            useComponent({
+              contentGetter: () => {
                 return `
                     <h1>${mainScope.store.data.home.titleWithName}</h1>
                   `;
               },
             }),
           ),
-          RouterView.then(({ useComponent }) => useComponent()),
+          _RouterView.then(({ useComponent }) => useComponent()),
         ],
       });
     }
