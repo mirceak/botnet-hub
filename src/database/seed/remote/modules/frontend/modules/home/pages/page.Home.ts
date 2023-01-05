@@ -19,7 +19,7 @@ const scopedCss = `
         appearance: none;
         border-radius: 4px;
         transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-      &:focus{
+        &:focus{
           color: #212529;
           background-color: #fff;
           border-color: #86b7fe;
@@ -90,6 +90,7 @@ const getClass = (
           ),
           _TemplateList.then(({ useComponent }) =>
             useComponent({
+              noWatcher: true,
               listGetter: () => [
                 _DynamicHtmlView.then(({ useComponent }) =>
                   useComponent({
@@ -97,6 +98,7 @@ const getClass = (
                       <small>Consider this scoped</small>
                       <input-component x-scope="xInputScope"></input-component>
                       <button-component x-scope="xButtonScope"></button-component>
+                      <template-list-view-component x-scope="xListScope"></template-list-view-component>
                     `,
                     scopesGetter: () => ({
                       xInputScope: _Input.then(({ useComponent }) =>
@@ -104,20 +106,53 @@ const getClass = (
                           onInput: (value: string) =>
                             (mainScope.store.data.home.nameInput = value),
                           attributes: {
-                            placeholder: 'Enter Yousr Name',
+                            placeholder: 'Test Input',
                           },
                         }),
                       ),
                       xButtonScope: _Button.then(({ useComponent }) =>
                         useComponent({
-                          label: 'Enter Yossur Name',
+                          label: 'Test Button',
+                        }),
+                      ),
+                      xListScope: _TemplateList.then(({ useComponent }) =>
+                        useComponent({
+                          noWatcher: true,
+                          listGetter: () => [
+                            _DynamicHtmlView.then(({ useComponent }) =>
+                              useComponent({
+                                contentGetter: () => `
+                                  <small>Consider this nested and scoped</small>
+                                  <input-component x-scope="xInputScope"></input-component>
+                                  <button-component x-scope="xButtonScope"></button-component>
+                                `,
+                                scopesGetter: () => ({
+                                  xInputScope: _Input.then(({ useComponent }) =>
+                                    useComponent({
+                                      onInput: (value: string) =>
+                                        (mainScope.store.data.home.nameInput =
+                                          value),
+                                      attributes: {
+                                        placeholder: 'Test Nested Input',
+                                      },
+                                    }),
+                                  ),
+                                  xButtonScope: _Button.then(
+                                    ({ useComponent }) =>
+                                      useComponent({
+                                        label: 'Test Nested Button',
+                                      }),
+                                  ),
+                                }),
+                              }),
+                            ),
+                          ],
                         }),
                       ),
                     }),
                   }),
                 ),
               ],
-              noWatcher: true,
             }),
           ),
           _DynamicHtmlView.then(({ useComponent }) =>

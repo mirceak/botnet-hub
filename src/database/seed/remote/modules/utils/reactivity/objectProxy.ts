@@ -57,7 +57,8 @@ const registerWatchedProxy = <ProxyMap extends IWeakMap>(
     options.propsCallbackToRegister &&
     Object.keys(options.propsCallbackToRegister).indexOf('_oldValues') === -1
   ) {
-    /*must keep the same reference to the old values across the tree*/
+    /* Must keep the same reference to the old values across the tree, so we disable watchers and get the values. */
+    /* Results will be the same, so we don't worry about triggering older watchers. */
     const values = [] as unknown[];
     const oldPropsCallbackToRegister = options.propsCallbackToRegister;
     const callbackToRegister = options.callbackToRegister;
@@ -168,7 +169,7 @@ const handler = <
   },
   set(obj: ObjectType, prop: symbol, value: ObjectType, receiver: unknown) {
     if (isObject(value)) {
-      /* keep all previous references alive. removing this would replace references to existing variables invalidating existing watchers using external variables to reference the tree*/
+      /* keep all previous references alive. removing this would replace references to existing variables invalidating existing watchers using external variables to reference the tree */
       if (this._proxySet.has(prop)) {
         if (obj[prop] != null) {
           /* we are replacing the existing values of the proxy tree we're currently on*/
