@@ -11,11 +11,11 @@ describe('greeter function', () => {
         return {
           async runImports() {
             return {
-              start() {},
+              start() {}
             };
-          },
+          }
         };
-      },
+      }
     }));
     import('@kernel/Kernel.js');
 
@@ -29,7 +29,7 @@ describe('greeter function', () => {
   it('logs "start" into the console', () => {
     expect(consoleLogSpy).toHaveBeenCalledTimes(1);
     expect(consoleLogSpy).toHaveBeenLastCalledWith(
-      expect.stringMatching('start'),
+      expect.stringMatching('start')
     );
   });
 });

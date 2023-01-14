@@ -1,4 +1,4 @@
-import { sayHey, Delays } from '@src/exampleTest/example.js';
+import { sayHey, Delays } from '@src/exampleTest/example.easy-to-test.js';
 const { useFakeTimers, spyOn, runOnlyPendingTimers } = import.meta.jest;
 
 describe('sayHey function', () => {
@@ -12,7 +12,7 @@ describe('sayHey function', () => {
     timeoutSpy = spyOn(global, 'setTimeout');
     consoleLogSpy = spyOn(global.console, 'log');
 
-    sayHey(name);
+    void sayHey(name);
     runOnlyPendingTimers();
   });
 
@@ -25,14 +25,14 @@ describe('sayHey function', () => {
     expect(setTimeout).toHaveBeenCalledTimes(1);
     expect(setTimeout).toHaveBeenLastCalledWith(
       expect.any(Function),
-      Delays.Medium,
+      Delays.Medium
     );
   });
 
   it('greets a user with `Hello, {name}, the world says hello` message', () => {
     expect(consoleLogSpy).toHaveBeenCalledTimes(1);
     expect(consoleLogSpy).toHaveBeenLastCalledWith(
-      expect.stringMatching('Hey John, the world says hello!'),
+      expect.stringMatching('Hey John, the world says hello!')
     );
   });
 });

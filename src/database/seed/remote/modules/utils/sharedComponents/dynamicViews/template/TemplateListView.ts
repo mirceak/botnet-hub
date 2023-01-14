@@ -1,7 +1,7 @@
 import type {
   InstancedHTMLComponent,
   IHTMLElementComponentTemplate,
-  IHTMLElementsScope,
+  IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
@@ -29,11 +29,11 @@ const getClass = (mainScope: IHTMLElementsScope) => {
           props: [() => scope.listGetter()],
           computed: () => {
             this.render(mainScope, scope.listGetter());
-          },
+          }
         };
         mainScope.store.registerOnChangeCallback(
           this.computeRender.props,
-          this.computeRender.computed,
+          this.computeRender.computed
         );
       }
 
@@ -46,11 +46,11 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 
     render(
       mainScope: IHTMLElementsScope,
-      value: IHTMLElementComponentTemplate['components'],
+      value: IHTMLElementComponentTemplate['components']
     ) {
-      mainScope.asyncLoadComponentTemplate({
+      void mainScope.asyncLoadComponentTemplate({
         target: this,
-        components: value,
+        components: value
       });
     }
 
@@ -58,7 +58,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
       if (this.computeRender) {
         mainScope.store.unRegisterOnChangeCallback(
           this.computeRender.props,
-          this.computeRender.computed,
+          this.computeRender.computed
         );
       }
     }

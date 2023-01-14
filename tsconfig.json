@@ -25,7 +25,8 @@
       "@helpers/*": ["./src/helpers/*"],
       "@kernel/*": ["./src/kernel/*"],
       "@database/*": ["./src/database/*"],
-      "@remoteModules/*": ["./src/database/seed/remote/modules/*"]
+      "@remoteModules/*": ["./src/database/seed/remote/modules/*"],
+      "@remoteFiles/*": ["./src/database/seed/remote/modules/utils/assets/*"]
     }
   },
   "typedocOptions": {
@@ -37,6 +38,6 @@
     ],
     "out": "docs"
   },
-  "include": ["src/**/*"],
-  "exclude": ["src/exampleTest/**/*", "src/**/*.test.ts", "node_modules/**/*"]
+  "exclude": ["**/*(.|-)test.ts", "node_modules/**/*"],
+  "include": ["src/**/*.ts"]
 }

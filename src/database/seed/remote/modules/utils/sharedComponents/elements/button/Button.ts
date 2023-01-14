@@ -1,6 +1,6 @@
 import type {
-  InstancedHTMLComponent,
   IHTMLElementsScope,
+  InstancedHTMLComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
@@ -13,7 +13,8 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     extends mainScope.HTMLElement
     implements InstancedHTMLComponent
   {
-    private removeOnClickListener?: CallableFunction;
+    private removeClickListener?: CallableFunction;
+
     constructor() {
       super();
     }
@@ -24,12 +25,12 @@ const getClass = (mainScope: IHTMLElementsScope) => {
       }
 
       if (scope.onClick) {
-        this.removeOnClickListener = mainScope.registerEventListener(
+        this.removeClickListener = mainScope.registerEventListener(
           this.children[0],
           'click',
           () => {
             scope.onClick?.();
-          },
+          }
         );
       }
     }
@@ -41,7 +42,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     }
 
     disconnectedCallback() {
-      this.removeOnClickListener?.();
+      this.removeClickListener?.();
     }
   };
 };

@@ -9,7 +9,7 @@ declare module 'vm' {
         context: Context;
         identifier: string;
         importModuleDynamically(specifier: string): Promise<Module>;
-      },
+      }
     );
 
     evaluate(): Promise<void>;

@@ -1,3 +1,4 @@
 /**/*.js
+/**/*.mjs
 /**/*.test.ts
 /**/*.test.mts

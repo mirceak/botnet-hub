@@ -1,6 +1,6 @@
 import type {
   InstancedHTMLComponent,
-  IHTMLElementsScope,
+  IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 const templateHtml = `

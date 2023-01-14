@@ -1,6 +1,6 @@
 import type {
   IHTMLElementsScope,
-  InstancedHTMLComponent,
+  InstancedHTMLComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
@@ -34,7 +34,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
           'input',
           (e: InputEvent) => {
             scope.onInput?.((e.target as HTMLInputElement).value);
-          },
+          }
         );
       }
     }

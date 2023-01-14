@@ -1,62 +1,43 @@
 import type {
   InstancedHTMLComponent,
-  IHTMLElementsScope,
+  IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-const scopedCss = `
-<style staticScope lang="sass">
-  home-component {
-    input-component {
-      input {
-        padding: 6px 12px;
-        font-size: 16px;
-        font-weight: 400;
-        line-height: 1.5;
-        color: #212529;
-        background-color: #fff;
-        background-clip: padding-box;
-        border: 1px solid #ced4da;
-        appearance: none;
-        border-radius: 4px;
-        transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-        &:focus{
-          color: #212529;
-          background-color: #fff;
-          border-color: #86b7fe;
-          outline: 0;
-          box-shadow: 0 0 0 0.25rem rgb(13 110 253 / 25%);
-        }            
-      }
-    }
+const scopedCss = /* language=scss */ `
+  main-component {
+      home-component  {
+      display: flex;
+      flex-direction: column;
+    align-items: center;
+      min-width: fit-content;
   }
-</style staticScope>`;
+}`;
 
 const getComponents = (mainScope: IHTMLElementsScope) => ({
   _DynamicHtmlView: mainScope.asyncRegisterComponent(
     () =>
       import(
         '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-      ),
+      )
   ),
   _Input: mainScope.asyncRegisterComponent(
-    () =>
-      import('@remoteModules/utils/sharedComponents/form/elements/Input.js'),
+    () => import('@remoteModules/utils/sharedComponents/form/elements/Input.js')
   ),
   _Button: mainScope.asyncRegisterComponent(
     () =>
-      import('@remoteModules/utils/sharedComponents/elements/button/Button.js'),
+      import('@remoteModules/utils/sharedComponents/elements/button/Button.js')
   ),
   _TemplateList: mainScope.asyncRegisterComponent(
     () =>
       import(
         '@remoteModules/utils/sharedComponents/dynamicViews/template/TemplateListView.js'
-      ),
-  ),
+      )
+  )
 });
 
 const getClass = (
   mainScope: IHTMLElementsScope,
-  instance: ReturnType<typeof getSingleton>,
+  instance: ReturnType<typeof getSingleton>
 ) => {
   const { _DynamicHtmlView, _Input, _Button, _TemplateList } =
     instance.registerComponents();
@@ -70,7 +51,7 @@ const getClass = (
     }
 
     init() {
-      mainScope.asyncLoadComponentTemplate({
+      void mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           _Input.then(({ useComponent }) =>
@@ -78,15 +59,15 @@ const getClass = (
               onInput: (value: string) =>
                 (mainScope.store.data.home.nameInput = value),
               attributes: {
-                placeholder: 'Enter Your Name',
-              },
-            }),
+                placeholder: 'Enter Your Name'
+              }
+            })
           ),
           _Button.then(({ useComponent }) =>
             useComponent({
-              onClick: () => mainScope.router.push('about'),
-              label: 'Go To About',
-            }),
+              onClick: () => void mainScope.router.push('about'),
+              label: 'Go To About'
+            })
           ),
           _TemplateList.then(({ useComponent }) =>
             useComponent({
@@ -98,7 +79,7 @@ const getClass = (
                       <small>Consider this scoped</small>
                       <input-component x-scope="xInputScope"></input-component>
                       <button-component x-scope="xButtonScope"></button-component>
-                      <template-list-view-component x-scope="xListScope"></template-list-view-component>
+                      <template-list-view-component x-scope="xListViewScope"></template-list-view-component>
                     `,
                     scopesGetter: () => ({
                       xInputScope: _Input.then(({ useComponent }) =>
@@ -106,16 +87,16 @@ const getClass = (
                           onInput: (value: string) =>
                             (mainScope.store.data.home.nameInput = value),
                           attributes: {
-                            placeholder: 'Test Input',
-                          },
-                        }),
+                            placeholder: 'Test Input'
+                          }
+                        })
                       ),
                       xButtonScope: _Button.then(({ useComponent }) =>
                         useComponent({
-                          label: 'Test Button',
-                        }),
+                          label: 'Test Button'
+                        })
                       ),
-                      xListScope: _TemplateList.then(({ useComponent }) =>
+                      xListViewScope: _TemplateList.then(({ useComponent }) =>
                         useComponent({
                           noWatcher: true,
                           listGetter: () => [
@@ -133,27 +114,27 @@ const getClass = (
                                         (mainScope.store.data.home.nameInput =
                                           value),
                                       attributes: {
-                                        placeholder: 'Test Nested Input',
-                                      },
-                                    }),
+                                        placeholder: 'Test Nested Input'
+                                      }
+                                    })
                                   ),
                                   xButtonScope: _Button.then(
                                     ({ useComponent }) =>
                                       useComponent({
-                                        label: 'Test Nested Button',
-                                      }),
-                                  ),
-                                }),
-                              }),
-                            ),
-                          ],
-                        }),
-                      ),
-                    }),
-                  }),
-                ),
-              ],
-            }),
+                                        label: 'Test Nested Button'
+                                      })
+                                  )
+                                })
+                              })
+                            )
+                          ]
+                        })
+                      )
+                    })
+                  })
+                )
+              ]
+            })
           ),
           _DynamicHtmlView.then(({ useComponent }) =>
             useComponent({
@@ -161,10 +142,10 @@ const getClass = (
                 return instance.useScopedCss();
               },
               noWatcher: true,
-              instant: true,
-            }),
-          ),
-        ],
+              instant: true
+            })
+          )
+        ]
       });
     }
   };

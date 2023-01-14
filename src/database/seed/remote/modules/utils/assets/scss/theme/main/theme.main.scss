@@ -1,0 +1,23 @@
+@import 'src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/basic';
+@import 'src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/input';
+@import 'src/database/seed/remote/modules/utils/assets/scss/theme/main/layout/layout.main';
+
+@import 'src/database/seed/remote/modules/utils/assets/scss/helpers/sizing';
+@import 'src/database/seed/remote/modules/utils/assets/scss/helpers/display';
+
+body {
+  display: flex;
+  height: 100dvh;
+  margin: 0;
+  width: 100dvw;
+
+  * {
+    display: block;
+    height: auto;
+  }
+
+  style,
+  script {
+    display: none !important;
+  }
+}

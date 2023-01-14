@@ -4,7 +4,7 @@ import type {
   HasOneSetAssociationMixin,
   InferAttributes,
   InferCreationAttributes,
-  Model,
+  Model
 } from 'sequelize';
 
 export const useHasOneMixin = <
@@ -15,10 +15,10 @@ export const useHasOneMixin = <
   TargetEntity extends Model<
     InferAttributes<TargetEntity>,
     InferCreationAttributes<TargetEntity>
-  >,
+  >
 >(
   sourceEntityInstance: SourceEntityInstance,
-  targetEntityName: string,
+  targetEntityName: string
 ): HasOneMixin<TargetEntity> => {
   return {
     getEntity: (
@@ -38,7 +38,7 @@ export const useHasOneMixin = <
         string,
         HasOneCreateAssociationMixin<TargetEntity>
       >
-    )[`create${targetEntityName}`].bind(sourceEntityInstance),
+    )[`create${targetEntityName}`].bind(sourceEntityInstance)
   };
 };
 
@@ -46,7 +46,7 @@ export type HasOneMixin<
   TargetEntity extends Model<
     InferAttributes<TargetEntity>,
     InferCreationAttributes<TargetEntity>
-  >,
+  >
 > = {
   getEntity: HasOneGetAssociationMixin<TargetEntity>;
   setEntity: HasOneSetAssociationMixin<TargetEntity, string | number>;

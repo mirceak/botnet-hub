@@ -9,7 +9,7 @@ interface HomeModuleState {
 
 class State {
   home: HomeModuleState = {
-    title: 'Welcome',
+    title: 'Welcome'
   };
 }
 
@@ -22,30 +22,31 @@ const startComputing = (storeProxyState: ReturnType<typeof useProxyState>) => {
     computed() {
       const home = homeModule();
       if (home) {
-        home.titleWithName =
-          home.title + (home.nameInput ? ' ' + home.nameInput + '!' : '!');
+        home.titleWithName = `${home.title || ''}${
+          home.nameInput ? ' ' + home.nameInput + '!' : '!'
+        }`;
       }
-    },
+    }
   };
   storeProxyState.registerOnChangeCallback(
     titleWithNameCompute.props,
-    titleWithNameCompute.computed,
+    titleWithNameCompute.computed.bind(this)
   );
 
   titleWithNameCompute.computed();
 };
 
 export const useProxyState = (
-  ProxyObject: typeof IProxyObject,
+  ProxyObject: typeof IProxyObject
 ): ReturnType<typeof IProxyObject<ReturnType<typeof useState>>> => {
   return ProxyObject(useState());
 };
 
 export const useStore = async (mainScope: IHTMLElementsScope) => {
   const { ProxyObject } = await mainScope.loadModule(
-    () => import('@remoteModules/utils/reactivity/objectProxy.js'),
+    () => import('@remoteModules/utils/reactivity/objectProxy.js')
   );
-  const proxyObject = await useProxyState(ProxyObject);
+  const proxyObject = useProxyState(ProxyObject);
   startComputing(proxyObject);
   return {
     data: proxyObject.data,
@@ -57,7 +58,7 @@ export const useStore = async (mainScope: IHTMLElementsScope) => {
       // @ts-ignore
       delete store.data.home.__removeTree;
       delete store.data;
-    },
+    }
   };
 };
 

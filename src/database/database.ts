@@ -3,13 +3,13 @@ import { type IKernelModuleInit } from '@kernel/Kernel.js';
 
 export const init: IKernelModuleInit = async (context) => {
   context.kernelGlobals.sequelize = new Sequelize('sqlite::memory:', {
-    typeValidation: true,
+    typeValidation: true
   });
   await context.runImports([
     import('@database/entities/Script.js'),
     import('@database/entities/RemoteModule.js'),
     import('@database/entities/Guard.js'),
-    import('@database/entities/Entity.js'),
+    import('@database/entities/Entity.js')
   ]);
 };
 

@@ -3,13 +3,13 @@ import {
   type InferAttributes,
   type InferCreationAttributes,
   Model,
-  type Sequelize,
+  type Sequelize
 } from 'sequelize';
 import { type IKernelModuleInit } from '@src/kernel/Kernel.js';
 import { type Guard } from './Guard.js';
 import {
   type HasManyMixin,
-  useHasManyMixin,
+  useHasManyMixin
 } from '@database/entities/mixins/HasManyMixin.js';
 
 export class Entity extends Model<
@@ -26,14 +26,14 @@ export class Entity extends Model<
   }
 }
 
-export const init: IKernelModuleInit = async (context) => {
-  await Entity.init(
+export const init: IKernelModuleInit = (context) => {
+  Entity.init(
     {
-      name: { type: DataTypes.STRING },
+      name: { type: DataTypes.STRING }
     },
     {
       sequelize: context.kernelGlobals.sequelize as Sequelize,
-      modelName: 'entity',
-    },
+      modelName: 'entity'
+    }
   );
 };

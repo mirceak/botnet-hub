@@ -14,14 +14,14 @@ type IOptions<T> = {
   propsCallbackToRegister?: CallableFunction[];
   registerOnChangeCallback: (
     propsCallbacks: CallableFunction[],
-    callback: CallableFunction,
+    callback: CallableFunction
   ) => void;
 };
 
 const isObject = (val: unknown) => {
   return (
     ['[object Object]', '[object Array]'].indexOf(
-      Object.prototype.toString.call(val),
+      Object.prototype.toString.call(val)
     ) > -1
   );
 };
@@ -29,9 +29,12 @@ const isObject = (val: unknown) => {
 const registerWatchedProxy = <ProxyMap extends IWeakMap>(
   obj: object,
   prop: symbol,
-  options: IOptions<ProxyMap>,
+  options: IOptions<ProxyMap>
 ) => {
-  let watchers = options.watchedProxiesMap.get(obj);
+  let watchers = options.watchedProxiesMap.get(obj) as Map<
+    typeof prop,
+    typeof obj
+  >;
   if (!watchers) {
     if (options.unRegisteringOnChangeCallback) {
       return;
@@ -39,7 +42,7 @@ const registerWatchedProxy = <ProxyMap extends IWeakMap>(
     options.watchedProxiesMap.set(obj, (watchers = new Map()));
   }
 
-  let callbacksPacks = watchers.get(prop);
+  let callbacksPacks = watchers.get(prop) as [Set<unknown>, Set<unknown>];
   if (!callbacksPacks) {
     if (options.unRegisteringOnChangeCallback) {
       return;
@@ -49,7 +52,8 @@ const registerWatchedProxy = <ProxyMap extends IWeakMap>(
 
   if (options.unRegisteringOnChangeCallback) {
     callbacksPacks[0].delete(options.propsCallbackToRegister);
-    return callbacksPacks[1].delete(options.callbackToRegister);
+    callbacksPacks[1].delete(options.callbackToRegister);
+    return;
   }
   callbacksPacks[0].add(options.propsCallbackToRegister);
   callbacksPacks[1].add(options.callbackToRegister);
@@ -78,9 +82,12 @@ const registerWatchedProxy = <ProxyMap extends IWeakMap>(
 const triggerWatchers = <ProxyMap extends IWeakMap>(
   obj: object,
   prop: symbol,
-  options: IOptions<ProxyMap>,
+  options: IOptions<ProxyMap>
 ) => {
-  const watchers = options.watchedProxiesMap.get(obj);
+  const watchers = options.watchedProxiesMap.get(obj) as Map<
+    typeof prop,
+    [Array<Record<string | number, () => unknown>>, []]
+  >;
   if (watchers) {
     const callbacksPacks = watchers.get(prop);
 
@@ -90,26 +97,35 @@ const triggerWatchers = <ProxyMap extends IWeakMap>(
       const callbacks = [..._callbacks];
       for (let i = 0; i < callbacks.length; i++) {
         if (options.reRegisteringOnChangeCallback) {
-          options.registerOnChangeCallback(propCallbacks[i], callbacks[i]);
+          options.registerOnChangeCallback(
+            propCallbacks[i] as unknown as CallableFunction[],
+            callbacks[i]
+          );
         }
         let foundChange = false;
         const newValues = [] as unknown[];
         Object.keys(propCallbacks[i]).forEach((key, index) => {
-          if (!isNaN(+key)) {
-            const newValue = propCallbacks[i][key]();
-            if (newValue !== propCallbacks[i]['_oldValues'][index]) {
+          if (!isNaN(+key) && typeof +key === 'number') {
+            const newValue = propCallbacks[i][+key]();
+            const oldValue = (
+              propCallbacks[i]['_oldValues'] as unknown as Record<
+                string | number,
+                () => unknown
+              >
+            )[index] as unknown;
+            if (newValue !== oldValue) {
               foundChange = true;
             }
             newValues.push(newValue);
           }
         });
         if (foundChange) {
-          propCallbacks[i]._oldValues.splice(
+          (propCallbacks[i]['_oldValues'] as unknown as Array<unknown>).splice(
             0,
-            propCallbacks[i]._oldValues.length,
-            ...newValues,
+            propCallbacks[i]['_oldValues'].length,
+            ...newValues
           );
-          callbacks[i]();
+          (callbacks[i] as CallableFunction)();
         }
       }
     }
@@ -118,11 +134,11 @@ const triggerWatchers = <ProxyMap extends IWeakMap>(
 const handler = <
   ObjectType extends Record<symbol, ObjectType>,
   ProxyMap extends IWeakMap,
-  Parent extends Record<string, Parent>,
+  Parent extends Record<string, Parent>
 >(
   options: IOptions<ProxyMap>,
   _parent: Parent & ObjectType,
-  _thisProp: string | 'root',
+  _thisProp: string | 'root'
 ) => ({
   _proxySet: new Map(),
   _thisProp,
@@ -135,9 +151,9 @@ const handler = <
           prop,
           new Proxy(
             obj[prop],
-            handler(options, this, prop as unknown as string),
+            handler(options, this, prop as unknown as string)
           ),
-          receiver,
+          receiver
         );
         this._proxySet.set(prop, obj[prop]);
       }
@@ -156,7 +172,7 @@ const handler = <
           if (parent._parent) {
             (parent._parent as unknown as Record<'get', CallableFunction>).get(
               parent._parent,
-              parent._thisProp as unknown as keyof typeof parent._parent,
+              parent._thisProp as unknown as keyof typeof parent._parent
             );
           }
           parent = parent._parent as typeof parent;
@@ -179,7 +195,7 @@ const handler = <
           Reflect.set(obj, prop, value, receiver);
           this._proxySet.set(
             prop,
-            new Proxy(value, handler(options, this, prop as unknown as string)),
+            new Proxy(value, handler(options, this, prop as unknown as string))
           );
         }
       } else {
@@ -188,7 +204,7 @@ const handler = <
           obj,
           prop,
           new Proxy(value, handler(options, this, prop as unknown as string)),
-          receiver,
+          receiver
         );
         this._proxySet.set(prop, obj[prop]);
       }
@@ -228,7 +244,7 @@ const handler = <
       triggerWatchers(this, prop, options);
     }
     return true;
-  },
+  }
 });
 
 /*If an object's structure is like a two-dimensional tree, a ProxyObject's structure is like a three-dimensional tree where it's main structure mirrors the original object's and some branches have depth because we need multiple instances of the same structures.*/
@@ -246,7 +262,7 @@ export const ProxyObject = <T>(obj: T) => {
     propsCallbackToRegister: undefined as CallableFunction[] | undefined,
     registerOnChangeCallback(
       propsCallbacks: CallableFunction[],
-      callback: CallableFunction,
+      callback: CallableFunction
     ) {
       options.callbackToRegister = callback;
       options.propsCallbackToRegister = propsCallbacks;
@@ -258,17 +274,19 @@ export const ProxyObject = <T>(obj: T) => {
     },
     unRegisterOnChangeCallback(
       propsCallbacks: CallableFunction[],
-      callback: CallableFunction,
+      callback: CallableFunction
     ) {
       options.unRegisteringOnChangeCallback = true;
       this.registerOnChangeCallback(propsCallbacks, callback);
       options.unRegisteringOnChangeCallback = false;
-    },
+    }
   };
   return {
     /*need to make this entire object a proxy and protect data from deletion as well as make sure new entries */
     data: new Proxy(obj, handler(options, undefined, 'root')) as T,
-    registerOnChangeCallback: options.registerOnChangeCallback,
-    unRegisterOnChangeCallback: options.unRegisterOnChangeCallback,
+    registerOnChangeCallback: options.registerOnChangeCallback.bind(options),
+    unRegisterOnChangeCallback:
+      options.unRegisterOnChangeCallback.bind(options),
+    options
   };
 };

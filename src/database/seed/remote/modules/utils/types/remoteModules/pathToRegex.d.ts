@@ -32,17 +32,17 @@ declare module '@node_modules/path-to-regexp/dist.es2015/index.js' {
    */
   export declare function compile<P extends object = object>(
     str: string,
-    options?: ParseOptions & TokensToFunctionOptions,
+    options?: ParseOptions & TokensToFunctionOptions
   ): PathFunction<P>;
   export declare type PathFunction<P extends object = object> = (
-    data?: P,
+    data?: P
   ) => string;
   /**
    * Expose a method for transforming tokens into the path function.
    */
   export declare function tokensToFunction<P extends object = object>(
     tokens: Token[],
-    options?: TokensToFunctionOptions,
+    options?: TokensToFunctionOptions
   ): PathFunction<P>;
   export interface RegexpToFunctionOptions {
     /**
@@ -66,14 +66,14 @@ declare module '@node_modules/path-to-regexp/dist.es2015/index.js' {
    * The match function takes a string and returns whether it matched the path.
    */
   export declare type MatchFunction<P extends object = object> = (
-    path: string,
+    path: string
   ) => Match<P>;
   /**
    * Create path match function from `path-to-regexp` spec.
    */
   export declare function match<P extends object = object>(
     str: Path,
-    options?: ParseOptions & TokensToRegexpOptions & RegexpToFunctionOptions,
+    options?: ParseOptions & TokensToRegexpOptions & RegexpToFunctionOptions
   ): MatchFunction<P>;
   /**
    * Create a path match function from `path-to-regexp` output.
@@ -81,7 +81,7 @@ declare module '@node_modules/path-to-regexp/dist.es2015/index.js' {
   export declare function regexpToFunction<P extends object = object>(
     re: RegExp,
     keys: Key[],
-    options?: RegexpToFunctionOptions,
+    options?: RegexpToFunctionOptions
   ): MatchFunction<P>;
   /**
    * Metadata about a key.
@@ -133,7 +133,7 @@ declare module '@node_modules/path-to-regexp/dist.es2015/index.js' {
   export declare function tokensToRegexp(
     tokens: Token[],
     keys?: Key[],
-    options?: TokensToRegexpOptions,
+    options?: TokensToRegexpOptions
   ): RegExp;
   /**
    * Supported `path-to-regexp` input types.
@@ -149,6 +149,6 @@ declare module '@node_modules/path-to-regexp/dist.es2015/index.js' {
   export declare function pathToRegexp(
     path: Path,
     keys?: Key[],
-    options?: TokensToRegexpOptions & ParseOptions,
+    options?: TokensToRegexpOptions & ParseOptions
   ): RegExp;
 }

@@ -11,7 +11,7 @@ import type {
   HasManySetAssociationsMixin,
   InferAttributes,
   InferCreationAttributes,
-  Model,
+  Model
 } from 'sequelize';
 
 export const useHasManyMixin = <
@@ -22,10 +22,10 @@ export const useHasManyMixin = <
   TargetEntity extends Model<
     InferAttributes<TargetEntity>,
     InferCreationAttributes<TargetEntity>
-  >,
+  >
 >(
   sourceEntityInstance: SourceEntityInstance,
-  targetEntityName: string,
+  targetEntityName: string
 ): HasManyMixin<TargetEntity> => {
   return {
     getEntities: (
@@ -87,7 +87,7 @@ export const useHasManyMixin = <
         string,
         HasManyCreateAssociationMixin<TargetEntity>
       >
-    )[`create${targetEntityName}`].bind(sourceEntityInstance),
+    )[`create${targetEntityName}`].bind(sourceEntityInstance)
   };
 };
 
@@ -95,7 +95,7 @@ export type HasManyMixin<
   TargetEntity extends Model<
     InferAttributes<TargetEntity>,
     InferCreationAttributes<TargetEntity>
-  >,
+  >
 > = {
   getEntities: HasManyGetAssociationsMixin<TargetEntity>;
   addEntity: HasManyAddAssociationMixin<TargetEntity, string | number>;

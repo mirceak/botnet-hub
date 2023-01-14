@@ -1,8 +1,11 @@
-import { type IKernelBackendWorkerLoad } from '@kernel/Kernel.js';
+import {
+  IKernelBackendWorker,
+  type IKernelBackendWorkerLoad
+} from '@kernel/Kernel.js';
 
 interface JsdomWorkerLoad extends IKernelBackendWorkerLoad {
   id?: string;
-  callback?: (data: string) => Promise<void>;
+  callback?: (data: string) => void;
 }
 
 const { default: cluster } = await import('cluster');
@@ -10,53 +13,56 @@ if (cluster.isPrimary) {
   const childProc = cluster.fork();
   const jsDocWorkers = [] as JsdomWorkerLoad[];
 
-  childProc.on('message', async (html) => {
+  childProc.on('message', (html: Record<string, string>) => {
     const index = jsDocWorkers.findIndex((jsDocWorker) => {
       return jsDocWorker.id === html.id;
     });
-    await jsDocWorkers[index].callback?.(html.data);
+
+    jsDocWorkers[index].callback?.(html.data);
     delete jsDocWorkers[index].id;
     delete jsDocWorkers[index].callback;
     jsDocWorkers.splice(index, 1);
   });
 
   kernelGlobals.backendWorkers.jsdom = {
-    async runJob(workerLoad: JsdomWorkerLoad) {
+    runJob(workerLoad: JsdomWorkerLoad) {
       const id = Date.now().toString();
       jsDocWorkers.push({
         callback: workerLoad.callback,
         payload: workerLoad.payload,
-        id,
+        id
       });
       childProc.send({ payload: workerLoad.payload, id });
-    },
-  };
+    }
+  } as IKernelBackendWorker;
 } else {
   const { JSDOM } = await import('jsdom');
+
+  /*language=HTML*/
   const htm = `<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/html">
-<head>
-<link rel="icon" href="data:,">
-</head>
-<body/>
-</html>`;
+	  <html   xmlns='http://www.w3.org/1999/html'>
+		<head>
+			<link rel='icon' href='data:,' />
+			  <meta name='viewport' content='width=device-width, initial-scale=1' />
+		</head>
+		<body />
+	</html> `;
   let processId: string;
   const dom = new JSDOM(htm, { runScripts: 'outside-only' });
   dom.window.SSR = true;
 
-  const dynamicImportWatcher = [] as Record<string, unknown>[];
-
+  const dynamicImportWatcher = [] as { code: string; path: string }[];
   const { registerMainComponent } =
     (await kernelGlobals.loadAndImportRemoteModule(
       '@remoteModules/frontend/engine/components/Main.js',
       {
-        window: dom.window,
-      },
+        window: dom.window
+      }
     )) as typeof import('@remoteModules/frontend/engine/components/Main.js');
-  await registerMainComponent();
+  registerMainComponent();
 
   const mainModuleScript = await kernelGlobals.loadRemoteModule(
-    '@remoteModules/frontend/engine/components/Main.js',
+    '@remoteModules/frontend/engine/components/Main.js'
   );
 
   dom.window.onHTMLReady = () => {
@@ -64,26 +70,28 @@ if (cluster.isPrimary) {
     dynamicImportWatchers.delete(dynamicImportWatcher);
     htmlBody = htmlBody.replace(
       '</body>',
-      `<script type="module">
-${mainModuleScript.script?.code
-  .replace(
-    '__modulesLoadedWithSSR = [];',
-    `__modulesLoadedWithSSR = ${JSON.stringify(dynamicImportWatcher)};`,
-  )
-  .replace('hydrating = window._shouldHydrate;', `hydrating = true;`)
-  .replace('SSR = window.SSR;', `SSR = false;`)}
-</script></body>`,
+      `<script type='module'>
+${
+  mainModuleScript.script?.code
+    .replace(
+      '__modulesLoadedWithSSR = [];',
+      `__modulesLoadedWithSSR = ${JSON.stringify(dynamicImportWatcher)};`
+    )
+    .replace('hydrating = window._shouldHydrate;', `hydrating = true;`)
+    .replace('SSR = window.SSR;', `SSR = false;`) || ''
+}
+</script></body>`
     );
     dynamicImportWatcher.splice(0);
     process.send?.({
       id: processId,
-      data: htmlBody,
+      data: htmlBody
     });
   };
 
-  const onMessage = async ({
+  const onMessage = ({
     payload,
-    id,
+    id
   }: {
     payload: Record<string, string>;
     id: string;

@@ -3,16 +3,16 @@ import {
   type InferAttributes,
   type InferCreationAttributes,
   Model,
-  type Sequelize,
+  type Sequelize
 } from 'sequelize';
 import { type IKernelModuleInit } from '@src/kernel/Kernel.js';
 import {
   type HasManyMixin,
-  useHasManyMixin,
+  useHasManyMixin
 } from '@database/entities/mixins/HasManyMixin.js';
 import {
   type HasOneMixin,
-  useHasOneMixin,
+  useHasOneMixin
 } from '@database/entities/mixins/HasOneMixin.js';
 import { type RemoteModule } from './RemoteModule.js';
 
@@ -36,7 +36,7 @@ export class Guard extends Model<
     this.guardEntities = useHasManyMixin<Guard, Guard>(this, 'GuardGuard');
     this.remoteModuleEntity = useHasOneMixin<Guard, RemoteModule>(
       this,
-      'remoteModule',
+      'remoteModule'
     );
   }
 }
@@ -45,41 +45,41 @@ export enum Permissions {
   'create',
   'read',
   'update',
-  'delete',
+  'delete'
 }
 
 export enum Roles {
   'admin',
-  'guest',
+  'guest'
 }
 
-export const init: IKernelModuleInit = async (context) => {
-  await Guard.init(
+export const init: IKernelModuleInit = (context) => {
+  Guard.init(
     {
       name: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
-        primaryKey: true,
+        primaryKey: true
       },
       roles: {
         type: DataTypes.ARRAY(
           DataTypes.ENUM({
-            values: Object.keys(Roles),
-          }),
-        ),
+            values: Object.keys(Roles)
+          })
+        )
       },
       permissions: {
         type: DataTypes.ARRAY(
           DataTypes.ENUM({
-            values: Object.keys(Permissions),
-          }),
-        ),
-      },
+            values: Object.keys(Permissions)
+          })
+        )
+      }
     },
     {
       sequelize: context.kernelGlobals.sequelize as Sequelize,
-      modelName: 'guard',
-    },
+      modelName: 'guard'
+    }
   );
 };

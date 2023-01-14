@@ -1,10 +1,11 @@
 import type { IStore } from '@remoteModules/frontend/engine/store.js';
 import type { Router } from '@remoteModules/frontend/engine/router.js';
+import type { GenericFalsy } from '@remoteModules/utils/types/genericTypes.js';
 
 export type HTMLElementComponentStaticScope =
   | Promise<IHTMLElementComponentStaticScope>
   | IHTMLElementComponentStaticScope
-  | undefined;
+  | GenericFalsy;
 
 export type HTMLComponent = InstanceType<typeof AHTMLComponent> &
   IHTMLComponent;
@@ -47,20 +48,19 @@ export abstract class AHTMLComponent implements IHTMLComponent {
   scopedCssIdIndex = 0;
   registerComponent(
     componentName: string,
-    component: CustomElementConstructor,
+    component: CustomElementConstructor
   ) {
     window.customElements.define(componentName, component);
   }
   getScopedCss(css: string) {
-    return css.replace(
-      '<style staticScope',
-      `<style staticScope=${this.scopedCssIdIndex++}`,
-    );
+    return `
+      <style staticScope=${this.scopedCssIdIndex++}>${css}</style>
+    `;
   }
   public getComponentScope = <T>(componentName: string, _scope?: T) => {
     const scope = {
       ..._scope,
-      componentName: componentName,
+      componentName: componentName
     };
     return scope as typeof scope & T;
   };
@@ -69,7 +69,7 @@ export abstract class AHTMLComponent implements IHTMLComponent {
 
   abstract initComponent(mainScope: IHTMLElementsScope): void;
 
-  abstract useComponent(scope?: unknown): void;
+  abstract useComponent(scope?: unknown): HTMLElementComponentStaticScope;
 }
 
 abstract class HTMLElement extends window.HTMLElement implements IHTMLElement {
@@ -101,17 +101,17 @@ class HTMLElementsScope {
     target: T,
     event: Parameters<T['addEventListener']>[0],
     callback: (e: E) => void,
-    options?: Parameters<T['addEventListener']>[2],
+    options?: Parameters<T['addEventListener']>[2]
   ) => {
     target.addEventListener(
       event,
       callback as EventListenerOrEventListenerObject,
-      options,
+      options
     );
     return () =>
       target.removeEventListener(
         event,
-        callback as EventListenerOrEventListenerObject,
+        callback as EventListenerOrEventListenerObject
       );
   };
 
@@ -119,8 +119,8 @@ class HTMLElementsScope {
     if (scope?.attributes) {
       return Object.keys(scope.attributes).reduce((reduced, current) => {
         reduced += `${current}${
-          '="' + scope.attributes?.[current as keyof typeof scope.attributes] ||
-          ''
+          '="' +
+          (scope.attributes?.[current as keyof typeof scope.attributes] || '')
         }" `;
         return reduced;
       }, '');
@@ -131,7 +131,7 @@ class HTMLElementsScope {
   /*whatever async logic running in SSR must register through this method*/
   asyncHydrationCallback = async <T>(
     callback: () => Promise<T>,
-    symbol = Symbol(),
+    symbol = Symbol()
   ) => {
     if (this.SSR || this.hydrating) {
       this.componentHydrationCallbacks.add(symbol);
@@ -141,13 +141,13 @@ class HTMLElementsScope {
 
     if (this.SSR || this.hydrating) {
       this.componentHydrationCallbacks.delete(symbol);
-      await this.asyncInstantiationConnectionFinishedCallback();
+      this.asyncInstantiationConnectionFinishedCallback();
     }
   };
 
   /*we also need to wait for all components to get registered so that we know what modules we need to put in the __modulesLoadedWithSSR array*/
   asyncRegisterComponent = async <T extends HTMLComponentModule>(
-    importer: () => Promise<T>,
+    importer: () => Promise<T>
   ) => {
     let component;
     await this.asyncHydrationCallback(async () => {
@@ -160,7 +160,7 @@ class HTMLElementsScope {
 
   /*lazy loads components*/
   asyncLoadComponentTemplate = async (
-    template: IHTMLElementComponentTemplate,
+    template: IHTMLElementComponentTemplate
   ) => {
     const promises = [];
     for (let i = 0; i < template.components.length; i++) {
@@ -179,7 +179,7 @@ class HTMLElementsScope {
                         this.appendComponent(
                           template.target,
                           componentScope.componentName,
-                          i,
+                          i
                         ) as unknown as Record<
                           'init',
                           (scope: unknown) => Promise<void>
@@ -195,7 +195,7 @@ class HTMLElementsScope {
                     )?.init(componentScope);
                   });
               }
-            }),
+            })
           );
         }
       }
@@ -206,7 +206,7 @@ class HTMLElementsScope {
   appendComponent = (
     target: InstanceType<typeof window.HTMLElement>,
     tag: string,
-    index: number,
+    index: number
   ): InstancedHTMLComponent | undefined => {
     const componentConstructor = window.customElements.get(tag);
     if (componentConstructor) {
@@ -226,7 +226,7 @@ class HTMLElementsScope {
               appendIndex = _index;
             }
           }
-        },
+        }
       );
       if (appendIndex < 0) {
         target.appendChild(component);
@@ -239,7 +239,44 @@ class HTMLElementsScope {
   };
 
   /*we need to keep track of imports for the __modulesLoadedWithSSR array used to provide all initial required javascript when serverside rendering*/
-  loadModule = async <T>(importer: () => Promise<T>): Promise<T> => {
+  loadFile = async <T>(
+    importer: () => Promise<T>
+  ): Promise<Promise<string> | string> => {
+    let path = importer
+      .toString()
+      .match(/import\('.*'\)/g)?.[0]
+      .replace("import('", '')
+      .replace("')", '')
+      .split('./')
+      .pop() as string;
+    if (path.includes('node_modules')) {
+      path = '@' + path;
+    } else if (
+      !path.includes('@remoteModules/') &&
+      !path.includes('@remoteFiles/')
+    ) {
+      path = '@remoteModules/' + path;
+    }
+    if (!this.SSR) {
+      const fileData = this.__modulesLoadedWithSSR.find(
+        (module) => module.path === path
+      )?.code;
+      if (fileData) {
+        return fileData as unknown as string;
+      }
+      const parsedPath = '/@remoteModules/../../../../' + path;
+      const result = await (await fetch(parsedPath)).text();
+      this.__modulesLoadedWithSSR.push({
+        path,
+        code: result
+      });
+      return result;
+    } else {
+      return (await fetch(path)) as unknown as string;
+    }
+  };
+
+  loadModule = <T>(importer: () => Promise<T>): Promise<T> => {
     let path = importer
       .toString()
       .match(/import\('.*'\)/g)?.[0]
@@ -260,30 +297,30 @@ class HTMLElementsScope {
     let module;
     if (
       (module = this.__modulesLoadedWithSSR.find(
-        (module) => module.path === parsedPath,
+        (module) => module.path === parsedPath
       ))
     ) {
       const encodedJs = encodeURIComponent(module.code as string);
       const dataUri = 'data:text/javascript;charset=utf-8,' + encodedJs;
 
-      return await import(dataUri);
+      return import(dataUri) as Promise<T>;
     }
 
     if (!this.SSR) {
-      return await import(
+      return import(
         '/' +
           path.replace(
             '@node_modules/',
-            '@remoteModules/../../../../node_modules/',
+            '@remoteModules/../../../../node_modules/'
           )
-      );
+      ) as Promise<T>;
     } else {
-      return await import(parsedPath);
+      return import(parsedPath) as Promise<T>;
     }
   };
 
   /*we need to know when we're done rendering on the server so asynchronous components and registry entries need to declare themselves as promises*/
-  async asyncInstantiationConnectionFinishedCallback() {
+  asyncInstantiationConnectionFinishedCallback() {
     if (this.componentHydrationCallbacks.size === 0) {
       if (window.onHTMLReady) {
         /*used by SSR to signal everything loaded and page is rendered completely*/
@@ -301,7 +338,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
     constructor() {
       super();
 
-      this.init();
+      void this.init();
     }
 
     async init() {
@@ -323,46 +360,46 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                   () =>
                     import(
                       '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-                    ),
+                    )
                 )
                 .then((component) => {
                   if (window.SSR) {
                     component.routerViewRegister.clear();
                   }
                   return component;
-                }),
+                })
             ];
 
             if (!mainScope.hydrating) {
-              mainScope.asyncLoadComponentTemplate({
+              await mainScope.asyncLoadComponentTemplate({
                 target: this,
                 components: [
-                  RouterView.then((component) => component.useComponent()),
-                ],
+                  RouterView.then((component) => component.useComponent())
+                ]
               });
             }
           });
       });
     }
 
-    async disconnectedCallback() {
-      await mainScope.router.onDestroy();
-      await mainScope.store.onDestroy();
+    disconnectedCallback() {
+      mainScope.router.onDestroy();
+      mainScope.store.onDestroy();
     }
   };
 };
 
-export const registerMainComponent = async () => {
+export const registerMainComponent = () => {
   const mainScope = new HTMLElementsScope();
   window.customElements.define('main-component', initComponent(mainScope));
 };
 
 if (!window.SSR) {
   /*entrypoint*/
-  await registerMainComponent();
+  registerMainComponent();
 } else {
   exports = {
     /*used for ssr*/
-    registerMainComponent,
+    registerMainComponent
   };
 }

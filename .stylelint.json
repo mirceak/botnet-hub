@@ -1,0 +1,19 @@
+{
+  "ignoreFiles": ["**/*.js"],
+  "extends": [
+    "stylelint-config-prettier",
+    "stylelint-prettier/recommended",
+    "stylelint-config-standard",
+    "stylelint-config-standard-scss",
+    "stylelint-config-sass-guidelines"
+  ],
+  "plugins": ["stylelint-scss", "stylelint-selector-bem-pattern"],
+  "rules": {
+    "indentation": 2,
+    "at-rule-empty-line-before": null,
+    "at-rule-no-unknown": null,
+    "block-closing-brace-newline-after": "always",
+    "function-url-quotes": "always",
+    "string-quotes": "double"
+  }
+}

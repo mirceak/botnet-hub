@@ -19,8 +19,8 @@ export default {
   moduleNameMapper: manageMapper(
     pathsToModuleNameMapper(tsconfigJson.compilerOptions.paths, {
       prefix: '<rootDir>/',
-      useESM: true,
-    }),
+      useESM: true
+    })
   ),
   testRegex: '.*(test|spec).(m)?ts$',
   coverageDirectory: 'coverage',
@@ -30,6 +30,6 @@ export default {
     '!**/*.testno.js',
     '!**/*.testno.ts',
     '!**/*.d.ts',
-    '!**/*.d.mts',
-  ],
+    '!**/*.d.mts'
+  ]
 };

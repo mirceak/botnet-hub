@@ -1,6 +1,6 @@
 import type {
   InstancedHTMLComponent,
-  IHTMLElementsScope,
+  IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 const getComponents = (mainScope: IHTMLElementsScope) => {
@@ -9,14 +9,14 @@ const getComponents = (mainScope: IHTMLElementsScope) => {
       () =>
         import(
           '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-        ),
-    ),
+        )
+    )
   };
 };
 
 const getClass = (
   mainScope: IHTMLElementsScope,
-  instance: ReturnType<typeof getSingleton>,
+  instance: ReturnType<typeof getSingleton>
 ) => {
   const { _RouterView } = instance.registerComponents();
 
@@ -29,9 +29,9 @@ const getClass = (
     }
 
     init() {
-      mainScope.asyncLoadComponentTemplate({
+      void mainScope.asyncLoadComponentTemplate({
         target: this,
-        components: [_RouterView.then(({ useComponent }) => useComponent())],
+        components: [_RouterView.then(({ useComponent }) => useComponent())]
       });
     }
   };

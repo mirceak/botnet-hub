@@ -1,28 +1,39 @@
 import type {
-  InstancedHTMLComponent,
   IHTMLElementsScope,
+  InstancedHTMLComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
+
+/*language=scss*/
+const scopedCss = `
+    @import 'scss/variables/color.scss';
+		
+		    main-component {
+		
+		    nav-left-main-component {
+			background-color: $blue;
+			color: white;
+			display: flex;
+			min-width: 284px;
+			max-width: 284px;
+			height: 100%;
+		}}
+			
+		`;
 
 const getComponents = (mainScope: IHTMLElementsScope) => ({
   _DynamicHtmlView: mainScope.asyncRegisterComponent(
     () =>
       import(
         '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-      ),
-  ),
-  _RouterView: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-      ),
-  ),
+      )
+  )
 });
 
 const getClass = (
   mainScope: IHTMLElementsScope,
-  instance: ReturnType<typeof getSingleton>,
+  instance: ReturnType<typeof getSingleton>
 ) => {
-  const { _DynamicHtmlView, _RouterView } = instance.registerComponents();
+  const { _DynamicHtmlView } = instance.registerComponents();
 
   return class Component
     extends mainScope.HTMLElement
@@ -33,20 +44,28 @@ const getClass = (
     }
 
     init() {
-      mainScope.asyncLoadComponentTemplate({
+      void mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           _DynamicHtmlView.then(({ useComponent }) =>
             useComponent({
               contentGetter: () => {
                 return `
-                    <h1>${mainScope.store.data.home.titleWithName}</h1>
-                  `;
-              },
-            }),
+                  <h1>${mainScope.store.data.home.titleWithName || ''}</h1>
+                `;
+              }
+            })
           ),
-          _RouterView.then(({ useComponent }) => useComponent()),
-        ],
+          _DynamicHtmlView.then(({ useComponent }) =>
+            useComponent({
+              contentGetter() {
+                return instance.useScopedCss();
+              },
+              noWatcher: true,
+              instant: true
+            })
+          )
+        ]
       });
     }
   };
@@ -54,7 +73,7 @@ const getClass = (
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
   class Instance extends mainScope.HTMLComponent {
-    componentName = 'layout-main-component';
+    componentName = 'nav-left-main-component';
 
     initComponent = (mainScope: IHTMLElementsScope) => {
       if (!window.customElements.get(this.componentName)) {
@@ -70,6 +89,10 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
 
     useComponent = () => {
       return this.getComponentScope(this.componentName);
+    };
+
+    useScopedCss = () => {
+      return this.getScopedCss(scopedCss);
     };
   }
 
