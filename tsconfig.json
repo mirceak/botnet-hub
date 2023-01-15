@@ -38,6 +38,6 @@
     ],
     "out": "docs"
   },
-  "exclude": ["**/*(.|-)test.ts", "node_modules/**/*"],
+  "exclude": ["{**/*,*}.{test.ts}}", "node_modules/**/*"],
   "include": ["src/**/*.ts"]
 }

@@ -1,0 +1,18 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-standard-scss",
+    "stylelint-config-sass-guidelines",
+    "stylelint-config-prettier"
+  ],
+  "plugins": ["stylelint-scss", "stylelint-selector-bem-pattern"],
+  "rules": {
+    "selector-max-compound-selectors": [
+      3,
+      {
+        "ignore": ["pseudo-classes"]
+      }
+    ],
+    "max-nesting-depth": null
+  }
+}

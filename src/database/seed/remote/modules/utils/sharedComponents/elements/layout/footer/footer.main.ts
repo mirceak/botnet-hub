@@ -8,7 +8,7 @@ const scopedCss = `
 @import 'src/database/seed/remote/modules/utils/assets/scss/variables/color.scss';
 
 main-component {
-  footer-main-component {
+      footer-main-component {
     background-color: $blue;
     color: white;
     display: flex;
@@ -27,7 +27,7 @@ const getComponents = (mainScope: IHTMLElementsScope) => ({
   )
 });
 
-const getClass = (
+    const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>
 ) => {

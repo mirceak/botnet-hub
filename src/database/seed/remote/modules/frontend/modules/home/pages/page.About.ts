@@ -3,10 +3,9 @@ import type {
   InstancedHTMLComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-/*language=HTML*/
 const scopedCss = `
-	<style staticScope lang='scss'>
-      main-component {
+	<style staticScope>
+         main-component {
 		
       about-component {
 			display: flex;

@@ -53,8 +53,7 @@ const loadSeederFile = async <T>(importer: () => Promise<T>) => {
     .pop() as string;
   const type = fileBasePath.split('.').pop();
   await RemoteModule.create({
-    name:
-      '@remoteFiles/' + fileBasePath.split('remote/modules/utils/assets/')[1]
+    name: fileBasePath
   }).then(async (remoteModule) => {
     let code = getFileContentsSync(
       `${
@@ -68,9 +67,7 @@ const loadSeederFile = async <T>(importer: () => Promise<T>) => {
         break;
     }
     await remoteModule.scriptEntity?.createEntity({
-      name:
-        '@remoteFiles/' +
-        fileBasePath.replace('remote/modules/utils/assets/', ''),
+      name: fileBasePath,
       code
     });
   });
@@ -198,12 +195,6 @@ export const init: IKernelModuleInit = async (context) => {
   );
 
   await loadSeederFile(
-    () => import('@remoteFiles/scss/theme/main/layout/layout.main.scss')
-  );
-
-  await loadSeederFile(() => import('@remoteFiles/scss/helpers/display.scss'));
-  await loadSeederFile(
     () => import('@remoteFiles/scss/theme/main/theme.main.scss')
   );
-  await loadSeederFile(() => import('@remoteFiles/scss/helpers/sizing.scss'));
 };

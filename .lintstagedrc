@@ -1,4 +1,0 @@
-{
-  "*": "prettier --write",
-  "*.ts": "yarn lint --fix"
-}

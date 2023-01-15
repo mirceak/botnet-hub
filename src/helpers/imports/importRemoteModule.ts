@@ -109,7 +109,6 @@ export const importRemoteModule = async (
             true
           );
         }
-
         // naked imports for backend
         return import(
           specifier

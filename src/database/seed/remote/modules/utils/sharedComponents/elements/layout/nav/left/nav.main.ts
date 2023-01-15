@@ -3,9 +3,9 @@ import type {
   InstancedHTMLComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-/*language=scss*/
 const scopedCss = `
-    @import 'scss/variables/color.scss';
+  <style staticScope>
+    @import 'src/database/seed/remote/modules/utils/assets/scss/variables/color.scss';
 		
 		    main-component {
 		
@@ -17,8 +17,8 @@ const scopedCss = `
 			max-width: 284px;
 			height: 100%;
 		}}
-			
-		`;
+
+    </style staticScope>`;
 
 const getComponents = (mainScope: IHTMLElementsScope) => ({
   _DynamicHtmlView: mainScope.asyncRegisterComponent(

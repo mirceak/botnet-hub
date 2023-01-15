@@ -26,6 +26,102 @@ main-component {
         &.layout--content {
           max-height: 100%;
           overflow-y: hidden;
+
+          layout-main-component {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+
+            dynamic-html-view-component {
+              height: auto;
+              width: auto;
+
+              &.layout--content {
+                max-height: 100%;
+                overflow-y: hidden;
+
+                layout-main-component {
+                  display: flex;
+                  flex-direction: column;
+                  height: 100%;
+
+                  dynamic-html-view-component {
+                    height: auto;
+                    width: auto;
+
+                    &.layout--content {
+                      max-height: 100%;
+                      overflow-y: hidden;
+
+                      layout-main-component {
+                        display: flex;
+                        flex-direction: column;
+                        height: 100%;
+
+                        dynamic-html-view-component {
+                          height: auto;
+                          width: auto;
+
+                          &.layout--content {
+                            max-height: 100%;
+                            overflow-y: hidden;
+
+                            layout-main-component {
+                              display: flex;
+                              flex-direction: column;
+                              height: 100%;
+
+                              dynamic-html-view-component {
+                                height: auto;
+                                width: auto;
+
+                                &.layout--content {
+                                  max-height: 100%;
+                                  overflow-y: hidden;
+
+                                  layout-main-component {
+                                    display: flex;
+                                    flex-direction: column;
+                                    height: 100%;
+
+                                    dynamic-html-view-component {
+                                      height: auto;
+                                      width: auto;
+
+                                      &.layout--content {
+                                        max-height: 100%;
+                                        overflow-y: hidden;
+
+                                        layout-main-component {
+                                          display: flex;
+                                          flex-direction: column;
+                                          height: 100%;
+
+                                          dynamic-html-view-component {
+                                            height: auto;
+                                            width: auto;
+
+                                            &.layout--content {
+                                              max-height: 100%;
+                                              overflow-y: hidden;
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

@@ -120,7 +120,7 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
       const scssMainTheme = await mainScope.loadFile(
         () => import('@remoteFiles/scss/theme/main/theme.main.scss')
       );
-      return [this.getScopedCss(scssMainTheme.toString())];
+      return [this.getScopedCss(scssMainTheme?.toString())];
     };
   }
 
