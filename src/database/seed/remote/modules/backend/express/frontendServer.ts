@@ -1,6 +1,5 @@
 const PORT = 3000;
 const { default: express } = await import('express');
-const { default: bodyParser } = await import('body-parser');
 const { default: cors } = await import('cors');
 const { default: morgan } = await import('morgan');
 const { default: compression } = await import('compression');
@@ -8,18 +7,11 @@ const { default: qs } = await import('qs');
 
 const app = express();
 
+app.use(compression());
 app.use(express.json());
 app.use(cors());
-app.use(
-  bodyParser.urlencoded({
-    limit: '10mb',
-    extended: true,
-    parameterLimit: 10000
-  })
-);
-app.use(morgan('dev'));
-app.use(compression());
 app.use(express.urlencoded({ extended: false }));
+app.use(morgan('tiny'));
 app.set('query parser', (str: string) => qs.parse(str));
 
 app.get('/favicon.ico', (...[, res]) => {
@@ -29,29 +21,20 @@ app.get('/favicon.ico', (...[, res]) => {
       .send()
   );
 });
-app.get('/@remoteModules/:path(.*)', (...[req, res]) => {
-  res.type('text/javascript');
-  void kernelGlobals
-    .loadRemoteModule(req.url.replace('/', ''))
-    .then((module) => {
-      const remoteModules = module.script?.code as string;
-      res
-        // .set('Cache-control', 'public, max-age=2592000')
-        .send(remoteModules);
-    });
-});
-
-app.get('/@remoteFiles/:path(.*)', (...[req, res]) => {
-  res.type('text/css');
-  void kernelGlobals
-    .loadRemoteModule(req.url.replace('/', ''))
-    .then((module) => {
-      const remoteFiles = module.script?.code as string;
-      res
-        // .set('Cache-control', 'public, max-age=2592000')
-        .send(remoteFiles);
-    });
-});
+app.get(
+  ['/@remoteModules/:path(.*)', '/@remoteFiles/:path(.*)'],
+  (...[req, res]) => {
+    res.type('text/javascript');
+    void kernelGlobals
+      .loadRemoteModule(req.url.replace('/', ''))
+      .then((module) => {
+        const remoteModules = module.script?.code as string;
+        res
+          // .set('Cache-control', 'public, max-age=2592000')
+          .send(remoteModules);
+      });
+  }
+);
 app.get('/node_modules/:path(.*)', (...[req, res]) => {
   res.type('text/javascript');
   const node_modules = kernelGlobals

@@ -14,8 +14,8 @@
     "lint": "eslint . --ext .ts --ext .mts",
     "husky:staged:pretify": "yarn prettier",
     "husky:staged:lint": "yarn tsc-build && yarn lint",
-    "husky:full:manual": "yarn husky:staged:pretify & yarn husky:staged:lint",
-    "postinstall": "husky install & npx husky add .husky/husky-staged-pretify \"yarn husky-staged-pretify\" & npx husky add .husky/husky-staged-lint \"yarn husky-staged-lint\""
+    "husky:full": "yarn husky:staged:pretify & yarn husky:staged:lint",
+    "postinstall": "husky install & npx husky add .husky/pre-commit \"yarn husky:full\""
   },
   "dependencies": {},
   "devDependencies": {
