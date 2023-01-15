@@ -3,6 +3,7 @@ import type {
   InstancedHTMLComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
+/*language=html*/
 const scopedCss = `
 	<style staticScope>
          main-component {

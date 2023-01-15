@@ -11,13 +11,17 @@
     "test": "set NODE_OPTIONS=es-module-specifier-resolution=node && set NODE_OPTIONS=--experimental-vm-modules && jest --coverage",
     "test:watch": "set NODE_OPTIONS=--experimental-vm-modules && jest --watchAll --coverage",
     "prettier": "prettier --config .prettierrc.json --write .",
-    "lint": "eslint . --ext .ts --ext .mts",
-    "husky:staged:pretify": "yarn prettier",
-    "husky:staged:lint": "yarn tsc-build && yarn lint",
-    "husky:full": "yarn husky:staged:pretify & yarn husky:staged:lint",
-    "postinstall": "husky install & npx husky add .husky/pre-commit \"yarn husky:full\""
+    "lint": "eslint",
+    "lint-scss": "stylelint",
+    "prepare": "node .husky/remove-old.js && git config --unset core.hooksPath && husky install && npx husky add .husky/pre-commit \"npx lint-staged\" && git add .husky/pre-commit"
   },
-  "dependencies": {},
+  "lint-staged": {
+    "*.ts": "yarn lint --fix",
+    "*.scss": "yarn lint-scss --fix"
+  },
+  "dependencies": {
+    "husky": "^8.0.3"
+  },
   "devDependencies": {
     "@types/compression": "^1.7.2",
     "@types/cors": "^2.8.13",
@@ -37,7 +41,6 @@
     "eslint-plugin-jest": "^27.2.1",
     "eslint-plugin-prettier": "^4.2.1",
     "express": "^5.0.0-beta.1",
-    "husky": "^8.0.3",
     "jest": "^29.3.1",
     "jsdom": "^21.0.0",
     "lint-staged": "^13.1.0",
@@ -47,9 +50,11 @@
     "prettier": "^2.8.3",
     "sass": "^1.57.1",
     "sequelize": "^6.28.0",
+    "husky": "^8.0.3",
     "sqlite3": "^5.1.4",
     "stylelint": "^14.16.1",
     "stylelint-config-prettier": "^9.0.4",
+    "stylelint-config-prettier-scss": "^0.0.1",
     "stylelint-config-recommended": "^9.0.0",
     "stylelint-config-sass-guidelines": "^9.0.1",
     "stylelint-config-standard": "^29.0.0",

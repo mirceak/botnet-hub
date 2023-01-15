@@ -1,4 +1,4 @@
-import { sayHey, Delays } from '@src/exampleTest/example.easy-to-test.js';
+import { sayHey, Delays } from '@src/exampleTest/example.easy-to-be-tested.js';
 const { useFakeTimers, spyOn, runOnlyPendingTimers } = import.meta.jest;
 
 describe('sayHey function', () => {

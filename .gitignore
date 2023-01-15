@@ -2,9 +2,11 @@ logs
 *.log
 npm-debug.log*
 
+.husky/_/
+
 node_modules/
 
-coverage
+coverage/
 build/
 release/
 docs/

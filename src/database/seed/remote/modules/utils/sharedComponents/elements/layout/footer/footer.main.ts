@@ -27,7 +27,7 @@ const getComponents = (mainScope: IHTMLElementsScope) => ({
   )
 });
 
-    const getClass = (
+const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>
 ) => {
