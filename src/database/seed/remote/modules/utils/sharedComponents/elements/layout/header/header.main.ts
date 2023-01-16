@@ -3,20 +3,19 @@ import type {
   IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-const scopedCss = `
-<style staticScope>
-@import 'src/database/seed/remote/modules/utils/assets/scss/variables/color.scss';
+const scopedCss = /* HTML */ `<style staticScope>
+  @import 'database/seed/remote/modules/utils/assets/scss/variables/color.scss';
 
-main-component {
-  header-main-component {
-    background-color: $blue;
-    color: white;
-    display: flex;
-    height: 102px;
-    width: 100%;
+  main-component {
+    header-main-component {
+      background-color: $blue;
+      color: white;
+      display: flex;
+      height: 102px;
+      width: 100%;
+    }
   }
-}
-</style staticScope>`;
+</style>`;
 
 const getComponents = (mainScope: IHTMLElementsScope) => ({
   _DynamicHtmlView: mainScope.asyncRegisterComponent(

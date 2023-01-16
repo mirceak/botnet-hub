@@ -6,6 +6,7 @@ import type { IKernelModuleInit } from '@src/kernel/Kernel.js';
 import { getFileContentsSync } from '@helpers/imports/io.js';
 import cluster from 'cluster';
 import sass from 'sass';
+import path from 'path';
 
 const loadSeederModule = async <T>(importer: () => Promise<T>) => {
   const moduleBasePath = importer
@@ -21,18 +22,30 @@ const loadSeederModule = async <T>(importer: () => Promise<T>) => {
     let code = getFileContentsSync(`build/database/seed/${moduleBasePath}`);
     if (code.includes('<style staticScope>')) {
       const scopedCssMatches = [
-        ...code.matchAll(/(<style staticScope>).+?(<\/style staticScope>)/gs)
+        ...code.matchAll(/(<style staticScope>).+?(<\/style>)/gs)
       ];
       if (scopedCssMatches) {
         for (const scopedCssMatch of scopedCssMatches) {
           const _sass = scopedCssMatch[0]
             .replace(scopedCssMatch[1], '')
             .replace(scopedCssMatch[2], '');
-          const parsedSass = sass.renderSync({ data: _sass }).css.toString();
+
+          const parsedSass = sass
+            .compileString(_sass, {
+              importers: [
+                {
+                  findFileUrl(url: string) {
+                    if (/^[a-z]+:/i.test(url)) return null;
+                    return new URL('file://' + path.resolve('src', url));
+                  }
+                }
+              ]
+            })
+            .css.toString();
           code = code
             .replace(_sass, parsedSass)
             .replace('<style staticScope>', '')
-            .replace('</style staticScope>', '');
+            .replace('</style>', '');
         }
       }
     }
@@ -63,7 +76,18 @@ const loadSeederFile = async <T>(importer: () => Promise<T>) => {
     );
     switch (type) {
       case 'scss':
-        code = sass.renderSync({ data: code }).css.toString();
+        code = sass
+          .compileString(code, {
+            importers: [
+              {
+                findFileUrl(url: string) {
+                  if (/^[a-z]+:/i.test(url)) return null;
+                  return new URL('file://' + path.resolve('src', url));
+                }
+              }
+            ]
+          })
+          .css.toString();
         break;
     }
     await remoteModule.scriptEntity?.createEntity({

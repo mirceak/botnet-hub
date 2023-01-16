@@ -3,16 +3,16 @@ import type {
   IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-const scopedCss = `
-  <style staticScope>
-    main-component {
-      home-component  {
+const scopedCss = /* HTML */ `<style staticScope>
+  main-component {
+    home-component {
       display: flex;
       flex-direction: column;
-    align-items: center;
+      align-items: center;
       min-width: fit-content;
+    }
   }
-}</style staticScope>`;
+</style>`;
 
 const getComponents = (mainScope: IHTMLElementsScope) => ({
   _DynamicHtmlView: mainScope.asyncRegisterComponent(

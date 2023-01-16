@@ -38,16 +38,17 @@ if (cluster.isPrimary) {
 } else {
   const { JSDOM } = await import('jsdom');
 
-  /* language=HTML */
-  const htm = `  
+  const htm = /* HTML */ `
     <!DOCTYPE html>
-	  <html   xmlns='http://www.w3.org/1999/html'>
-		  <head>
-			<link rel='icon' href='data:,' />
-			      <meta name='viewport' content='width=device-width, initial-scale=1' />
-		</head>
-		  <body />
-	</html> `;
+    <html xmlns="http://www.w3.org/1999/html" lang="en">
+      <head>
+        <link rel="icon" href="data:," />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>FullStack.js</title>
+      </head>
+      <body />
+    </html>
+  `;
   let processId: string;
   const dom = new JSDOM(htm, { runScripts: 'outside-only' });
   dom.window.SSR = true;
@@ -71,17 +72,15 @@ if (cluster.isPrimary) {
     dynamicImportWatchers.delete(dynamicImportWatcher);
     htmlBody = htmlBody.replace(
       '</body>',
-      `<script type='module'>
-${
-  mainModuleScript.script?.code
-    .replace(
-      '__modulesLoadedWithSSR = [];',
-      `__modulesLoadedWithSSR = ${JSON.stringify(dynamicImportWatcher)};`
-    )
-    .replace('hydrating = window._shouldHydrate;', `hydrating = true;`)
-    .replace('SSR = window.SSR;', `SSR = false;`) || ''
-}
-</script></body>`
+      /* HTML */ `<script type='module'>${
+        mainModuleScript.script?.code
+          .replace(
+            '__modulesLoadedWithSSR = [];',
+            `__modulesLoadedWithSSR = ${JSON.stringify(dynamicImportWatcher)};`
+          )
+          .replace('hydrating = window._shouldHydrate;', `hydrating = true;`)
+          .replace('SSR = window.SSR;', `SSR = false;`) || ''
+      }</script></body>`
     );
     dynamicImportWatcher.splice(0);
     process.send?.({
