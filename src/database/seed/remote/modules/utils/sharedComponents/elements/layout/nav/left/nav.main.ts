@@ -3,8 +3,8 @@ import type {
   InstancedHTMLComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-const scopedCss = `<style staticScope>
-  @import 'database/seed/remote/modules/utils/assets/scss/variables/color.scss';
+const scopedCss = /* HTML */ `<style staticScope>
+  @import '/src/database/seed/remote/modules/utils/assets/scss/variables/color.scss';
 
   main-component {
     nav-left-main-component {

@@ -35,8 +35,11 @@ const loadSeederModule = async <T>(importer: () => Promise<T>) => {
               importers: [
                 {
                   findFileUrl(url: string) {
+                    console.log(22, path.resolve('.', url));
                     if (/^[a-z]+:/i.test(url)) return null;
-                    return new URL('file://' + path.resolve('src', url));
+                    return new URL(
+                      'file://' + path.resolve(url.replace('/', ''))
+                    );
                   }
                 }
               ]

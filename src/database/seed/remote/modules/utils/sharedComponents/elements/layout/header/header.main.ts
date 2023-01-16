@@ -4,7 +4,7 @@ import type {
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 const scopedCss = /* HTML */ `<style staticScope>
-  @import 'database/seed/remote/modules/utils/assets/scss/variables/color.scss';
+  @import '/src/database/seed/remote/modules/utils/assets/scss/variables/color.scss';
 
   main-component {
     header-main-component {
