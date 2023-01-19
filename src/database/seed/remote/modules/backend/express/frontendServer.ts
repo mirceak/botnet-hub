@@ -64,10 +64,11 @@ app.get('/(.*)', (...[req, res]) => {
 
   return res.send(/* HTML */ `
     <!DOCTYPE html>
-    <html xmlns="http://www.w3.org/1999/html">
+    <html xmlns="http://www.w3.org/1999/html" lang="en">
       <head>
         <link rel="icon" href="data:," />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>FullStack.js</title>
       </head>
       <body>
         <main-component />

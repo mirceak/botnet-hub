@@ -3,20 +3,6 @@ import type {
   IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-const scopedCss = /* HTML */ `<style staticScope>
-  @import '/src/database/seed/remote/modules/utils/assets/scss/variables/color.scss';
-
-  main-component {
-    footer-main-component {
-      background-color: $blue;
-      color: white;
-      display: flex;
-      width: 100%;
-      height: 102px;
-    }
-  }
-</style>`;
-
 const getComponents = (mainScope: IHTMLElementsScope) => ({
   _DynamicHtmlView: mainScope.asyncRegisterComponent(
     () =>
@@ -55,15 +41,16 @@ const getClass = (
               instant: true
             })
           ),
-          _DynamicHtmlView.then(({ useComponent }) =>
-            useComponent({
+          _DynamicHtmlView.then(async ({ useComponent }) => {
+            const scopedCss = await instance.useScopedCss();
+            return useComponent({
               contentGetter() {
-                return instance.useScopedCss();
+                return scopedCss;
               },
               noWatcher: true,
               instant: true
-            })
-          )
+            });
+          })
         ]
       });
     }
@@ -90,8 +77,14 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
       return this.getComponentScope(this.componentName);
     };
 
-    useScopedCss = () => {
-      return this.getScopedCss(scopedCss);
+    useScopedCss = async () => {
+      const scopedCss = await mainScope.loadFile(
+        () =>
+          import(
+            '@remoteModules/utils/sharedComponents/elements/layout/footer/footer.main.scss'
+          )
+      );
+      return this.getScopedCss(scopedCss.toString());
     };
   }
 

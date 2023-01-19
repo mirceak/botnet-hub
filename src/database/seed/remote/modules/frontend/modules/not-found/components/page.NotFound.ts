@@ -3,10 +3,6 @@ import type {
   IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-const templateHtml = `
-<h1>Page not found!</h1>
-`;
-
 const getClass = (mainScope: IHTMLElementsScope) => {
   return class Component
     extends mainScope.HTMLElement
@@ -19,7 +15,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     init() {
       if (!mainScope.hydrating) {
         const template = window.document.createElement('template');
-        template.innerHTML = templateHtml as string;
+        template.innerHTML = `<h1>Page not found!</h1>`;
         this.appendChild(template.content.cloneNode(true));
       }
     }

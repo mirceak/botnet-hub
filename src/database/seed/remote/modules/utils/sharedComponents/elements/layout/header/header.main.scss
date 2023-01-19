@@ -1,0 +1,11 @@
+@import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
+
+main-component {
+  header-main-component {
+    background-color: $blue;
+    color: #fff;
+    display: flex;
+    height: 102px;
+    width: 100%;
+  }
+}

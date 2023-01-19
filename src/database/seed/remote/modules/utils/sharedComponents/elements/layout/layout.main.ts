@@ -81,7 +81,7 @@ const getClass = (
           }),
           _Footer,
           _DynamicHtmlView.then(async ({ useComponent }) => {
-            const [mainThemeCss] = await instance.useScopedCss();
+            const mainThemeCss = await instance.useScopedCss();
             return useComponent({
               contentGetter() {
                 return mainThemeCss;
@@ -120,7 +120,7 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
       const scssMainTheme = await mainScope.loadFile(
         () => import('@remoteFiles/scss/theme/main/theme.main.scss')
       );
-      return [this.getScopedCss(scssMainTheme?.toString())];
+      return this.getScopedCss(scssMainTheme.toString());
     };
   }
 

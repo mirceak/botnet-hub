@@ -3,17 +3,6 @@ import type {
   IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-const scopedCss = /* HTML */ `<style staticScope>
-  main-component {
-    home-component {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: fit-content;
-    }
-  }
-</style>`;
-
 const getComponents = (mainScope: IHTMLElementsScope) => ({
   _DynamicHtmlView: mainScope.asyncRegisterComponent(
     () =>
@@ -137,15 +126,16 @@ const getClass = (
               ]
             })
           ),
-          _DynamicHtmlView.then(({ useComponent }) =>
-            useComponent({
+          _DynamicHtmlView.then(async ({ useComponent }) => {
+            const scopedCss = await instance.useScopedCss();
+            return useComponent({
               contentGetter() {
-                return instance.useScopedCss();
+                return scopedCss;
               },
               noWatcher: true,
               instant: true
-            })
-          )
+            });
+          })
         ]
       });
     }
@@ -172,7 +162,11 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
       return this.getComponentScope(this.componentName);
     };
 
-    useScopedCss = () => {
+    useScopedCss = async () => {
+      const scopedCss = await mainScope.loadFile(
+        () =>
+          import('@remoteModules/frontend/modules/home/pages/page.Home.scss')
+      );
       return this.getScopedCss(scopedCss);
     };
   }

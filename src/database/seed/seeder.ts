@@ -19,39 +19,7 @@ const loadSeederModule = async <T>(importer: () => Promise<T>) => {
   await RemoteModule.create({
     name: '@remoteModules/' + moduleBasePath.replace('remote/modules/', '')
   }).then(async (remoteModule) => {
-    let code = getFileContentsSync(`build/database/seed/${moduleBasePath}`);
-    if (code.includes('<style staticScope>')) {
-      const scopedCssMatches = [
-        ...code.matchAll(/(<style staticScope>).+?(<\/style>)/gs)
-      ];
-      if (scopedCssMatches) {
-        for (const scopedCssMatch of scopedCssMatches) {
-          const _sass = scopedCssMatch[0]
-            .replace(scopedCssMatch[1], '')
-            .replace(scopedCssMatch[2], '');
-
-          const parsedSass = sass
-            .compileString(_sass, {
-              importers: [
-                {
-                  findFileUrl(url: string) {
-                    console.log(22, path.resolve('.', url));
-                    if (/^[a-z]+:/i.test(url)) return null;
-                    return new URL(
-                      'file://' + path.resolve(url.replace('/', ''))
-                    );
-                  }
-                }
-              ]
-            })
-            .css.toString();
-          code = code
-            .replace(_sass, parsedSass)
-            .replace('<style staticScope>', '')
-            .replace('</style>', '');
-        }
-      }
-    }
+    const code = getFileContentsSync(`build/database/seed/${moduleBasePath}`);
     await remoteModule.scriptEntity?.createEntity({
       name: '@remoteModules/' + moduleBasePath.replace('remote/modules/', ''),
       code
@@ -64,19 +32,27 @@ const loadSeederFile = async <T>(importer: () => Promise<T>) => {
     .toString()
     .match(/import\('.*'\)/g)?.[0]
     .replace("import('", '')
-    .replace("')", '')
-    .split('./')
-    .pop() as string;
+    .replace("')", '') as string;
   const type = fileBasePath.split('.').pop();
   await RemoteModule.create({
     name: fileBasePath
   }).then(async (remoteModule) => {
-    let code = getFileContentsSync(
-      `${
-        'src/database/seed/remote/modules/utils/assets/' +
-        fileBasePath.split('@remoteFiles/')[1]
-      }`
-    );
+    let code = '';
+    if (fileBasePath.indexOf('@remoteModules/') !== -1) {
+      code = getFileContentsSync(
+        `${
+          'src/database/seed/remote/modules/' +
+          fileBasePath.split('@remoteModules/')[1]
+        }`
+      );
+    } else {
+      code = getFileContentsSync(
+        `${
+          'src/database/seed/remote/modules/utils/assets/' +
+          fileBasePath.split('@remoteFiles/')[1]
+        }`
+      );
+    }
     switch (type) {
       case 'scss':
         code = sass
@@ -223,5 +199,29 @@ export const init: IKernelModuleInit = async (context) => {
 
   await loadSeederFile(
     () => import('@remoteFiles/scss/theme/main/theme.main.scss')
+  );
+  await loadSeederFile(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/elements/layout/header/header.main.scss'
+      )
+  );
+  await loadSeederFile(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/elements/layout/nav/left/nav.main.scss'
+      )
+  );
+  await loadSeederFile(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/elements/layout/footer/footer.main.scss'
+      )
+  );
+  await loadSeederFile(
+    () => import('@remoteModules/frontend/modules/home/pages/page.About.scss')
+  );
+  await loadSeederFile(
+    () => import('@remoteModules/frontend/modules/home/pages/page.Home.scss')
   );
 };

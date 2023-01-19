@@ -26,7 +26,7 @@ export interface IHTMLComponent {
   initComponent: (mainScope: IHTMLElementsScope) => void;
   useComponent: CallableFunction;
   componentName: string;
-  useScopedCss?: (idIndex: number) => string;
+  useScopedCss?: (idIndex: number) => Promise<string> | string;
 }
 
 export interface IHTMLElementComponent

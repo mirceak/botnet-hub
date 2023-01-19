@@ -1,0 +1,12 @@
+@import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
+
+main-component {
+  nav-left-main-component {
+    background-color: $blue;
+    color: #fff;
+    display: flex;
+    height: 100%;
+    max-width: 284px;
+    min-width: 284px;
+  }
+}

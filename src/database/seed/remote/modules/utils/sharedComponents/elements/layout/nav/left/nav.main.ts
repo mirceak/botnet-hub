@@ -3,21 +3,6 @@ import type {
   InstancedHTMLComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
-const scopedCss = /* HTML */ `<style staticScope>
-  @import '/src/database/seed/remote/modules/utils/assets/scss/variables/color.scss';
-
-  main-component {
-    nav-left-main-component {
-      background-color: $blue;
-      color: white;
-      display: flex;
-      min-width: 284px;
-      max-width: 284px;
-      height: 100%;
-    }
-  }
-</style>`;
-
 const getComponents = (mainScope: IHTMLElementsScope) => ({
   _DynamicHtmlView: mainScope.asyncRegisterComponent(
     () =>
@@ -54,15 +39,16 @@ const getClass = (
               }
             })
           ),
-          _DynamicHtmlView.then(({ useComponent }) =>
-            useComponent({
+          _DynamicHtmlView.then(async ({ useComponent }) => {
+            const scopedCss = await instance.useScopedCss();
+            return useComponent({
               contentGetter() {
-                return instance.useScopedCss();
+                return scopedCss;
               },
               noWatcher: true,
               instant: true
-            })
-          )
+            });
+          })
         ]
       });
     }
@@ -89,8 +75,14 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
       return this.getComponentScope(this.componentName);
     };
 
-    useScopedCss = () => {
-      return this.getScopedCss(scopedCss);
+    useScopedCss = async () => {
+      const scopedCss = await mainScope.loadFile(
+        () =>
+          import(
+            '@remoteModules/utils/sharedComponents/elements/layout/nav/left/nav.main.scss'
+          )
+      );
+      return this.getScopedCss(scopedCss.toString());
     };
   }
 
