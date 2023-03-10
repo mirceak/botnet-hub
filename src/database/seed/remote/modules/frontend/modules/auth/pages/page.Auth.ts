@@ -41,7 +41,7 @@ const getClass = (
           components: [
             {
               template: /* HTML */ ` <div class="card">
-                  <div class="header">
+                  <div class="m-b-16">
                     <h1>Welcome!</h1>
                   </div>
                   <input-component

@@ -39,7 +39,7 @@ const getClass = (
           target: this,
           components: [
             {
-              template: /* HTML */ `<div class="card fit-content">
+              template: /* HTML */ `<div class="card gap-8 m-a-16 fit-content">
                   <div class="header row align-items-center">
                     <button-component
                       class="bg-primary m-r-16"
@@ -48,7 +48,7 @@ const getClass = (
                     <h1>Components</h1>
                   </div>
                   <div class="card">
-                    <div class="header">
+                    <div class="m-b-2">
                       <h1>Buttons</h1>
                     </div>
                     <div class="row gap-8">
@@ -78,7 +78,7 @@ const getClass = (
                     </div>
                   </div>
                   <div class="card">
-                    <div class="header">
+                    <div class="m-b-16">
                       <h1>Inputs</h1>
                     </div>
                     <div class="row gap-8">

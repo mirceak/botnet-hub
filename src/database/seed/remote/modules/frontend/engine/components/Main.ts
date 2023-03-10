@@ -539,6 +539,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
             }
 
             if (!mainScope.SSR) {
+              const screenSizes = ['599px', '1023px', '1439px', '1919px'];
               const css = document.createElement('style');
               const modifiers = ['padding', 'margin'];
               const directions = [
@@ -561,6 +562,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                 '32px',
                 '64px'
               ];
+              const screens = ['xs', 'sm', 'md', 'lg', 'xl'];
               const sizeVars = [
                 '--auto',
                 '--0',
@@ -581,9 +583,12 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
               });
               css.innerHTML += '}';
 
-              const iterateDirections = (modifier: string): void => {
+              const iterateDirections = (
+                modifier: string,
+                screenSize?: string
+              ): void => {
                 directions.forEach((direction) => {
-                  iterateVisibility(modifier, direction);
+                  iterateVisibility(modifier, direction, screenSize);
                 });
               };
 
@@ -592,7 +597,8 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                 classDirection: string,
                 directions: string[],
                 size: string,
-                sizeIndex: number
+                sizeIndex: number,
+                screenSize?: string
               ): string => {
                 if (modifier === 'padding' && size === 'auto') {
                   return '';
@@ -602,7 +608,9 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                 .${modifier.substring(0, 1)}-${classDirection.substring(
                   0,
                   1
-                )}-${size.replaceAll('px', '')} {`;
+                )}-${size.replaceAll('px', '')}${
+                  screenSize ? `-${screenSize}` : ''
+                } {`;
 
                 directions.forEach((direction) => {
                   result += `${modifier}-${direction}: var(${sizeVars[sizeIndex]});`;
@@ -613,7 +621,8 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
 
               const iterateVisibility = (
                 modifier: string,
-                direction: string
+                direction: string,
+                screenSize?: string
               ): void => {
                 sizes.forEach((size, sizeIndex) => {
                   switch (direction) {
@@ -623,7 +632,8 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                         direction,
                         ['left', 'right'],
                         size,
-                        sizeIndex
+                        sizeIndex,
+                        screenSize
                       );
                       break;
                     case 'y':
@@ -632,7 +642,8 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                         direction,
                         ['top', 'bottom'],
                         size,
-                        sizeIndex
+                        sizeIndex,
+                        screenSize
                       );
                       break;
                     case 'a':
@@ -641,7 +652,8 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                         direction,
                         ['left', 'right', 'top', 'bottom'],
                         size,
-                        sizeIndex
+                        sizeIndex,
+                        screenSize
                       );
                       break;
                     default:
@@ -650,7 +662,8 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                         direction,
                         [direction],
                         size,
-                        sizeIndex
+                        sizeIndex,
+                        screenSize
                       );
                       break;
                   }
@@ -659,6 +672,50 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
 
               modifiers.forEach((modifier) => {
                 iterateDirections(modifier);
+              });
+
+              screens.forEach((screenSize, index) => {
+                if (index === 0) {
+                  css.innerHTML += `
+                    @media (max-width: ${screenSizes[index]}) {
+                  `;
+
+                  modifiers.forEach((modifier) => {
+                    iterateDirections(modifier, screenSize);
+                  });
+
+                  css.innerHTML += '}';
+                } else if (index < screens.length - 1) {
+                  css.innerHTML += `
+                    @media (max-width: ${screenSizes[index]}) {
+                  `;
+
+                  modifiers.forEach((modifier) => {
+                    iterateDirections(modifier, screenSize);
+                  });
+
+                  css.innerHTML += '}';
+
+                  css.innerHTML += `
+                    @media (min-width: ${screenSizes[index - 1]}) {
+                  `;
+
+                  modifiers.forEach((modifier) => {
+                    iterateDirections(modifier, `${screenSize}-min`);
+                  });
+
+                  css.innerHTML += '}';
+                } else {
+                  css.innerHTML += `
+                    @media (min-width: ${screenSizes[index - 1]}) {
+                  `;
+
+                  modifiers.forEach((modifier) => {
+                    iterateDirections(modifier, screenSize);
+                  });
+
+                  css.innerHTML += '}';
+                }
               });
 
               document.body.append(css);
