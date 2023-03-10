@@ -12,9 +12,7 @@ $default-display-border-radius: 4px;
   --backgroundColorG: #{color.green($grey-1)};
   --backgroundColorB: #{color.blue($grey-1)};
   --backgroundC: rgb(
-    var(--backgroundColorR)
-    var(--backgroundColorG)
-    var(--backgroundColorB)
+    var(--backgroundColorR) var(--backgroundColorG) var(--backgroundColorB)
   );
 
   @if $element != input {
@@ -69,9 +67,7 @@ $default-display-border-radius: 4px;
     --backgroundColorB: #{color.blue($color)};
     --border-normal: 1px solid
       rgb(
-        var(--backgroundColorR)
-        var(--backgroundColorG)
-        var(--backgroundColorB)
+        var(--backgroundColorR) var(--backgroundColorG) var(--backgroundColorB)
       );
     @if $element == input {
       --border-active: var(--border-normal);
@@ -82,8 +78,8 @@ $default-display-border-radius: 4px;
     --border-focus: 1px solid
       rgb(
         calc(var(--backgroundColorR) + (255 - var(--backgroundColorR)) / 1.6)
-        calc(var(--backgroundColorG) + (255 - var(--backgroundColorG)) / 1.6)
-        calc(var(--backgroundColorB) + (255 - var(--backgroundColorB)) / 1.6)
+          calc(var(--backgroundColorG) + (255 - var(--backgroundColorG)) / 1.6)
+          calc(var(--backgroundColorB) + (255 - var(--backgroundColorB)) / 1.6)
       );
 
     #{$element} {
