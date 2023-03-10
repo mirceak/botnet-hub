@@ -1,0 +1,67 @@
+@use 'sass:color' as color;
+@use 'sass:math' as math;
+
+@use '../src/database/seed/remote/modules/utils/assets/scss/variables/color' as
+  colorVars;
+@use '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows'
+  as shadowVars;
+
+:host {
+  --font-color: #{colorVars.$grey-9};
+}
+
+@mixin default-font($element) {
+  @if $element == input {
+    @include standard-font-pack(16px, 400, false);
+
+    &::placeholder {
+      @include standard-font-pack(14px, 300, false);
+
+      font-style: italic;
+      opacity: 1;
+    }
+  } @else {
+    @include standard-font-pack;
+  }
+}
+
+@mixin standard-font-pack(
+  $fontSize: 16px,
+  $fontWeight: 900,
+  $addEvents: true,
+  $textShadow: shadowVars.$shadow-text-1,
+  $textShadowHover: shadowVars.$shadow-text-2,
+  $textShadowActive: $textShadow
+) {
+  color: var(--font-color);
+  font-size: $fontSize;
+  font-weight: $fontWeight;
+  line-height: 22px;
+  opacity: 1;
+  transition: color 150ms ease, text-shadow 150ms ease, background 150ms ease;
+
+  @if $addEvents == true {
+    text-shadow: $textShadow;
+
+    @supports selector(:focus-visible) {
+      &:focus-visible,
+      &:hover {
+        text-shadow: $textShadowHover;
+
+        &:active {
+          text-shadow: $textShadowActive;
+        }
+      }
+    }
+    @supports not selector(:focus-visible) {
+      &:focus,
+      &:hover {
+        text-shadow: $textShadowHover;
+
+        &:active {
+          text-shadow: $textShadowActive;
+        }
+      }
+    }
+  }
+}

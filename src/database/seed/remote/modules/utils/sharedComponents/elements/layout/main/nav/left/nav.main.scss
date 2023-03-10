@@ -2,11 +2,9 @@
 
 main-component {
   nav-left-main-component {
-    background-color: $blue;
+    background-color: $light-blue;
     color: #fff;
-    display: flex;
-    height: 100%;
-    max-width: 284px;
-    min-width: 284px;
+    max-width: 300px;
+    min-width: 300px;
   }
 }

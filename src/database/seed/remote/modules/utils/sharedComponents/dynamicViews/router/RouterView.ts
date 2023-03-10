@@ -1,38 +1,24 @@
 import type {
   IHTMLElementsScope,
-  InstancedHTMLComponent,
+  IHTMLElementComponent,
   IHTMLComponent,
-  HTMLElementComponentStaticScope
+  HTMLElementComponentStaticScope,
+  IComponentAttributes
 } from '@remoteModules/frontend/engine/components/Main.js';
 import type { IRoute } from '@remoteModules/frontend/engine/router.js';
 
 interface ILocalScope {
   fromConstructor?: boolean;
-  attributes?: IRouterViewAttributes;
+  attributes?: IComponentAttributes;
 }
-
-interface IRouterViewAttributes {
-  class: string;
-}
-
-const getComponents = (mainScope: IHTMLElementsScope) => ({
-  _DynamicHtmlView: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-      )
-  )
-});
 
 const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>
 ) => {
-  const { _DynamicHtmlView } = instance.registerComponents();
-
   return class Component
     extends mainScope.HTMLElement
-    implements InstancedHTMLComponent
+    implements IHTMLElementComponent
   {
     private _index?: number;
 
@@ -56,7 +42,8 @@ const getClass = (
       ) {
         throw new Error('router-view has no matching route');
       }
-      if (!this._index) {
+
+      if (this._index == null) {
         this._index = instance.routerViewRegister.size;
         this.setAttribute('id', `${this._index}`);
         instance.routerViewRegister.add(this._index);
@@ -76,31 +63,34 @@ const getClass = (
       const route = mainScope.router?.matchedRoutes?.[
         matchedRoutesLength - this._index - 1
       ] as IRoute;
+
       if (route) {
         const routeComponent =
           route.component as unknown as () => Promise<IHTMLComponent>;
-        if (!mainScope.SSR && !mainScope.hydrating) {
+        if (!mainScope.hydrating) {
           this.innerHTML = '';
         }
-        void mainScope.asyncLoadComponentTemplate({
-          target: this,
-          components: [
-            _DynamicHtmlView.then(async ({ useComponent }) => {
-              const { componentName, useComponent: useRouteComponent } =
-                await routeComponent();
-              const routeScope = await route.scope?.();
 
-              return useComponent({
-                contentGetter: () =>
-                  `<${componentName} x-scope="xScope"></${componentName}>`,
-                scopesGetter: () => ({
-                  xScope: useRouteComponent(
-                    routeScope
-                  ) as HTMLElementComponentStaticScope
-                })
-              });
-            })
-          ]
+        void mainScope.asyncHydrationCallback(async () => {
+          const { componentName, useComponent: useRouteComponent } =
+            await routeComponent();
+          const routeScope = await route.scope?.();
+
+          void mainScope.asyncLoadComponentTemplate({
+            target: this,
+            components: [
+              {
+                template: `<${componentName} xScope="xScope${this._index}"></${componentName}>` /* xScope${this._index} -> avoid nested template parsing because the first scope would be sent to all other instances */,
+                scopesGetter: () => {
+                  return {
+                    [`xScope${this._index}`]: useRouteComponent(
+                      routeScope
+                    ) as HTMLElementComponentStaticScope
+                  };
+                }
+              }
+            ]
+          });
         });
       }
     }
@@ -121,13 +111,7 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
     initComponent = (mainScope: IHTMLElementsScope) => {
       if (!window.customElements.get(this.componentName)) {
         this.registerComponent(this.componentName, getClass(mainScope, this));
-      } else if (mainScope.SSR) {
-        this.registerComponents();
       }
-    };
-
-    registerComponents = () => {
-      return getComponents(mainScope);
     };
 
     useComponent = (scope?: ILocalScope) => {

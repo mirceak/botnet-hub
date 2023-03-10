@@ -1,17 +1,25 @@
 import type {
   IHTMLElementsScope,
-  InstancedHTMLComponent
+  IHTMLElementComponent,
+  IComponentAttributes
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   onClick?: () => void;
   label?: string;
+  attributes?: IComponentAttributes;
+  elementAttributes?: IButtonElementAttributes;
+}
+
+interface IButtonElementAttributes {
+  class?: string;
+  type?: string;
 }
 
 const getClass = (mainScope: IHTMLElementsScope) => {
   return class Component
     extends mainScope.HTMLElement
-    implements InstancedHTMLComponent
+    implements IHTMLElementComponent
   {
     private removeClickListener?: CallableFunction;
 
@@ -37,7 +45,9 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 
     render(scope?: ILocalScope) {
       this.innerHTML = `
-        <button>${scope?.label || ''}</button>
+        <button ${mainScope.getAttributesString(scope)}>${
+        scope?.label || ''
+      }</button>
       `;
     }
 

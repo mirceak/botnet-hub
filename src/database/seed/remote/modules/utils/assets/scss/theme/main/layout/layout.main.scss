@@ -1,33 +1,15 @@
 main-component {
   width: 100%;
 
-  router-view-component,
-  dynamic-html-view-component {
+  layout-main-component {
+    display: flex;
+    flex-direction: column;
     height: 100%;
-    width: 100%;
 
-    &.layout--content {
+    .layout--content {
       height: 100%;
-
-      &__router-view {
-        overflow-x: auto;
-      }
-    }
-
-    layout-main-component {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-
-      dynamic-html-view-component {
-        height: auto;
-        width: auto;
-
-        &.layout--content {
-          max-height: 100%;
-          overflow-y: hidden;
-        }
-      }
+      max-height: 100%;
+      overflow-y: auto;
     }
   }
 }

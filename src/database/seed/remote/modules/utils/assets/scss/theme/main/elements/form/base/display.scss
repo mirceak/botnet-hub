@@ -1,0 +1,97 @@
+@use 'sass:color' as color;
+
+@import '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows';
+@import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
+@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/font';
+@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/interacting';
+
+$default-display-border-radius: 4px;
+
+@mixin default-interactive-component($element) {
+  --backgroundColorR: #{color.red($grey-1)};
+  --backgroundColorG: #{color.green($grey-1)};
+  --backgroundColorB: #{color.blue($grey-1)};
+  --backgroundC: rgb(
+    var(--backgroundColorR)
+    var(--backgroundColorG)
+    var(--backgroundColorB)
+  );
+
+  @if $element != input {
+    --border-normal: 1px solid #{$grey-1};
+  } @else {
+    --border-normal: 1px solid #{$grey-6};
+  }
+
+  --border-focus: 1px solid #{$grey-5};
+  --border-active: 1px solid #{$grey-6};
+  --font-color: #{$grey-9};
+
+  @include add-variant($element, 'primary', $blue-7, $grey-1);
+  @include add-variant($element, 'secondary', $light-green-6, $grey-1);
+  @include add-variant($element, 'info', $light-blue-5, $grey-1);
+  @include add-variant($element, 'warning', $orange-6, $grey-1);
+  @include add-variant($element, 'danger', $red-6, $grey-1);
+
+  @include default-hover($element);
+  @include default-focus($element);
+  @include default-active($element);
+
+  @if $element != input {
+    box-shadow: $shadow-1;
+    background-color: var(--backgroundC);
+  } @else {
+    background-color: transparent;
+  }
+
+  border: var(--border-normal);
+  border-radius: $default-display-border-radius;
+  transition: box-shadow 150ms ease, border-color 150ms ease,
+    background 150ms ease;
+  width: fit-content;
+
+  #{$element} {
+    @include default-font($element);
+
+    background-color: transparent;
+    border: 0;
+    border-radius: $default-display-border-radius;
+    outline: 0;
+    padding: 6px 12px;
+  }
+}
+
+@mixin add-variant($element, $name, $color, $font-color: $grey-9) {
+  &.bg-#{$name},
+  &:has(.bg-#{$name}) {
+    --backgroundColorR: #{color.red($color)};
+    --backgroundColorG: #{color.green($color)};
+    --backgroundColorB: #{color.blue($color)};
+    --border-normal: 1px solid
+      rgb(
+        var(--backgroundColorR)
+        var(--backgroundColorG)
+        var(--backgroundColorB)
+      );
+    @if $element == input {
+      --border-active: var(--border-normal);
+    } @else {
+      --border-active: 1px solid #{$white};
+    }
+
+    --border-focus: 1px solid
+      rgb(
+        calc(var(--backgroundColorR) + (255 - var(--backgroundColorR)) / 1.6)
+        calc(var(--backgroundColorG) + (255 - var(--backgroundColorG)) / 1.6)
+        calc(var(--backgroundColorB) + (255 - var(--backgroundColorB)) / 1.6)
+      );
+
+    #{$element} {
+      @if $element == input {
+        --font-color: #{$color};
+      } @else {
+        --font-color: #{$font-color};
+      }
+    }
+  }
+}

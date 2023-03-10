@@ -1,4 +1,26 @@
 .row {
   display: flex;
-  width: 100%;
+  flex-wrap: wrap;
+}
+
+.col {
+  flex: 10000 1 0;
+}
+
+.gap-8 {
+  gap: 8px;
+}
+
+.fit-content {
+  width: fit-content;
+}
+
+.align-items-center {
+  align-items: center;
+  display: flex;
+}
+
+.justify-content-center {
+  display: flex;
+  justify-content: center;
 }

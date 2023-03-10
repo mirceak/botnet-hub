@@ -1,22 +1,31 @@
-@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/basic';
-@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/input';
-@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/layout/layout.main';
+@import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
 @import '../src/database/seed/remote/modules/utils/assets/scss/helpers/sizing';
 @import '../src/database/seed/remote/modules/utils/assets/scss/helpers/display';
+@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements';
+@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/layout/layout.main';
 
 body {
-  display: flex;
+  font-size: 14px;
   height: 100dvh;
   margin: 0;
   width: 100dvw;
 
   * {
-    display: block;
-    height: auto;
+    font-family: Roboto, sans-serif;
   }
 
   style,
   script {
     display: none !important;
+  }
+
+  dynamic-html-view-component {
+    height: auto;
+    width: auto;
+  }
+
+  router-view-component {
+    height: auto;
+    width: auto;
   }
 }

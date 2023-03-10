@@ -1,0 +1,29 @@
+@import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
+@import '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows';
+
+:root {
+  --card-border-radius: 8px;
+  --card-padding: 16px;
+  --card-margin: 16px;
+}
+
+.card {
+  align-items: flex-start;
+  border-radius: var(--card-border-radius);
+  box-shadow: $shadow-2;
+  display: flex;
+  flex-direction: column;
+  margin: var(--card-margin);
+  padding: var(--card-padding);
+
+  .header {
+    margin-bottom: var(--card-margin);
+  }
+
+  .actions {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--card-margin);
+    width: 100%;
+  }
+}

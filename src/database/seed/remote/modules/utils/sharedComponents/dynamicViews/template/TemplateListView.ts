@@ -1,18 +1,20 @@
 import type {
-  InstancedHTMLComponent,
+  IHTMLElementComponent,
   IHTMLElementComponentTemplate,
-  IHTMLElementsScope
+  IHTMLElementsScope,
+  IComponentAttributes
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   listGetter: () => IHTMLElementComponentTemplate['components'];
   noWatcher?: boolean;
+  attributes?: IComponentAttributes;
 }
 
 const getClass = (mainScope: IHTMLElementsScope) => {
   return class Component
     extends mainScope.HTMLElement
-    implements InstancedHTMLComponent
+    implements IHTMLElementComponent
   {
     private computeRender?: {
       props: CallableFunction[];
@@ -24,6 +26,17 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     }
 
     init(scope: ILocalScope) {
+      if (scope.attributes) {
+        Object.keys(scope.attributes).forEach((key) => {
+          this.setAttribute(
+            key,
+            scope.attributes
+              ? `${scope.attributes[key as keyof typeof scope.attributes]}`
+              : ''
+          );
+        });
+      }
+
       if (!scope.noWatcher) {
         this.computeRender = {
           props: [() => scope.listGetter()],

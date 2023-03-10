@@ -10,10 +10,13 @@ await import('@kernel/Kernel.js').then(async (kernel) => {
     .then(async (kernel) => {
       await kernel.start();
     });
-  /*TODO: Add i18n module*/
-  /*TODO: form component implementation*/
-  /*TODO: security + email app*/
+  /*TODO: login page*/
+  /*TODO: add and test guards*/
+  /*TODO: table component*/
+  /*TODO: form component and elements implementation*/
   /*TODO: api requests*/
+  /*TODO: security + email app*/
+  /*TODO: Add i18n module*/
 });
 
 console.log('start');

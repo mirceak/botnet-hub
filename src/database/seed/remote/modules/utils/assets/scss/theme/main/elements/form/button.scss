@@ -1,0 +1,10 @@
+@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/display';
+
+button-component {
+  @include default-interactive-component(button);
+
+  button {
+    cursor: pointer;
+    font-weight: bolder;
+  }
+}

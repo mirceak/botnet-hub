@@ -1,21 +1,23 @@
 import type {
   IHTMLElementsScope,
-  InstancedHTMLComponent
+  IHTMLElementComponent,
+  IComponentAttributes
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   onInput?: (value: string) => void;
-  attributes?: IInputElementAttributes;
+  attributes?: IComponentAttributes;
+  elementAttributes?: IInputElementAttributes;
 }
 
 interface IInputElementAttributes {
-  placeholder: string;
+  placeholder?: string;
 }
 
 const getClass = (mainScope: IHTMLElementsScope) => {
   return class Component
     extends mainScope.HTMLElement
-    implements InstancedHTMLComponent
+    implements IHTMLElementComponent
   {
     private removeInputListener?: CallableFunction;
 
@@ -53,7 +55,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
 
 const getSingleton = (mainScope: IHTMLElementsScope) => {
   class Instance extends mainScope.HTMLComponent {
-    componentName = 'input-component';
+    componentName = 'select-input-component';
 
     initComponent = (mainScope: IHTMLElementsScope) => {
       if (!window.customElements.get(this.componentName)) {

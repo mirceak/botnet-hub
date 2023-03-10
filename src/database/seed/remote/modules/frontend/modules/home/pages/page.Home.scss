@@ -4,5 +4,10 @@ main-component {
     display: flex;
     flex-direction: column;
     min-width: fit-content;
+
+    dynamic-html-view-component {
+      display: flex;
+      flex-direction: column;
+    }
   }
 }

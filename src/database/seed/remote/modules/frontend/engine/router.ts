@@ -43,6 +43,70 @@ interface IBrowserHistoryState {
 
 let pathToRegexp: typeof import('@node_modules/path-to-regexp/dist/index.js')['pathToRegexp'];
 
+const components = {
+  ProxyRouterViewComponent: (mainScope: IHTMLElementsScope) =>
+    mainScope.asyncRegisterComponent(
+      () =>
+        import(
+          '@remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+        )
+    ),
+  LayoutMainComponent: (mainScope: IHTMLElementsScope) =>
+    mainScope.asyncRegisterComponent(
+      () =>
+        import(
+          '@remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+        )
+    ),
+  PageHomeComponent: (mainScope: IHTMLElementsScope) =>
+    mainScope.asyncRegisterComponent(
+      () => import('@remoteModules/frontend/modules/home/pages/page.Home.js')
+    ),
+  PageAuthComponent: (mainScope: IHTMLElementsScope) =>
+    mainScope.asyncRegisterComponent(
+      () => import('@remoteModules/frontend/modules/auth/pages/page.Auth.js')
+    ),
+  PageAboutComponent: (mainScope: IHTMLElementsScope) =>
+    mainScope.asyncRegisterComponent(
+      () => import('@remoteModules/frontend/modules/home/pages/page.About.js')
+    ),
+  PageComponentsComponent: (mainScope: IHTMLElementsScope) =>
+    mainScope.asyncRegisterComponent(
+      () =>
+        import(
+          '@remoteModules/frontend/modules/home/pages/dev/page.Components.js'
+        )
+    ),
+  Page404Component: (mainScope: IHTMLElementsScope) =>
+    mainScope.asyncRegisterComponent(
+      () =>
+        import(
+          '@remoteModules/frontend/modules/not-found/components/page.NotFound.js'
+        )
+    )
+};
+
+const mainLayoutComponents = (mainScope: IHTMLElementsScope) => ({
+  _Header: mainScope.asyncRegisterComponent(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+      )
+  ),
+  _Footer: mainScope.asyncRegisterComponent(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+      )
+  ),
+  _Nav: mainScope.asyncRegisterComponent(
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+      )
+  )
+});
+
 const getRouter = (mainScope: IHTMLElementsScope): Router => {
   return {
     routes: [] as Route[],
@@ -108,8 +172,9 @@ const getRouter = (mainScope: IHTMLElementsScope): Router => {
           const firstRouterViewParent = firstRouterView?.parentElement;
           if (firstRouterViewParent) {
             oldMatchedRoutes?.forEach((_route, index) => {
-              if (index >= firstMatchingRouteIndex + 1)
+              if (index >= firstMatchingRouteIndex + 1) {
                 window.document.getElementById(`${index}`)?.remove();
+              }
             });
             await (
               window.document.getElementById(
@@ -127,59 +192,6 @@ const getRouter = (mainScope: IHTMLElementsScope): Router => {
     }
   };
 };
-
-const components = {
-  ProxyRouterViewComponent: (mainScope: IHTMLElementsScope) =>
-    mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
-        )
-    ),
-  LayoutMainComponent: (mainScope: IHTMLElementsScope) =>
-    mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/elements/layout/layout.main.js'
-        )
-    ),
-  PageHomeComponent: (mainScope: IHTMLElementsScope) =>
-    mainScope.asyncRegisterComponent(
-      () => import('@remoteModules/frontend/modules/home/pages/page.Home.js')
-    ),
-  PageAboutComponent: (mainScope: IHTMLElementsScope) =>
-    mainScope.asyncRegisterComponent(
-      () => import('@remoteModules/frontend/modules/home/pages/page.About.js')
-    ),
-  Page404Component: (mainScope: IHTMLElementsScope) =>
-    mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/frontend/modules/not-found/components/page.NotFound.js'
-        )
-    )
-};
-
-const mainLayoutComponents = (mainScope: IHTMLElementsScope) => ({
-  _Header: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/elements/layout/header/header.main.js'
-      )
-  ),
-  _Footer: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/elements/layout/footer/footer.main.js'
-      )
-  ),
-  _Nav: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/elements/layout/nav/left/nav.main.js'
-      )
-  )
-});
 
 export const useRoutes = (mainScope: IHTMLElementsScope): Route[] => [
   {
@@ -209,6 +221,11 @@ export const useRoutes = (mainScope: IHTMLElementsScope): Route[] => [
         ]
       },
       {
+        path: 'components',
+        name: 'components',
+        component: () => components.PageComponentsComponent(mainScope)
+      },
+      {
         path: 'about',
         name: 'about',
         component: () => components.PageAboutComponent(mainScope)
@@ -216,7 +233,12 @@ export const useRoutes = (mainScope: IHTMLElementsScope): Route[] => [
     ]
   },
   {
-    path: 'not-found',
+    path: '/auth',
+    name: 'auth',
+    component: () => components.PageAuthComponent(mainScope)
+  },
+  {
+    path: '/not-found',
     name: '404',
     component: () => components.Page404Component(mainScope)
   },

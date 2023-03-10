@@ -110,14 +110,7 @@ export const importRemoteModule = async (
           );
         }
         // naked imports for backend
-        return import(
-          specifier
-            .replace(
-              '@remoteFiles/',
-              '../../../src/database/seed/remote/modules/utils/assets/'
-            )
-            .replace('@node_modules/', '')
-        );
+        return import(specifier.replace('@node_modules/', ''));
       }
     });
     await compiled.link(defaultLinker);

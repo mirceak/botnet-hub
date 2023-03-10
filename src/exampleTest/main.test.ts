@@ -19,7 +19,7 @@ describe('greeter function', () => {
     }));
     import('@kernel/Kernel.js');
 
-    await import('@src/main.js');
+    await import('@src/main.ts');
   });
   afterAll(() => {
     consoleLogSpy.mockRestore();

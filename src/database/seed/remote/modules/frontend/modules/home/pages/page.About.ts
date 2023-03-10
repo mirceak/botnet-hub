@@ -1,18 +1,14 @@
 import type {
   IHTMLElementsScope,
-  InstancedHTMLComponent
+  IHTMLElementComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 const getComponents = (mainScope: IHTMLElementsScope) => ({
-  _DynamicHtmlView: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-      )
-  ),
   _Button: mainScope.asyncRegisterComponent(
     () =>
-      import('@remoteModules/utils/sharedComponents/elements/button/Button.js')
+      import(
+        '@remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+      )
   )
 });
 
@@ -20,46 +16,38 @@ const getClass = (
   mainScope: IHTMLElementsScope,
   instance: ReturnType<typeof getSingleton>
 ) => {
-  const { _DynamicHtmlView, _Button } = instance.registerComponents();
+  const { _Button } = instance.registerComponents();
 
   return class Component
     extends mainScope.HTMLElement
-    implements InstancedHTMLComponent
+    implements IHTMLElementComponent
   {
     constructor() {
       super();
     }
 
     init() {
-      void mainScope.asyncLoadComponentTemplate({
-        target: this,
-        components: [
-          _DynamicHtmlView.then(({ useComponent }) =>
-            useComponent({
-              contentGetter: () => {
-                return `
-                  <h1>About Page</h1>
-                `;
-              }
-            })
-          ),
-          _Button.then(({ useComponent }) =>
-            useComponent({
-              onClick: () => void mainScope.router.push('home'),
-              label: 'Go To Home'
-            })
-          ),
-          _DynamicHtmlView.then(async ({ useComponent }) => {
-            const scopedCss = await instance.useScopedCss();
-            return useComponent({
-              contentGetter() {
-                return scopedCss;
-              },
-              noWatcher: true,
-              instant: true
-            });
-          })
-        ]
+      void mainScope.asyncHydrationCallback(async () => {
+        const scopedCss = await instance.useScopedCss();
+
+        void mainScope.asyncLoadComponentTemplate({
+          target: this,
+          components: [
+            {
+              template: /* HTML */ `<h1>About Page</h1>
+                <button-component xScope="xButtonScope"></button-component>`,
+              scopesGetter: () => ({
+                xButtonScope: _Button.then(({ useComponent }) =>
+                  useComponent({
+                    onClick: () => void mainScope.router.push('home'),
+                    label: 'Go Home'
+                  })
+                )
+              })
+            },
+            scopedCss
+          ]
+        });
       });
     }
   };

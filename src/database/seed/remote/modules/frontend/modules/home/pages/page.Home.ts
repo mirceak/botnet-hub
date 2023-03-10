@@ -1,5 +1,5 @@
 import type {
-  InstancedHTMLComponent,
+  IHTMLElementComponent,
   IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
@@ -11,11 +11,16 @@ const getComponents = (mainScope: IHTMLElementsScope) => ({
       )
   ),
   _Input: mainScope.asyncRegisterComponent(
-    () => import('@remoteModules/utils/sharedComponents/form/elements/Input.js')
+    () =>
+      import(
+        '@remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
+      )
   ),
   _Button: mainScope.asyncRegisterComponent(
     () =>
-      import('@remoteModules/utils/sharedComponents/elements/button/Button.js')
+      import(
+        '@remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+      )
   ),
   _TemplateList: mainScope.asyncRegisterComponent(
     () =>
@@ -34,7 +39,7 @@ const getClass = (
 
   return class Component
     extends mainScope.HTMLElement
-    implements InstancedHTMLComponent
+    implements IHTMLElementComponent
   {
     constructor() {
       super();
@@ -48,15 +53,24 @@ const getClass = (
             useComponent({
               onInput: (value: string) =>
                 (mainScope.store.data.home.nameInput = value),
-              attributes: {
-                placeholder: 'Enter Your Name'
+              elementAttributes: {
+                placeholder: 'Enter Your Name...'
               }
             })
           ),
           _Button.then(({ useComponent }) =>
             useComponent({
               onClick: () => void mainScope.router.push('about'),
-              label: 'Go To About'
+              label: 'Go To About',
+              elementAttributes: {
+                class: 'bg-primary'
+              }
+            })
+          ),
+          _Button.then(({ useComponent }) =>
+            useComponent({
+              onClick: () => void mainScope.router.push('components'),
+              label: 'Go To Components'
             })
           ),
           _TemplateList.then(({ useComponent }) =>
@@ -65,7 +79,12 @@ const getClass = (
               listGetter: () => [
                 _DynamicHtmlView.then(({ useComponent }) =>
                   useComponent({
-                    contentGetter: () => `
+                    attributes: {
+                      class: ''
+                    },
+                    noWatcher: true,
+                    instant: true,
+                    templateGetter: () => `
                       <small>Consider this scoped</small>
                       <input-component x-scope="xInputScope"></input-component>
                       <button-component x-scope="xButtonScope"></button-component>
@@ -76,7 +95,7 @@ const getClass = (
                         useComponent({
                           onInput: (value: string) =>
                             (mainScope.store.data.home.nameInput = value),
-                          attributes: {
+                          elementAttributes: {
                             placeholder: 'Test Input'
                           }
                         })
@@ -92,18 +111,21 @@ const getClass = (
                           listGetter: () => [
                             _DynamicHtmlView.then(({ useComponent }) =>
                               useComponent({
-                                contentGetter: () => `
+                                templateGetter: () => `
                                   <small>Consider this nested and scoped</small>
                                   <input-component x-scope="xInputScope"></input-component>
                                   <button-component x-scope="xButtonScope"></button-component>
                                 `,
+                                noWatcher: true,
+                                instant: true,
                                 scopesGetter: () => ({
                                   xInputScope: _Input.then(({ useComponent }) =>
                                     useComponent({
                                       onInput: (value: string) =>
                                         (mainScope.store.data.home.nameInput =
                                           value),
-                                      attributes: {
+                                      elementAttributes: {
+                                        class: 'p-x-16',
                                         placeholder: 'Test Nested Input'
                                       }
                                     })
@@ -129,7 +151,7 @@ const getClass = (
           _DynamicHtmlView.then(async ({ useComponent }) => {
             const scopedCss = await instance.useScopedCss();
             return useComponent({
-              contentGetter() {
+              templateGetter() {
                 return scopedCss;
               },
               noWatcher: true,

@@ -1,6 +1,6 @@
 import type {
   IHTMLElementsScope,
-  InstancedHTMLComponent
+  IHTMLElementComponent
 } from '@remoteModules/frontend/engine/components/Main.js';
 
 const getComponents = (mainScope: IHTMLElementsScope) => ({
@@ -20,36 +20,30 @@ const getClass = (
 
   return class Component
     extends mainScope.HTMLElement
-    implements InstancedHTMLComponent
+    implements IHTMLElementComponent
   {
     constructor() {
       super();
     }
 
     init() {
-      void mainScope.asyncLoadComponentTemplate({
-        target: this,
-        components: [
-          _DynamicHtmlView.then(({ useComponent }) =>
-            useComponent({
-              contentGetter: () => {
-                return `
-                  <h1>${mainScope.store.data.home.titleWithName || ''}</h1>
-                `;
-              }
-            })
-          ),
-          _DynamicHtmlView.then(async ({ useComponent }) => {
-            const scopedCss = await instance.useScopedCss();
-            return useComponent({
-              contentGetter() {
-                return scopedCss;
-              },
-              noWatcher: true,
-              instant: true
-            });
-          })
-        ]
+      void mainScope.asyncHydrationCallback(async () => {
+        const scopedCss = await instance.useScopedCss();
+        void mainScope.asyncLoadComponentTemplate({
+          target: this,
+          components: [
+            _DynamicHtmlView.then(async ({ useComponent }) => {
+              return useComponent({
+                templateGetter() {
+                  return /* HTML */ `<h1>
+                    ${mainScope.store.data.home.titleWithName || ''}
+                  </h1>`;
+                }
+              });
+            }),
+            scopedCss
+          ]
+        });
       });
     }
   };
@@ -79,7 +73,7 @@ const getSingleton = (mainScope: IHTMLElementsScope) => {
       const scopedCss = await mainScope.loadFile(
         () =>
           import(
-            '@remoteModules/utils/sharedComponents/elements/layout/nav/left/nav.main.scss'
+            '@remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.scss'
           )
       );
       return this.getScopedCss(scopedCss.toString());

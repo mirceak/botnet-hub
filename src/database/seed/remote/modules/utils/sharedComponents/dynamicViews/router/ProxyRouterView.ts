@@ -1,5 +1,5 @@
 import type {
-  InstancedHTMLComponent,
+  IHTMLElementComponent,
   IHTMLElementsScope
 } from '@remoteModules/frontend/engine/components/Main.js';
 
@@ -22,7 +22,7 @@ const getClass = (
 
   return class Component
     extends mainScope.HTMLElement
-    implements InstancedHTMLComponent
+    implements IHTMLElementComponent
   {
     constructor() {
       super();

@@ -7,13 +7,12 @@ export const init: IKernelModuleInit = async (context) => {
   });
   await context.runImports([
     import('@database/entities/Script.js'),
+    import('@database/entities/User.js'),
     import('@database/entities/RemoteModule.js'),
     import('@database/entities/Guard.js'),
     import('@database/entities/Entity.js')
   ]);
 };
-
-//move express in mainRemote.ts (not a bot functionality)
 
 //add webComponent entity
 //add webModule entity

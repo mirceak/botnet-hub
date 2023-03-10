@@ -1,5 +1,5 @@
 {
-	"singleQuote": true,
-	"trailingComma": "none",
-	"embeddedLanguageFormatting": "auto"
+  "singleQuote": true,
+  "trailingComma": "none",
+  "embeddedLanguageFormatting": "auto"
 }

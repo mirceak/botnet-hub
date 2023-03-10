@@ -1,11 +1,15 @@
 @import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
 
+:root {
+  --footer-height: 102px;
+}
+
 main-component {
   footer-main-component {
-    background-color: $blue;
+    background-color: $light-blue;
     color: #fff;
-    display: flex;
-    height: 102px;
+    max-height: var(--header-height);
+    min-height: var(--header-height);
     width: 100%;
   }
 }

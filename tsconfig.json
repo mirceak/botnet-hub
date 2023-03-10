@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "lib": ["ES2021", "dom"],
+    "lib": ["ESNext", "dom"],
     "moduleResolution": "Node16",
     "baseUrl": ".",
     "rootDir": "src",
@@ -25,8 +25,7 @@
       "@helpers/*": ["./src/helpers/*"],
       "@kernel/*": ["./src/kernel/*"],
       "@database/*": ["./src/database/*"],
-      "@remoteModules/*": ["./src/database/seed/remote/modules/*"],
-      "@remoteFiles/*": ["./src/database/seed/remote/modules/utils/assets/*"]
+      "@remoteModules/*": ["./src/database/seed/remote/modules/*"]
     }
   },
   "typedocOptions": {

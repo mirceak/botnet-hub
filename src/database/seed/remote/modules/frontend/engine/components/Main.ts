@@ -10,16 +10,14 @@ export type HTMLElementComponentStaticScope =
 export type HTMLComponent = InstanceType<typeof AHTMLComponent> &
   IHTMLComponent;
 
-export type InstancedHTMLComponent = IHTMLElement & IHTMLElementComponent;
-
 export type HTMLComponentModule = {
   default: (mainScope: IHTMLElementsScope) => unknown;
 };
 
 export type IHTMLElementsScope = InstanceType<typeof HTMLElementsScope>;
 
-export interface IHTMLElement {
-  indexInParent?: number;
+export interface IComponentAttributes {
+  class?: string;
 }
 
 export interface IHTMLComponent {
@@ -34,12 +32,21 @@ export interface IHTMLElementComponent
   init: CallableFunction;
 }
 
+export interface IHTMLElementStaticScope {
+  template: string;
+  scopesGetter: () => Record<string, HTMLElementComponentStaticScope>;
+}
+
 export interface IHTMLElementComponentStaticScope {
   componentName: string;
 }
 
 export interface IHTMLElementComponentTemplate {
-  components: HTMLElementComponentStaticScope[];
+  components: (
+    | HTMLElementComponentStaticScope
+    | IHTMLElementStaticScope
+    | string
+  )[];
 
   target: InstanceType<typeof window.HTMLElement>;
 }
@@ -72,12 +79,10 @@ export abstract class AHTMLComponent implements IHTMLComponent {
   abstract useComponent(scope?: unknown): HTMLElementComponentStaticScope;
 }
 
-abstract class HTMLElement extends window.HTMLElement implements IHTMLElement {
+abstract class HTMLElement extends window.HTMLElement {
   protected constructor() {
     super();
   }
-
-  indexInParent = -1;
 }
 
 class HTMLElementsScope {
@@ -115,12 +120,14 @@ class HTMLElementsScope {
       );
   };
 
-  getAttributesString = (scope?: { attributes?: object }) => {
-    if (scope?.attributes) {
-      return Object.keys(scope.attributes).reduce((reduced, current) => {
+  getAttributesString = (scope?: { elementAttributes?: object }) => {
+    if (scope?.elementAttributes) {
+      return Object.keys(scope.elementAttributes).reduce((reduced, current) => {
         reduced += `${current}${
           '="' +
-          (scope.attributes?.[current as keyof typeof scope.attributes] || '')
+          (scope.elementAttributes?.[
+            current as keyof typeof scope.elementAttributes
+          ] || '')
         }" `;
         return reduced;
       }, '');
@@ -128,6 +135,7 @@ class HTMLElementsScope {
     return '';
   };
 
+  ind = 0;
   /*whatever async logic running in SSR must register through this method*/
   asyncHydrationCallback = async <T>(
     callback: () => Promise<T>,
@@ -158,6 +166,44 @@ class HTMLElementsScope {
     return component as ReturnType<T['default']>;
   };
 
+  parseChildren = (scopes: Record<string, HTMLElementComponentStaticScope>) => {
+    return (child: IHTMLElementComponent): void => {
+      if (child.tagName.toLowerCase() !== 'dynamic-html-view-component') {
+        const scopeId = child.getAttribute('xScope');
+        if (scopeId) {
+          void this.asyncHydrationCallback(async () => {
+            return window.customElements
+              .whenDefined(child.tagName.toLowerCase())
+              .then(async () => {
+                const scope = (await scopes[
+                  scopeId
+                ]) as HTMLElementComponentStaticScope;
+
+                if (scope) {
+                  if (
+                    (scope as IHTMLElementComponentStaticScope)
+                      ?.componentName === child.tagName.toLowerCase()
+                  ) {
+                    child.init?.(scope);
+                  } else {
+                    throw new Error(
+                      `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
+                    );
+                  }
+                }
+              });
+          });
+        }
+
+        if (child.children.length) {
+          return [
+            ...(child.children as unknown as IHTMLElementComponent[])
+          ].forEach(this.parseChildren(scopes));
+        }
+      }
+    };
+  };
+
   /*lazy loads components*/
   asyncLoadComponentTemplate = async (
     template: IHTMLElementComponentTemplate
@@ -167,73 +213,188 @@ class HTMLElementsScope {
       if (template.components[i]) {
         const component = template.components[i];
         if (component) {
-          promises.push(
-            this.asyncHydrationCallback(async () => {
-              const componentScope = await template.components[i];
-              if (componentScope) {
-                return await window.customElements
-                  .whenDefined(componentScope.componentName)
-                  .then(async () => {
-                    if (!this.hydrating || this.SSR) {
-                      return (
-                        this.appendComponent(
+          if (typeof component !== 'string') {
+            promises.push(
+              this.asyncHydrationCallback(async () => {
+                const componentScope = await component;
+                if (componentScope) {
+                  if (
+                    (componentScope as IHTMLElementComponentStaticScope)
+                      .componentName
+                  ) {
+                    return await window.customElements
+                      .whenDefined(
+                        (componentScope as IHTMLElementComponentStaticScope)
+                          .componentName
+                      )
+                      .then(async () => {
+                        if (!this.hydrating) {
+                          return (
+                            (await this.appendComponent(
+                              template.target,
+                              (
+                                componentScope as IHTMLElementComponentStaticScope
+                              ).componentName,
+                              i
+                            )) as unknown as Record<
+                              'init',
+                              (scope: unknown) => Promise<void>
+                            >
+                          )?.init(componentScope);
+                        }
+
+                        return (
+                          template.target.children[
+                            this.calculateElementPosition(
+                              i,
+                              template.target
+                                .children as unknown as HTMLElement[]
+                            )
+                          ] as unknown as Record<
+                            'init',
+                            (scope: unknown) => Promise<void>
+                          >
+                        )?.init(componentScope);
+                      });
+                  } else if (
+                    (componentScope as IHTMLElementStaticScope).template
+                  ) {
+                    const newElements = [] as Element[];
+                    if (!this.hydrating) {
+                      newElements.push(
+                        ...((await this.appendComponent(
                           template.target,
-                          componentScope.componentName,
-                          i
-                        ) as unknown as Record<
-                          'init',
-                          (scope: unknown) => Promise<void>
-                        >
-                      )?.init(componentScope);
+                          (componentScope as IHTMLElementStaticScope).template,
+                          i,
+                          true
+                        )) as HTMLElement[])
+                      );
                     }
 
-                    return (
-                      template.target.children[i] as unknown as Record<
-                        'init',
-                        (scope: unknown) => Promise<void>
-                      >
-                    )?.init(componentScope);
-                  });
-              }
-            })
-          );
+                    if (
+                      (componentScope as IHTMLElementStaticScope).scopesGetter
+                    ) {
+                      const _scopes = (
+                        componentScope as IHTMLElementStaticScope
+                      ).scopesGetter();
+
+                      [
+                        ...(template.target
+                          .children as unknown as IHTMLElementComponent[])
+                      ]
+                        .filter((child) => {
+                          return (
+                            +(child.getAttribute('indexInParent') as string) ===
+                            i
+                          );
+                        })
+                        .forEach(this.parseChildren(_scopes));
+                    }
+                  }
+                }
+                return;
+              })
+            );
+          } else {
+            if (!this.hydrating) {
+              promises.push(
+                this.asyncHydrationCallback(async () => {
+                  await this.appendComponent(
+                    template.target,
+                    component,
+                    i,
+                    true
+                  );
+                })
+              );
+            }
+          }
         }
       }
     }
     return Promise.all(promises);
   };
 
-  appendComponent = (
-    target: InstanceType<typeof window.HTMLElement>,
-    tag: string,
-    index: number
-  ): InstancedHTMLComponent | undefined => {
-    const componentConstructor = window.customElements.get(tag);
-    if (componentConstructor) {
-      const component = new componentConstructor() as InstancedHTMLComponent;
-      component.indexInParent = index;
+  private calculateElementPosition(
+    index: number,
+    children: HTMLElement[]
+  ): number {
+    let indexPosition = -1;
+    let maxIndexValue = 0;
 
-      let appendIndex = -1;
-      [...(target.children as unknown as InstancedHTMLComponent[])].forEach(
-        (child, _index) => {
-          if (appendIndex < 0) {
-            if (
-              _index === index ||
-              (child.indexInParent != null &&
-                child.indexInParent >= index &&
-                index >= _index)
-            ) {
-              appendIndex = _index;
-            }
-          }
-        }
-      );
-      if (appendIndex < 0) {
-        target.appendChild(component);
-      } else {
-        target.insertBefore(component, target.children[appendIndex]);
+    while (indexPosition < children.length) {
+      indexPosition++;
+
+      if (indexPosition == children.length) {
+        break;
       }
-      return component;
+
+      if (
+        +(children[indexPosition].getAttribute('indexInParent') as string) >=
+        maxIndexValue
+      ) {
+        if (
+          index >
+          +(children[indexPosition].getAttribute('indexInParent') as string)
+        ) {
+          maxIndexValue = +(children[indexPosition].getAttribute(
+            'indexInParent'
+          ) as string);
+        } else {
+          break;
+        }
+      }
+    }
+
+    return Math.max(0, indexPosition);
+  }
+
+  appendComponent = async (
+    target: InstanceType<typeof window.HTMLElement>,
+    tagOrTemplate: string,
+    index: number,
+    isTemplate = false
+  ): Promise<IHTMLElementComponent | HTMLElement[] | undefined> => {
+    if (isTemplate) {
+      const result = [] as HTMLElement[];
+      target.innerHTML += tagOrTemplate;
+      const children = [...(target.children as unknown as HTMLElement[])];
+      for (const child of children) {
+        if (!child.getAttribute('indexInParent')) {
+          child.setAttribute('indexInParent', index.toString());
+          result.push(child);
+        }
+      }
+      result.forEach((child, _index) => {
+        if (_index === 0) {
+          target.children[
+            this.calculateElementPosition(index, children)
+          ].insertAdjacentElement('beforebegin', child);
+        } else {
+          result[_index - 1].insertAdjacentElement('afterend', child);
+        }
+      });
+      return result;
+    } else {
+      const componentConstructor = window.customElements.get(
+        tagOrTemplate
+      ) as CustomElementConstructor;
+      const component = new componentConstructor() as IHTMLElementComponent;
+      component.setAttribute('indexInParent', index.toString());
+
+      if (component) {
+        const indexPosition = this.calculateElementPosition(
+          index,
+          target.children as unknown as HTMLElement[]
+        );
+
+        if (indexPosition < 0) {
+          target.appendChild(component);
+        } else {
+          target.insertBefore(component, target.children[indexPosition]);
+        }
+        return component;
+      }
     }
     return undefined;
   };
@@ -251,10 +412,7 @@ class HTMLElementsScope {
       .pop() as string;
     if (path.includes('node_modules')) {
       path = '@' + path;
-    } else if (
-      !path.includes('@remoteModules/') &&
-      !path.includes('@remoteFiles/')
-    ) {
+    } else if (!path.includes('@remoteModules/')) {
       path = '@remoteModules/' + path;
     }
     if (!this.SSR) {
@@ -277,6 +435,7 @@ class HTMLElementsScope {
   };
 
   loadModule = <T>(importer: () => Promise<T>): Promise<T> => {
+    //TODO: Remove after implementing database only development system
     let path = importer
       .toString()
       .match(/import\('.*'\)/g)?.[0]
@@ -377,6 +536,132 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
                   RouterView.then((component) => component.useComponent())
                 ]
               });
+            }
+
+            if (!mainScope.SSR) {
+              const css = document.createElement('style');
+              const modifiers = ['padding', 'margin'];
+              const directions = [
+                'top',
+                'bottom',
+                'left',
+                'right',
+                'x',
+                'y',
+                'a'
+              ];
+              const sizes = [
+                'auto',
+                '0',
+                '2px',
+                '4px',
+                '8px',
+                '12px',
+                '16px',
+                '32px',
+                '64px'
+              ];
+              const sizeVars = [
+                '--auto',
+                '--0',
+                '--2px',
+                '--4px',
+                '--8px',
+                '--12px',
+                '--16px',
+                '--32px',
+                '--64px'
+              ];
+
+              css.innerHTML += ':root {';
+              sizeVars.forEach((sizeVar, index) => {
+                css.innerHTML += `
+                ${sizeVar}: ${sizes[index]};
+                `;
+              });
+              css.innerHTML += '}';
+
+              const iterateDirections = (modifier: string): void => {
+                directions.forEach((direction) => {
+                  iterateVisibility(modifier, direction);
+                });
+              };
+
+              const fillClass = (
+                modifier: string,
+                classDirection: string,
+                directions: string[],
+                size: string,
+                sizeIndex: number
+              ): string => {
+                if (modifier === 'padding' && size === 'auto') {
+                  return '';
+                }
+
+                let result = `
+                .${modifier.substring(0, 1)}-${classDirection.substring(
+                  0,
+                  1
+                )}-${size.replaceAll('px', '')} {`;
+
+                directions.forEach((direction) => {
+                  result += `${modifier}-${direction}: var(${sizeVars[sizeIndex]});`;
+                });
+
+                return result + '}';
+              };
+
+              const iterateVisibility = (
+                modifier: string,
+                direction: string
+              ): void => {
+                sizes.forEach((size, sizeIndex) => {
+                  switch (direction) {
+                    case 'x':
+                      css.innerHTML += fillClass(
+                        modifier,
+                        direction,
+                        ['left', 'right'],
+                        size,
+                        sizeIndex
+                      );
+                      break;
+                    case 'y':
+                      css.innerHTML += fillClass(
+                        modifier,
+                        direction,
+                        ['top', 'bottom'],
+                        size,
+                        sizeIndex
+                      );
+                      break;
+                    case 'a':
+                      css.innerHTML += fillClass(
+                        modifier,
+                        direction,
+                        ['left', 'right', 'top', 'bottom'],
+                        size,
+                        sizeIndex
+                      );
+                      break;
+                    default:
+                      css.innerHTML += fillClass(
+                        modifier,
+                        direction,
+                        [direction],
+                        size,
+                        sizeIndex
+                      );
+                      break;
+                  }
+                });
+              };
+
+              modifiers.forEach((modifier) => {
+                iterateDirections(modifier);
+              });
+
+              document.body.append(css);
             }
           });
       });

@@ -1,0 +1,51 @@
+@use 'sass:color' as color;
+@use '../src/database/seed/remote/modules/utils/assets/scss/variables/color' as
+  colorVars;
+@use '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows'
+  as shadowVars;
+
+@mixin default-hover($element) {
+  &:has(#{$element}:hover) {
+    @if $element != input {
+      border: var(--border-active);
+      box-shadow: shadowVars.$shadow-3;
+    } @else {
+      border: var(--border-focus);
+      box-shadow: shadowVars.$shadow-2;
+    }
+  }
+}
+
+@mixin default-active($element) {
+  &:has(#{$element}:active) {
+    @if $element != input {
+      box-shadow: shadowVars.$shadow-1;
+      border: var(--border-active);
+    }
+  }
+}
+
+@mixin default-focus($element) {
+  @supports not selector(:focus-visible) {
+    &:has(#{$element}:focus) {
+      @include focus($element);
+    }
+  }
+  @supports selector(:focus-visible) {
+    &:has(#{$element}:focus-visible) {
+      @include focus($element);
+    }
+  }
+}
+
+@mixin focus($element) {
+  @if $element == input {
+    border: var(--border-active);
+  } @else {
+    &:not(&:has(#{$element}:active, #{$element}:hover)) {
+      border: var(--border-focus);
+    }
+  }
+
+  box-shadow: shadowVars.$shadow-3;
+}

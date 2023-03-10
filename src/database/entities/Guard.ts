@@ -10,34 +10,21 @@ import {
   type HasManyMixin,
   useHasManyMixin
 } from '@database/entities/mixins/HasManyMixin.js';
-import {
-  type HasOneMixin,
-  useHasOneMixin
-} from '@database/entities/mixins/HasOneMixin.js';
-import { type RemoteModule } from './RemoteModule.js';
 
 export class Guard extends Model<
-  InferAttributes<Guard, { omit: 'guardEntities' | 'remoteModuleEntity' }>,
-  InferCreationAttributes<
-    Guard,
-    { omit: 'guardEntities' | 'remoteModuleEntity' }
-  >
+  InferAttributes<Guard, { omit: 'guardEntities' }>,
+  InferCreationAttributes<Guard, { omit: 'guardEntities' }>
 > {
   declare name: string;
   declare roles: Roles[];
   declare permissions: Permissions[];
 
   declare guardEntities?: HasManyMixin<Guard>;
-  declare remoteModuleEntity?: HasOneMixin<RemoteModule>;
 
   constructor(...attrs: never[]) {
     super(...attrs);
 
     this.guardEntities = useHasManyMixin<Guard, Guard>(this, 'GuardGuard');
-    this.remoteModuleEntity = useHasOneMixin<Guard, RemoteModule>(
-      this,
-      'remoteModule'
-    );
   }
 }
 
