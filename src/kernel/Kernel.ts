@@ -1,12 +1,12 @@
 import { type Sequelize } from 'sequelize';
-import { RemoteModule } from '@database/entities/RemoteModule.js';
+import { RemoteModule } from '#database/entities/RemoteModule.js';
 import {
   importRemoteModule,
   type Module
-} from '@helpers/imports/importRemoteModule.js';
-import { Script } from '@database/entities/Script.js';
+} from '#helpers/imports/importRemoteModule.js';
+import { Script } from '#database/entities/Script.js';
 import { Context } from 'node:vm';
-import { getFileContentsSync } from '@helpers/imports/io.js';
+import { getFileContentsSync } from '#helpers/imports/io.js';
 
 export interface IKernel {
   runImports: (queue?: Promise<IKernelModule>[]) => Promise<IKernel>;
@@ -55,8 +55,8 @@ export interface IRemoteModuleModel {
 export type IKernelModuleInit = (context: IKernel) => Promise<void> | void;
 
 const defaultModules = [
-  import('@database/database.js'),
-  import('@database/seed/seeder.js')
+  import('#database/database.js'),
+  import('#database/seed/seeder.js')
 ];
 
 const remoteModuleScriptCache: Record<string, IRemoteModuleModel> = {};
@@ -78,7 +78,7 @@ const useKernel = (loadQueue: Promise<IKernelModule>[]): IKernel => {
     },
     async start() {
       await this.kernelGlobals.loadAndImportRemoteModule(
-        '@remoteModules/mainRemote.js'
+        '#remoteModules/mainRemote.js'
       );
     },
     kernelGlobals: {

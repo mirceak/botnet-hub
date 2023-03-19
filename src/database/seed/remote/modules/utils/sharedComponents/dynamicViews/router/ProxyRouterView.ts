@@ -1,26 +1,18 @@
 import type {
   IHTMLElementComponent,
-  IHTMLElementsScope
-} from '@remoteModules/frontend/engine/components/Main.js';
+  TMainScope
+} from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponents = (mainScope: IHTMLElementsScope) => {
-  return {
+const getComponent = (mainScope: TMainScope) => {
+  const { _RouterView } = {
     _RouterView: mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-        )
+      import(
+        '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+      )
     )
   };
-};
 
-const getClass = (
-  mainScope: IHTMLElementsScope,
-  instance: ReturnType<typeof getSingleton>
-) => {
-  const { _RouterView } = instance.registerComponents();
-
-  return class Component
+  class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
   {
@@ -28,47 +20,15 @@ const getClass = (
       super();
     }
 
-    init() {
-      void mainScope.asyncLoadComponentTemplate({
+    async init() {
+      await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [_RouterView.then(({ useComponent }) => useComponent())]
       });
     }
-  };
-};
-
-const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent {
-    componentName = 'proxy-router-view-component';
-
-    initComponent = (mainScope: IHTMLElementsScope) => {
-      if (!window.customElements.get(this.componentName)) {
-        this.registerComponent(this.componentName, getClass(mainScope, this));
-      } else if (mainScope.SSR) {
-        this.registerComponents();
-      }
-    };
-
-    registerComponents = () => {
-      return getComponents(mainScope);
-    };
-
-    useComponent = () => {
-      return this.getComponentScope(this.componentName);
-    };
   }
 
-  return new Instance();
+  return new mainScope.HTMLComponent('proxy-router-view-component', Component);
 };
 
-let componentInstance: ReturnType<typeof getSingleton>;
-
-export default (mainScope: IHTMLElementsScope) => {
-  if (!componentInstance || window.SSR) {
-    if (!componentInstance) {
-      componentInstance = getSingleton(mainScope);
-    }
-    componentInstance.initComponent(mainScope);
-  }
-  return componentInstance;
-};
+export default (mainScope: TMainScope) => getComponent(mainScope);

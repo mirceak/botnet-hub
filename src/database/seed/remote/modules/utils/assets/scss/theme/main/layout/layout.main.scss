@@ -12,4 +12,10 @@ main-component {
       overflow-y: auto;
     }
   }
+
+  dynamic-html-view-component,
+  router-view-component {
+    height: auto;
+    width: auto;
+  }
 }

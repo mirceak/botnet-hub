@@ -1,15 +1,20 @@
 import type {
-  IHTMLElementsScope,
-  HTMLComponentModule,
-  IHTMLElementComponentStaticScope
-} from '@remoteModules/frontend/engine/components/Main.js';
+  TMainScope,
+  HTMLElementComponentStaticScope,
+  IHTMLElementComponent
+} from '/remoteModules/frontend/engine/components/Main.js';
+import { BaseHTMLComponent } from '/remoteModules/frontend/engine/components/Main.js';
 
 export interface Route {
   path: string;
   name?: string;
   redirect?: string;
-  component?: () => Promise<unknown>;
-  scope?: () => Promise<IHTMLElementComponentStaticScope>;
+  component?: Promise<BaseHTMLComponent<unknown>>;
+  scopesGetter?: (
+    mainScope: TMainScope
+  ) =>
+    | Promise<Record<string, HTMLElementComponentStaticScope>>
+    | Record<string, HTMLElementComponentStaticScope>;
   params?: Record<string, string[]>;
   children?: Route[];
   parent?: Route;
@@ -18,7 +23,7 @@ export interface Route {
 }
 
 export interface IRoute extends Route {
-  component: () => Promise<HTMLComponentModule>;
+  component: Promise<BaseHTMLComponent<unknown>>;
 }
 
 export interface Router {
@@ -41,77 +46,70 @@ interface IBrowserHistoryState {
   name: string;
 }
 
-let pathToRegexp: typeof import('@node_modules/path-to-regexp/dist/index.js')['pathToRegexp'];
+let pathToRegexp: typeof import('path-to-regexp/dist/index.js')['pathToRegexp'];
 
-const components = {
-  ProxyRouterViewComponent: (mainScope: IHTMLElementsScope) =>
+const {
+  ProxyRouterViewComponent,
+  LayoutMainComponent,
+  PageHomeComponent,
+  PageAuthComponent,
+  PageAboutComponent,
+  PageComponentsComponent,
+  Page404Component
+} = {
+  ProxyRouterViewComponent: (mainScope: TMainScope) =>
     mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
-        )
+      import(
+        '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+      )
     ),
-  LayoutMainComponent: (mainScope: IHTMLElementsScope) =>
+  LayoutMainComponent: (mainScope: TMainScope) =>
     mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
-        )
+      import(
+        '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+      )
     ),
-  PageHomeComponent: (mainScope: IHTMLElementsScope) =>
+  PageHomeComponent: (mainScope: TMainScope) =>
     mainScope.asyncRegisterComponent(
-      () => import('@remoteModules/frontend/modules/home/pages/page.Home.js')
+      import('/remoteModules/frontend/modules/home/pages/page.Home.js')
     ),
-  PageAuthComponent: (mainScope: IHTMLElementsScope) =>
+  PageAuthComponent: (mainScope: TMainScope) =>
     mainScope.asyncRegisterComponent(
-      () => import('@remoteModules/frontend/modules/auth/pages/page.Auth.js')
+      import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
     ),
-  PageAboutComponent: (mainScope: IHTMLElementsScope) =>
+  PageAboutComponent: (mainScope: TMainScope) =>
     mainScope.asyncRegisterComponent(
-      () => import('@remoteModules/frontend/modules/home/pages/page.About.js')
+      import('/remoteModules/frontend/modules/home/pages/page.About.js')
     ),
-  PageComponentsComponent: (mainScope: IHTMLElementsScope) =>
+  PageComponentsComponent: (mainScope: TMainScope) =>
     mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/frontend/modules/home/pages/dev/page.Components.js'
-        )
+      import(
+        '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
+      )
     ),
-  Page404Component: (mainScope: IHTMLElementsScope) =>
+  Page404Component: (mainScope: TMainScope) =>
     mainScope.asyncRegisterComponent(
-      () =>
-        import(
-          '@remoteModules/frontend/modules/not-found/components/page.NotFound.js'
-        )
+      import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
     )
 };
 
-const mainLayoutComponents = (mainScope: IHTMLElementsScope) => ({
-  _Header: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
-      )
-  ),
-  _Footer: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
-      )
-  ),
-  _Nav: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
-      )
-  )
+const mainLayoutComponents = async (mainScope: TMainScope) => ({
+  _Header: import(
+    '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+  ).then((module) => module.default(mainScope)),
+  _Footer: import(
+    '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+  ).then((module) => module.default(mainScope)),
+  _Nav: import(
+    '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+  ).then((module) => module.default(mainScope))
 });
 
-const getRouter = (mainScope: IHTMLElementsScope): Router => {
+const getRouter = (): Router => {
   return {
     routes: [] as Route[],
     onPopState(e: IPopStateEvent) {
-      return void this.push(e.state.name, true);
+      return this.push(e.state.name, true);
     },
     onDestroy() {
       this.removePopstateListener?.();
@@ -141,31 +139,24 @@ const getRouter = (mainScope: IHTMLElementsScope): Router => {
           ...matched
         );
         this.currentRoute = matched[0];
-        if (!mainScope.SSR) {
-          if (!replaceRoute) {
-            window.history.pushState(
-              { name: matched[0].name, computedPath: matched[0].computedPath },
-              '',
-              (matched[0].computedPath as string) +
-                (window.location.search || '')
-            );
-          } else {
-            window.history.replaceState(
-              { name: matched[0].name, computedPath: matched[0].computedPath },
-              '',
-              (matched[0].computedPath as string) +
-                (window.location.search || '')
-            );
-          }
+
+        if (!replaceRoute) {
+          window.history.pushState(
+            { name: matched[0].name, computedPath: matched[0].computedPath },
+            '',
+            (matched[0].computedPath as string) + (window.location.search || '')
+          );
         } else {
-          window.pathname =
-            (matched[0].computedPath || '') +
-            (window.pathname?.split('?')[1] || '');
+          window.history.replaceState(
+            { name: matched[0].name, computedPath: matched[0].computedPath },
+            '',
+            (matched[0].computedPath as string) + (window.location.search || '')
+          );
         }
 
         /*Need to reset the stack of router-views*/
         /*Remove all router-views whose route is no longer matching and add the first one of those back and let it pull in its new component*/
-        if (firstMatchingRouteIndex !== -1 && !mainScope.hydrating) {
+        if (firstMatchingRouteIndex !== -1) {
           const firstRouterView = window.document.getElementById(
             `${firstMatchingRouteIndex}`
           );
@@ -179,7 +170,7 @@ const getRouter = (mainScope: IHTMLElementsScope): Router => {
             await (
               window.document.getElementById(
                 `${firstMatchingRouteIndex}`
-              ) as unknown as Record<'init', () => Promise<void>>
+              ) as IHTMLElementComponent
             )?.init();
           }
         }
@@ -193,7 +184,7 @@ const getRouter = (mainScope: IHTMLElementsScope): Router => {
   };
 };
 
-export const useRoutes = (mainScope: IHTMLElementsScope): Route[] => [
+export const useRoutes = (mainScope: TMainScope): Route[] => [
   {
     path: '/',
     name: 'root-home',
@@ -201,46 +192,41 @@ export const useRoutes = (mainScope: IHTMLElementsScope): Route[] => [
   },
   {
     path: '/home',
-    component: () => components.LayoutMainComponent(mainScope),
-    scope: () =>
-      components
-        .LayoutMainComponent(mainScope)
-        .then(({ useComponent }) =>
-          useComponent(mainLayoutComponents(mainScope))
-        ),
+    component: LayoutMainComponent(mainScope),
+    scopesGetter: (mainScope: TMainScope) => mainLayoutComponents(mainScope),
     children: [
       {
         path: '',
-        component: () => components.ProxyRouterViewComponent(mainScope),
+        component: ProxyRouterViewComponent(mainScope),
         children: [
           {
             path: '',
             name: 'home',
-            component: () => components.PageHomeComponent(mainScope)
+            component: PageHomeComponent(mainScope)
           }
         ]
       },
       {
         path: 'components',
         name: 'components',
-        component: () => components.PageComponentsComponent(mainScope)
+        component: PageComponentsComponent(mainScope)
       },
       {
         path: 'about',
         name: 'about',
-        component: () => components.PageAboutComponent(mainScope)
+        component: PageAboutComponent(mainScope)
       }
     ]
   },
   {
     path: '/auth',
     name: 'auth',
-    component: () => components.PageAuthComponent(mainScope)
+    component: PageAuthComponent(mainScope)
   },
   {
     path: '/not-found',
     name: '404',
-    component: () => components.Page404Component(mainScope)
+    component: Page404Component(mainScope)
   },
   {
     path: '(.*)',
@@ -249,29 +235,19 @@ export const useRoutes = (mainScope: IHTMLElementsScope): Route[] => [
   }
 ];
 
-export const useRouter = async (
-  mainScope: IHTMLElementsScope
-): Promise<Router> => {
-  const router = getRouter(mainScope);
-  if (!pathToRegexp || mainScope.SSR) {
+export const useRouter = async (mainScope: TMainScope): Promise<Router> => {
+  const router = getRouter();
+  if (!pathToRegexp) {
     /*TODO: Replace with own implementation of path interpreter*/
-    pathToRegexp = (
-      await (mainScope.SSR
-        ? mainScope.loadModule(
-            () => import('@node_modules/path-to-regexp/dist/index.js')
-          )
-        : mainScope.loadModule(
-            () => import('@node_modules/path-to-regexp/dist.es2015/index.js')
-          ))
-    ).pathToRegexp;
+    pathToRegexp = await import(
+      `${'/node_modules/path-to-regexp/dist.es2015/index.js'}`
+    ).then((module) => module.pathToRegexp);
   }
 
   router.routes.push(...useRoutes(mainScope).map(routeMapper));
 
   router.matchedRoutes = router.routes.reduce(
-    matchedRoutePathReducer(
-      mainScope.SSR ? (window.pathname as string) : window.location.pathname
-    ),
+    matchedRoutePathReducer(window.location.pathname),
     [] as Route[]
   );
 
@@ -285,23 +261,21 @@ export const useRouter = async (
     await router.redirect(router.currentRoute.redirect);
   }
 
-  if (!mainScope.SSR) {
-    window.history.replaceState(
-      {
-        name: router.currentRoute.name,
-        computedPath: router.currentRoute.computedPath
-      },
-      '',
-      (router.currentRoute.computedPath as string) +
-        (window.location.search || '')
-    );
+  window.history.replaceState(
+    {
+      name: router.currentRoute.name,
+      computedPath: router.currentRoute.computedPath
+    },
+    '',
+    (router.currentRoute.computedPath as string) +
+      (window.location.search || '')
+  );
 
-    router.removePopstateListener = mainScope.registerEventListener(
-      window,
-      'popstate',
-      router.onPopState.bind(router)
-    );
-  }
+  router.removePopstateListener = mainScope.registerEventListener(
+    window,
+    'popstate',
+    router.onPopState.bind(router)
+  );
 
   router.ready = true;
 

@@ -1,7 +1,8 @@
-@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/display';
+@use '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/display'
+  as display;
 
 button-component {
-  @include default-interactive-component(button);
+  @include display.default-interactive-component(button);
 
   button {
     cursor: pointer;

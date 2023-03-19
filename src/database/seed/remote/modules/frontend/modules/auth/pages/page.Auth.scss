@@ -6,7 +6,7 @@
 main-component {
   auth-component {
     align-items: center;
-    animation: color-change 10s linear infinite alternate;
+    animation: color-change 15s linear infinite alternate;
     background: radial-gradient(
         farthest-corner at top,
         mix(colorVars.$light-blue-6, colorVars.$deep-purple-6, 15%),

@@ -5,11 +5,11 @@ import {
   Model,
   type Sequelize
 } from 'sequelize';
-import { type IKernelModuleInit } from '@src/kernel/Kernel.js';
+import { type IKernelModuleInit } from '#src/kernel/Kernel.js';
 import {
   type HasManyMixin,
   useHasManyMixin
-} from '@database/entities/mixins/HasManyMixin.js';
+} from '#database/entities/mixins/HasManyMixin.js';
 
 export class Guard extends Model<
   InferAttributes<Guard, { omit: 'guardEntities' }>,

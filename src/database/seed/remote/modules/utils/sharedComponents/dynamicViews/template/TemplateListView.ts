@@ -1,9 +1,9 @@
 import type {
   IHTMLElementComponent,
   IHTMLElementComponentTemplate,
-  IHTMLElementsScope,
+  TMainScope,
   IComponentAttributes
-} from '@remoteModules/frontend/engine/components/Main.js';
+} from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   listGetter: () => IHTMLElementComponentTemplate['components'];
@@ -11,8 +11,8 @@ interface ILocalScope {
   attributes?: IComponentAttributes;
 }
 
-const getClass = (mainScope: IHTMLElementsScope) => {
-  return class Component
+const getComponent = (mainScope: TMainScope) => {
+  class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
   {
@@ -25,7 +25,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
       super();
     }
 
-    init(scope: ILocalScope) {
+    async init(scope: ILocalScope) {
       if (scope.attributes) {
         Object.keys(scope.attributes).forEach((key) => {
           this.setAttribute(
@@ -58,7 +58,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     }
 
     render(
-      mainScope: IHTMLElementsScope,
+      mainScope: TMainScope,
       value: IHTMLElementComponentTemplate['components']
     ) {
       void mainScope.asyncLoadComponentTemplate({
@@ -75,35 +75,12 @@ const getClass = (mainScope: IHTMLElementsScope) => {
         );
       }
     }
-  };
-};
-
-const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent {
-    componentName = 'template-list-view-component';
-
-    initComponent = (mainScope: IHTMLElementsScope) => {
-      if (!window.customElements.get(this.componentName)) {
-        this.registerComponent(this.componentName, getClass(mainScope));
-      }
-    };
-
-    useComponent = (scope: ILocalScope) => {
-      return this.getComponentScope(this.componentName, scope);
-    };
   }
 
-  return new Instance();
+  return new mainScope.HTMLComponent<ILocalScope>(
+    'template-list-view-component',
+    Component
+  );
 };
 
-let componentInstance: ReturnType<typeof getSingleton>;
-
-export default (mainScope: IHTMLElementsScope) => {
-  if (!componentInstance || window.SSR) {
-    if (!componentInstance) {
-      componentInstance = getSingleton(mainScope);
-    }
-    componentInstance.initComponent(mainScope);
-  }
-  return componentInstance;
-};
+export default (mainScope: TMainScope) => getComponent(mainScope);

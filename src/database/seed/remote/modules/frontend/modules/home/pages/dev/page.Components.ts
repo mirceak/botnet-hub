@@ -1,30 +1,23 @@
 import type {
-  IHTMLElementsScope,
-  IHTMLElementComponent
-} from '@remoteModules/frontend/engine/components/Main.js';
+  IHTMLElementComponent,
+  TMainScope
+} from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponents = (mainScope: IHTMLElementsScope) => ({
-  _Button: mainScope.asyncRegisterComponent(
-    () =>
+const getComponent = async (mainScope: TMainScope) => {
+  const { _Input, _Button } = {
+    _Button: mainScope.asyncRegisterComponent(
       import(
-        '@remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
       )
-  ),
-  _Input: mainScope.asyncRegisterComponent(
-    () =>
+    ),
+    _Input: mainScope.asyncRegisterComponent(
       import(
-        '@remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
       )
-  )
-});
+    )
+  };
 
-const getClass = (
-  mainScope: IHTMLElementsScope,
-  instance: ReturnType<typeof getSingleton>
-) => {
-  const { _Button, _Input } = instance.registerComponents();
-
-  return class Component
+  class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
   {
@@ -32,49 +25,49 @@ const getClass = (
       super();
     }
 
-    init() {
-      void mainScope.asyncHydrationCallback(async () => {
-        const scopedCss = await instance.useScopedCss();
-        void mainScope.asyncLoadComponentTemplate({
-          target: this,
-          components: [
-            {
-              template: /* HTML */ `<div class="card gap-8 m-a-16 fit-content">
-                  <div class="header row align-items-center">
+    async init() {
+      await mainScope.asyncLoadComponentTemplate({
+        target: this,
+        components: [
+          async () => {
+            return {
+              /*language=HTML */
+              template: `
+                <div class="card gap-8 m-a-16 fit-content">
+                  <div class="header row items-center">
                     <button-component
-                      class="bg-primary m-r-16"
-                      xScope="xButtonBack"
-                    ></button-component>
+                        class="bg-primary m-r-16"
+                        xScope="xButtonBack">
+                    </button-component>
                     <h1>Components</h1>
                   </div>
                   <div class="card">
-                    <div class="m-b-2">
+                    <div class="m-b-16">
                       <h1>Buttons</h1>
                     </div>
                     <div class="row gap-8">
+                      <button-component xScope="xButtonDefault">
+                      </button-component>
                       <button-component
-                        xScope="xButtonDefault"
-                      ></button-component>
+                          class="bg-primary"
+                          xScope="xButtonPrimary">
+                      </button-component>
                       <button-component
-                        class="bg-primary"
-                        xScope="xButtonPrimary"
-                      ></button-component>
+                          class="bg-secondary"
+                          xScope="xButtonSecondary">
+                      </button-component>
                       <button-component
-                        class="bg-secondary"
-                        xScope="xButtonSecondary"
-                      ></button-component>
+                          class="bg-info"
+                          xScope="xButtonInfo">
+                      </button-component>
                       <button-component
-                        class="bg-info"
-                        xScope="xButtonInfo"
-                      ></button-component>
+                          class="bg-warning"
+                          xScope="xButtonWarning">
+                      </button-component>
                       <button-component
-                        class="bg-warning"
-                        xScope="xButtonWarning"
-                      ></button-component>
-                      <button-component
-                        class="bg-danger"
-                        xScope="xButtonDanger"
-                      ></button-component>
+                          class="bg-danger"
+                          xScope="xButtonDanger">
+                      </button-component>
                     </div>
                   </div>
                   <div class="card">
@@ -82,31 +75,31 @@ const getClass = (
                       <h1>Inputs</h1>
                     </div>
                     <div class="row gap-8">
-                      <input-component xScope="xInputDefault"></input-component>
+                      <input-component xScope="xInputDefault">
+                      </input-component>
                       <input-component
-                        class="bg-primary"
-                        xScope="xInputPrimary"
-                      ></input-component>
+                          class="bg-primary"
+                          xScope="xInputPrimary">
+                      </input-component>
                       <input-component
-                        class="bg-secondary"
-                        xScope="xInputSecondary"
-                      ></input-component>
+                          class="bg-secondary"
+                          xScope="xInputSecondary">
+                      </input-component>
                       <input-component
-                        class="bg-info"
-                        xScope="xInputInfo"
-                      ></input-component>
+                          class="bg-info"
+                          xScope="xInputInfo">
+                      </input-component>
                       <input-component
-                        class="bg-warning"
-                        xScope="xInputWarning"
-                      ></input-component>
+                          class="bg-warning"
+                          xScope="xInputWarning">
+                      </input-component>
                       <input-component
-                        class="bg-danger"
-                        xScope="xInputDanger"
-                      ></input-component>
+                          class="bg-danger"
+                          xScope="xInputDanger">
+                      </input-component>
                     </div>
                   </div>
-                </div>
-                ${scopedCss}`,
+                </div>`,
               scopesGetter: () => ({
                 xButtonBack: _Button.then(({ useComponent }) => {
                   return useComponent({
@@ -187,56 +180,26 @@ const getClass = (
                   });
                 })
               })
-            }
-          ]
-        });
+            };
+          },
+          async () => {
+            const scopedCss = await (
+              await fetch(
+                '/remoteModules/frontend/modules/home/pages/dev/page.Components.scss'
+              )
+            ).text();
+            return instance.getScopedCss(scopedCss);
+          }
+        ]
       });
     }
-  };
-};
-
-const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent {
-    componentName = 'components-component';
-
-    initComponent = (mainScope: IHTMLElementsScope) => {
-      if (!window.customElements.get(this.componentName)) {
-        this.registerComponent(this.componentName, getClass(mainScope, this));
-      } else if (mainScope.SSR) {
-        this.registerComponents();
-      }
-    };
-
-    registerComponents = () => {
-      return getComponents(mainScope);
-    };
-
-    useComponent = () => {
-      return this.getComponentScope(this.componentName);
-    };
-
-    useScopedCss = async () => {
-      const scopedCss = await mainScope.loadFile(
-        () =>
-          import(
-            '@remoteModules/frontend/modules/home/pages/dev/page.Components.scss'
-          )
-      );
-      return this.getScopedCss(scopedCss);
-    };
   }
 
-  return new Instance();
+  const instance = new mainScope.HTMLComponent(
+    'components-component',
+    Component
+  );
+  return instance;
 };
 
-let componentInstance: ReturnType<typeof getSingleton>;
-
-export default (mainScope: IHTMLElementsScope) => {
-  if (!componentInstance || window.SSR) {
-    if (!componentInstance) {
-      componentInstance = getSingleton(mainScope);
-    }
-    componentInstance.initComponent(mainScope);
-  }
-  return componentInstance;
-};
+export default async (mainScope: TMainScope) => getComponent(mainScope);

@@ -1,5 +1,5 @@
-@import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
-@import '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows';
+@use '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows'
+  as shadowVars;
 
 :root {
   --card-border-radius: 8px;
@@ -10,7 +10,7 @@
 .card {
   align-items: flex-start;
   border-radius: var(--card-border-radius);
-  box-shadow: $shadow-2;
+  box-shadow: shadowVars.$shadow-2;
   display: flex;
   flex-direction: column;
   padding: var(--card-padding);

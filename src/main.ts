@@ -3,7 +3,7 @@
  *
  * @module main
  */
-await import('@kernel/Kernel.js').then(async (kernel) => {
+await import('#kernel/Kernel.js').then(async (kernel) => {
   await kernel
     .getKernel()
     .runImports()

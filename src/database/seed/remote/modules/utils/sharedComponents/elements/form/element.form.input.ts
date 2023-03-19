@@ -1,8 +1,8 @@
 import type {
-  IHTMLElementsScope,
+  TMainScope,
   IHTMLElementComponent,
   IComponentAttributes
-} from '@remoteModules/frontend/engine/components/Main.js';
+} from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   onInput?: (value: string) => void;
@@ -17,8 +17,8 @@ interface IInputElementAttributes {
   autocomplete?: string;
 }
 
-const getClass = (mainScope: IHTMLElementsScope) => {
-  return class Component
+const getComponent = async (mainScope: TMainScope) => {
+  class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
   {
@@ -28,10 +28,8 @@ const getClass = (mainScope: IHTMLElementsScope) => {
       super();
     }
 
-    init(scope: ILocalScope) {
-      if (!mainScope.hydrating) {
-        this.render(scope);
-      }
+    async init(scope: ILocalScope) {
+      this.render(scope);
 
       if (scope.onInput) {
         this.removeInputListener = mainScope.registerEventListener(
@@ -53,35 +51,9 @@ const getClass = (mainScope: IHTMLElementsScope) => {
     disconnectedCallback() {
       this.removeInputListener?.();
     }
-  };
-};
-
-const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent {
-    componentName = 'input-component';
-
-    initComponent = (mainScope: IHTMLElementsScope) => {
-      if (!window.customElements.get(this.componentName)) {
-        this.registerComponent(this.componentName, getClass(mainScope));
-      }
-    };
-
-    useComponent = (scope: ILocalScope) => {
-      return this.getComponentScope(this.componentName, scope);
-    };
   }
 
-  return new Instance();
+  return new mainScope.HTMLComponent<ILocalScope>('input-component', Component);
 };
 
-let componentInstance: ReturnType<typeof getSingleton>;
-
-export default (mainScope: IHTMLElementsScope) => {
-  if (!componentInstance || window.SSR) {
-    if (!componentInstance) {
-      componentInstance = getSingleton(mainScope);
-    }
-    componentInstance.initComponent(mainScope);
-  }
-  return componentInstance;
-};
+export default (mainScope: TMainScope) => getComponent(mainScope);

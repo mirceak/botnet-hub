@@ -1,22 +1,21 @@
 import type {
-  IHTMLElementsScope,
-  IHTMLElementComponent,
-  IHTMLComponent,
   HTMLElementComponentStaticScope,
-  IComponentAttributes
-} from '@remoteModules/frontend/engine/components/Main.js';
-import type { IRoute } from '@remoteModules/frontend/engine/router.js';
+  IComponentAttributes,
+  IHTMLComponent,
+  IHTMLElementComponent,
+  TMainScope
+} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IRoute } from '/remoteModules/frontend/engine/router.js';
 
 interface ILocalScope {
   fromConstructor?: boolean;
   attributes?: IComponentAttributes;
 }
 
-const getClass = (
-  mainScope: IHTMLElementsScope,
-  instance: ReturnType<typeof getSingleton>
-) => {
-  return class Component
+const getComponent = async (mainScope: TMainScope) => {
+  const routerViewRegister = new Set();
+
+  class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
   {
@@ -24,29 +23,19 @@ const getClass = (
 
     constructor() {
       super();
-
-      if (mainScope.hydrating) {
-        this.init({ fromConstructor: true });
-      }
     }
 
     init(scope?: ILocalScope) {
-      if (mainScope.hydrating && !scope?.fromConstructor) {
-        /*avoid adding the route's component twice when hydrating SSR*/
-        return;
-      }
       const matchedRoutesLength = mainScope.router?.matchedRoutes
         ?.length as number;
-      if (
-        Object.keys(instance.routerViewRegister).length === matchedRoutesLength
-      ) {
+      if (Object.keys(routerViewRegister).length === matchedRoutesLength) {
         throw new Error('router-view has no matching route');
       }
 
       if (this._index == null) {
-        this._index = instance.routerViewRegister.size;
+        this._index = routerViewRegister.size;
         this.setAttribute('id', `${this._index}`);
-        instance.routerViewRegister.add(this._index);
+        routerViewRegister.add(this._index);
       }
 
       if (scope?.attributes) {
@@ -66,70 +55,43 @@ const getClass = (
 
       if (route) {
         const routeComponent =
-          route.component as unknown as () => Promise<IHTMLComponent>;
-        if (!mainScope.hydrating) {
-          this.innerHTML = '';
-        }
+          route.component as unknown as Promise<IHTMLComponent>;
+        this.innerHTML = '';
 
-        void mainScope.asyncHydrationCallback(async () => {
-          const { componentName, useComponent: useRouteComponent } =
-            await routeComponent();
-          const routeScope = await route.scope?.();
-
-          void mainScope.asyncLoadComponentTemplate({
-            target: this,
-            components: [
-              {
-                template: `<${componentName} xScope="xScope${this._index}"></${componentName}>` /* xScope${this._index} -> avoid nested template parsing because the first scope would be sent to all other instances */,
+        void mainScope.asyncLoadComponentTemplate({
+          target: this,
+          components: [
+            async () => {
+              const { componentName, useComponent: useRouteComponent } =
+                await routeComponent;
+              return {
+                template: `<${componentName} xScope="xScope${this._index}">
+</${componentName}>` /* xScope${this._index} -> avoids nested template parsing errors because the first scope would be sent to all other instances caring the same scope names */,
                 scopesGetter: () => {
                   return {
-                    [`xScope${this._index}`]: useRouteComponent(
-                      routeScope
-                    ) as HTMLElementComponentStaticScope
+                    [`xScope${this._index}`]: useRouteComponent({
+                      scopesGetter: route.scopesGetter
+                    }) as HTMLElementComponentStaticScope
                   };
                 }
-              }
-            ]
-          });
+              };
+            }
+          ]
         });
       }
     }
 
     disconnectedCallback() {
       if (this._index != undefined) {
-        instance.routerViewRegister.delete(this._index);
+        routerViewRegister.delete(this._index);
       }
     }
-  };
-};
-
-const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent {
-    componentName = 'router-view-component';
-    routerViewRegister = new Set();
-
-    initComponent = (mainScope: IHTMLElementsScope) => {
-      if (!window.customElements.get(this.componentName)) {
-        this.registerComponent(this.componentName, getClass(mainScope, this));
-      }
-    };
-
-    useComponent = (scope?: ILocalScope) => {
-      return this.getComponentScope(this.componentName, scope);
-    };
   }
 
-  return new Instance();
+  return new mainScope.HTMLComponent<ILocalScope>(
+    'router-view-component',
+    Component
+  );
 };
 
-let componentInstance: ReturnType<typeof getSingleton>;
-
-export default (mainScope: IHTMLElementsScope) => {
-  if (!componentInstance || window.SSR) {
-    if (!componentInstance) {
-      componentInstance = getSingleton(mainScope);
-    }
-    componentInstance.initComponent(mainScope);
-  }
-  return componentInstance;
-};
+export default (mainScope: TMainScope) => getComponent(mainScope);

@@ -1,10 +1,11 @@
-import { Entity } from '@database/entities/Entity.js';
-import { Guard } from '@database/entities/Guard.js';
-import { RemoteModule } from '@database/entities/RemoteModule.js';
-import { Script } from '@database/entities/Script.js';
-import { User } from '@database/entities/User.js';
-import type { IKernelModuleInit } from '@src/kernel/Kernel.js';
-import { getFileContentsSync } from '@helpers/imports/io.js';
+import { Entity } from '#database/entities/Entity.js';
+import { Guard } from '#database/entities/Guard.js';
+import { RemoteModule } from '#database/entities/RemoteModule.js';
+import { Script } from '#database/entities/Script.js';
+import { User } from '#database/entities/User.js';
+import { WebComponent } from '#database/entities/WebComponent.js';
+import type { IKernelModuleInit } from '#src/kernel/Kernel.js';
+import { getFileContentsSync } from '#helpers/imports/io.js';
 import cluster from 'cluster';
 import sass from 'sass';
 import path from 'path';
@@ -12,17 +13,23 @@ import path from 'path';
 const loadSeederModule = async <T>(importer: () => Promise<T>) => {
   const moduleBasePath = importer
     .toString()
-    .match(/import\('.*'\)/g)?.[0]
+    .replaceAll(/[\n\r\t ]/g, '')
+    .match(/import\(.*\)/g)?.[0]
     .replace("import('", '')
     .replace("')", '')
     .split('./')
     .pop() as string;
   await RemoteModule.create({
-    name: '@remoteModules/' + moduleBasePath.replace('remote/modules/', '')
+    name: moduleBasePath.replace('/', '#')
   }).then(async (remoteModule) => {
-    const code = getFileContentsSync(`build/database/seed/${moduleBasePath}`);
+    const code = getFileContentsSync(
+      moduleBasePath.replace(
+        /\/remoteModules/gs,
+        'build/database/seed/remote/modules/'
+      )
+    );
     await remoteModule.scriptEntity?.createEntity({
-      name: '@remoteModules/' + moduleBasePath.replace('remote/modules/', ''),
+      name: moduleBasePath.replace('/', '#'),
       code
     });
   });
@@ -31,17 +38,20 @@ const loadSeederModule = async <T>(importer: () => Promise<T>) => {
 const loadSeederFile = async <T>(importer: () => Promise<T>) => {
   const fileBasePath = importer
     .toString()
-    .match(/import\('.*'\)/g)?.[0]
+    .replaceAll(/[\n\r\t ]/g, '')
+    .match(/import\(.*\)/g)?.[0]
     .replace("import('", '')
-    .replace("')", '') as string;
+    .replace("')", '')
+    .split('./')
+    .pop() as string;
   const type = fileBasePath.split('.').pop();
   await RemoteModule.create({
-    name: fileBasePath
+    name: fileBasePath.replace('/', '#')
   }).then(async (remoteModule) => {
     let code = getFileContentsSync(
       `${
         'src/database/seed/remote/modules/' +
-        fileBasePath.split('@remoteModules/')[1]
+        fileBasePath.split('/remoteModules/')[1]
       }`
     );
     switch (type) {
@@ -61,7 +71,7 @@ const loadSeederFile = async <T>(importer: () => Promise<T>) => {
         break;
     }
     await remoteModule.scriptEntity?.createEntity({
-      name: fileBasePath,
+      name: fileBasePath.replace('/', '#'),
       code
     });
   });
@@ -73,6 +83,7 @@ export const init: IKernelModuleInit = async (context) => {
   User.hasMany(Guard);
   RemoteModule.hasMany(Guard);
   Entity.hasMany(Guard);
+  WebComponent.hasMany(Guard);
   Guard.hasMany(Guard, {
     as: 'guardGuards'
   });
@@ -95,6 +106,9 @@ export const init: IKernelModuleInit = async (context) => {
   });
   await Entity.create({
     name: 'users'
+  });
+  await Entity.create({
+    name: 'webComponent'
   });
 
   await User.create({
@@ -120,153 +134,150 @@ export const init: IKernelModuleInit = async (context) => {
   });
 
   //seedRemoteKernel;
-  await loadSeederModule(() => import('@remoteModules/mainRemote.js'));
+  await loadSeederModule(() => import('/remoteModules/mainRemote.js'));
   if (cluster.isPrimary) {
     await loadSeederModule(
-      () => import('@remoteModules/backend/express/frontendServer.js')
+      () => import('/remoteModules/backend/express/frontendServer.js')
     );
   }
   await loadSeederModule(
-    () => import('@remoteModules/frontend/modules/home/pages/page.Home.js')
+    () => import('/remoteModules/frontend/modules/home/pages/page.Home.js')
   );
   await loadSeederModule(
-    () => import('@remoteModules/frontend/modules/home/pages/page.About.js')
+    () => import('/remoteModules/frontend/modules/home/pages/page.About.js')
   );
   await loadSeederModule(
-    () => import('@remoteModules/frontend/modules/auth/pages/page.Auth.js')
-  );
-  await loadSeederModule(
-    () =>
-      import(
-        '@remoteModules/frontend/modules/home/pages/dev/page.Components.js'
-      )
+    () => import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/frontend/modules/not-found/components/page.NotFound.js'
+        '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
       )
   );
-
   await loadSeederModule(
-    () => import('@remoteModules/frontend/engine/components/Main.js')
-  );
-  await loadSeederModule(
-    () => import('@remoteModules/frontend/engine/router.js')
-  );
-  await loadSeederModule(
-    () => import('@remoteModules/frontend/engine/store.js')
+    () => import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
   );
 
   await loadSeederModule(
-    () => import('@remoteModules/utils/reactivity/objectProxy.js')
+    () => import('/remoteModules/frontend/engine/components/Main.js')
+  );
+  await loadSeederModule(
+    () => import('/remoteModules/frontend/engine/router.js')
+  );
+  await loadSeederModule(
+    () => import('/remoteModules/frontend/engine/store.js')
+  );
+
+  await loadSeederModule(
+    () => import('/remoteModules/utils/reactivity/objectProxy.js')
   );
 
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+        '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+        '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/template/TemplateListView.js'
+        '/remoteModules/utils/sharedComponents/dynamicViews/template/TemplateListView.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+        '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+        '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
+        '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/form/element.form.select.js'
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.select.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
       )
   );
 
   await loadSeederModule(
-    () => import('@remoteModules/backend/workers/jsdom/jsdomWorker.js')
+    () => import('/remoteModules/backend/workers/jsdom/jsdomWorker.js')
   );
 
   await loadSeederFile(
-    () => import('@remoteModules/utils/assets/scss/theme/main/theme.main.scss')
+    () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
   await loadSeederFile(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.scss'
+        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.scss'
       )
   );
   await loadSeederFile(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.scss'
+        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.scss'
       )
   );
   await loadSeederFile(
     () =>
       import(
-        '@remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.scss'
+        '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.scss'
       )
   );
   await loadSeederFile(
-    () => import('@remoteModules/frontend/modules/home/pages/page.About.scss')
+    () => import('/remoteModules/frontend/modules/home/pages/page.About.scss')
   );
   await loadSeederFile(
-    () => import('@remoteModules/frontend/modules/auth/pages/page.Auth.scss')
+    () => import('/remoteModules/frontend/modules/auth/pages/page.Auth.scss')
   );
   await loadSeederFile(
     () =>
       import(
-        '@remoteModules/frontend/modules/home/pages/dev/page.Components.scss'
+        '/remoteModules/frontend/modules/home/pages/dev/page.Components.scss'
       )
   );
   await loadSeederFile(
-    () => import('@remoteModules/frontend/modules/home/pages/page.Home.scss')
+    () => import('/remoteModules/frontend/modules/home/pages/page.Home.scss')
   );
 };

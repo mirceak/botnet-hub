@@ -1,10 +1,10 @@
 import type {
   IHTMLElementComponent,
-  IHTMLElementsScope,
+  TMainScope,
   HTMLElementComponentStaticScope,
-  IHTMLElementComponentStaticScope,
+  IComponentStaticScope,
   IComponentAttributes
-} from '@remoteModules/frontend/engine/components/Main.js';
+} from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
   templateGetter: () => string | undefined;
@@ -14,8 +14,8 @@ interface ILocalScope {
   attributes?: IComponentAttributes;
 }
 
-const getClass = (mainScope: IHTMLElementsScope) => {
-  return class Component
+const getComponent = async (mainScope: TMainScope) => {
+  class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
   {
@@ -28,7 +28,7 @@ const getClass = (mainScope: IHTMLElementsScope) => {
       super();
     }
 
-    init(scope: ILocalScope & { useComponent?: CallableFunction }) {
+    async init(scope: ILocalScope) {
       if (scope.attributes) {
         Object.keys(scope.attributes).forEach((key) => {
           this.setAttribute(
@@ -52,12 +52,10 @@ const getClass = (mainScope: IHTMLElementsScope) => {
           this.computeRender.computed
         );
 
-        if (!mainScope.hydrating) {
-          this.computeRender.computed();
-        }
+        this.computeRender.computed();
       }
 
-      if (scope.instant && !mainScope.hydrating) {
+      if (scope.instant) {
         this.render(scope.templateGetter());
       }
 
@@ -74,8 +72,8 @@ const getClass = (mainScope: IHTMLElementsScope) => {
                     scopeId
                   ]) as HTMLElementComponentStaticScope;
                   if (
-                    (scope as IHTMLElementComponentStaticScope)
-                      ?.componentName === child.tagName.toLowerCase()
+                    (scope as IComponentStaticScope)?.componentName ===
+                    child.tagName.toLowerCase()
                   ) {
                     child.init(scope);
                   } else {
@@ -113,35 +111,12 @@ const getClass = (mainScope: IHTMLElementsScope) => {
         );
       }
     }
-  };
-};
-
-const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent {
-    componentName = 'dynamic-html-view-component';
-
-    initComponent = (mainScope: IHTMLElementsScope) => {
-      if (!window.customElements.get(this.componentName)) {
-        this.registerComponent(this.componentName, getClass(mainScope));
-      }
-    };
-
-    useComponent = (scope: ILocalScope) => {
-      return this.getComponentScope(this.componentName, scope);
-    };
   }
 
-  return new Instance();
+  return new mainScope.HTMLComponent<ILocalScope>(
+    'dynamic-html-view-component',
+    Component
+  );
 };
 
-let componentInstance: ReturnType<typeof getSingleton>;
-
-export default (mainScope: IHTMLElementsScope) => {
-  if (!componentInstance || window.SSR) {
-    if (!componentInstance) {
-      componentInstance = getSingleton(mainScope);
-    }
-    componentInstance.initComponent(mainScope);
-  }
-  return componentInstance;
-};
+export default async (mainScope: TMainScope) => getComponent(mainScope);

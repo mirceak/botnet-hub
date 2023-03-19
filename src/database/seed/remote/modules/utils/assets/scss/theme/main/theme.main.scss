@@ -1,6 +1,5 @@
 @import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
-@import '../src/database/seed/remote/modules/utils/assets/scss/helpers/sizing';
-@import '../src/database/seed/remote/modules/utils/assets/scss/helpers/display';
+@import '../src/database/seed/remote/modules/utils/assets/scss/helpers';
 @import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements';
 @import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/layout/layout.main';
 
@@ -10,22 +9,13 @@ body {
   margin: 0;
   width: 100dvw;
 
+  &,
   * {
-    font-family: Roboto, sans-serif;
+    font-family: Geneva, sans-serif;
   }
 
   style,
   script {
     display: none !important;
-  }
-
-  dynamic-html-view-component {
-    height: auto;
-    width: auto;
-  }
-
-  router-view-component {
-    height: auto;
-    width: auto;
   }
 }

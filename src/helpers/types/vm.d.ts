@@ -1,4 +1,4 @@
-import { linker, Module } from '@helpers/imports/importRemoteModule.js';
+import { linker, Module } from '#helpers/imports/importRemoteModule.js';
 import { type Context } from 'node:vm';
 
 declare module 'vm' {

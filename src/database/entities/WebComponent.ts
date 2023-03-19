@@ -2,8 +2,8 @@ import {
   DataTypes,
   type InferAttributes,
   type InferCreationAttributes,
-  type Sequelize,
-  Model
+  Model,
+  type Sequelize
 } from 'sequelize';
 import { type IKernelModuleInit } from '#src/kernel/Kernel.js';
 import { type Guard } from './Guard.js';
@@ -12,17 +12,14 @@ import {
   useHasManyMixin
 } from '#database/entities/mixins/HasManyMixin.js';
 import {
-  type HasOneMixin,
+  HasOneMixin,
   useHasOneMixin
 } from '#database/entities/mixins/HasOneMixin.js';
-import { type Script } from './Script.js';
+import { Script } from '#database/entities/Script.js';
 
-export class RemoteModule extends Model<
-  InferAttributes<RemoteModule, { omit: 'scriptEntity' | 'guardEntities' }>,
-  InferCreationAttributes<
-    RemoteModule,
-    { omit: 'scriptEntity' | 'guardEntities' }
-  >
+export class WebComponent extends Model<
+  InferAttributes<WebComponent, { omit: 'guardEntities' }>,
+  InferCreationAttributes<WebComponent, { omit: 'guardEntities' }>
 > {
   declare name: string;
 
@@ -31,19 +28,19 @@ export class RemoteModule extends Model<
 
   constructor(...attrs: never[]) {
     super(...attrs);
-    this.guardEntities = useHasManyMixin<RemoteModule, Guard>(this, 'Guard');
-    this.scriptEntity = useHasOneMixin<RemoteModule, Script>(this, 'Script');
+    this.guardEntities = useHasManyMixin<WebComponent, Guard>(this, 'Guard');
+    this.scriptEntity = useHasOneMixin<WebComponent, Script>(this, 'Script');
   }
 }
 
 export const init: IKernelModuleInit = (context) => {
-  RemoteModule.init(
+  WebComponent.init(
     {
       name: { type: DataTypes.STRING }
     },
     {
       sequelize: context.kernelGlobals.sequelize as Sequelize,
-      modelName: 'remoteModule'
+      modelName: 'webComponent'
     }
   );
 };

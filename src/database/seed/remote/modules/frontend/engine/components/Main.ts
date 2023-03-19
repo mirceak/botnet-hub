@@ -1,27 +1,25 @@
-import type { IStore } from '@remoteModules/frontend/engine/store.js';
-import type { Router } from '@remoteModules/frontend/engine/router.js';
-import type { GenericFalsy } from '@remoteModules/utils/types/genericTypes.js';
+import type { IStore } from '/remoteModules/frontend/engine/store.js';
+import type { Router } from '/remoteModules/frontend/engine/router.js';
+import type { GenericFalsy } from '/remoteModules/utils/types/genericTypes.js';
 
 export type HTMLElementComponentStaticScope =
-  | Promise<IHTMLElementComponentStaticScope>
-  | IHTMLElementComponentStaticScope
+  | Promise<IComponentStaticScope>
+  | IComponentStaticScope
   | GenericFalsy;
 
-export type HTMLComponent = InstanceType<typeof AHTMLComponent> &
-  IHTMLComponent;
+export type HTMLComponent = InstanceType<typeof BaseHTMLComponent>;
 
-export type HTMLComponentModule = {
-  default: (mainScope: IHTMLElementsScope) => unknown;
-};
+export interface HTMLComponentModule {
+  default: CallableFunction;
+}
 
-export type IHTMLElementsScope = InstanceType<typeof HTMLElementsScope>;
+export type TMainScope = InstanceType<typeof HTMLElementsScope>;
 
 export interface IComponentAttributes {
   class?: string;
 }
 
 export interface IHTMLComponent {
-  initComponent: (mainScope: IHTMLElementsScope) => void;
   useComponent: CallableFunction;
   componentName: string;
   useScopedCss?: (idIndex: number) => Promise<string> | string;
@@ -34,16 +32,17 @@ export interface IHTMLElementComponent
 
 export interface IHTMLElementStaticScope {
   template: string;
-  scopesGetter: () => Record<string, HTMLElementComponentStaticScope>;
+  scopesGetter?: CallableFunction;
 }
 
-export interface IHTMLElementComponentStaticScope {
+export interface IComponentStaticScope {
   componentName: string;
 }
 
 export interface IHTMLElementComponentTemplate {
   components: (
     | HTMLElementComponentStaticScope
+    | (() => Promise<IHTMLElementStaticScope | string>)
     | IHTMLElementStaticScope
     | string
   )[];
@@ -51,56 +50,58 @@ export interface IHTMLElementComponentTemplate {
   target: InstanceType<typeof window.HTMLElement>;
 }
 
-export abstract class AHTMLComponent implements IHTMLComponent {
+export class BaseHTMLComponent<ILocalScope> implements IHTMLComponent {
   scopedCssIdIndex = 0;
-  registerComponent(
-    componentName: string,
-    component: CustomElementConstructor
-  ) {
-    window.customElements.define(componentName, component);
+  componentName: string;
+
+  constructor(componentName: string, constructor: CustomElementConstructor) {
+    this.componentName = componentName;
+    this.initComponent(constructor, this);
   }
+
+  registerComponent(
+    component: CustomElementConstructor,
+    target: BaseHTMLComponent<ILocalScope>
+  ) {
+    window.customElements.define(target.componentName, component);
+  }
+
   getScopedCss(css: string) {
     return `
       <style staticScope=${this.scopedCssIdIndex++}>${css}</style>
     `;
   }
-  public getComponentScope = <T>(componentName: string, _scope?: T) => {
+
+  public getComponentScope = (_scope?: ILocalScope) => {
     const scope = {
       ..._scope,
-      componentName: componentName
+      componentName: this.componentName
     };
-    return scope as typeof scope & T;
+    return scope as typeof scope & ILocalScope;
   };
 
-  abstract componentName: string;
+  public initComponent = (
+    constructor: CustomElementConstructor,
+    target: BaseHTMLComponent<ILocalScope>
+  ) => {
+    if (!window.customElements.get(target.componentName)) {
+      this.registerComponent(constructor, target);
+    }
+  };
 
-  abstract initComponent(mainScope: IHTMLElementsScope): void;
-
-  abstract useComponent(scope?: unknown): HTMLElementComponentStaticScope;
-}
-
-abstract class HTMLElement extends window.HTMLElement {
-  protected constructor() {
-    super();
-  }
+  public useComponent = (scope?: ILocalScope) => {
+    return this.getComponentScope(scope);
+  };
 }
 
 class HTMLElementsScope {
-  /*REQUIRED FOR SSR HYDRATION*/
-  SSR = window.SSR;
-  hydrating = window._shouldHydrate;
-  hydrated = false;
-  __modulesLoadedWithSSR = [] as Record<string, unknown>[];
-  /*DO NOT REMOVE THESE LINES*/
-
   store!: IStore;
   router!: Router;
 
-  HTMLComponent = AHTMLComponent;
-
-  componentHydrationCallbacks = new Set();
-
+  HTMLComponent = BaseHTMLComponent;
   HTMLElement = HTMLElement;
+
+  asyncHydrationCallbackIndex = 0;
 
   registerEventListener = <T extends Element | Window, E extends Event>(
     target: T,
@@ -135,61 +136,233 @@ class HTMLElementsScope {
     return '';
   };
 
-  ind = 0;
-  /*whatever async logic running in SSR must register through this method*/
-  asyncHydrationCallback = async <T>(
-    callback: () => Promise<T>,
-    symbol = Symbol()
-  ) => {
-    if (this.SSR || this.hydrating) {
-      this.componentHydrationCallbacks.add(symbol);
+  /* we add blocking - NON-SSR logic after everything finished loading and rendering */
+  asyncHydrationCallback = async <T>(callback: () => Promise<T>) => {
+    if (this.asyncHydrationCallbackIndex !== -1) {
+      this.asyncHydrationCallbackIndex++;
     }
 
     await callback();
 
-    if (this.SSR || this.hydrating) {
-      this.componentHydrationCallbacks.delete(symbol);
-      this.asyncInstantiationConnectionFinishedCallback();
+    this.asyncHydrationCallbackIndex--;
+    if (this.asyncHydrationCallbackIndex === 0) {
+      this.asyncHydrationCallbackIndex = -1;
+      this.addCssHelpers();
     }
   };
 
-  /*we also need to wait for all components to get registered so that we know what modules we need to put in the __modulesLoadedWithSSR array*/
-  asyncRegisterComponent = async <T extends HTMLComponentModule>(
-    importer: () => Promise<T>
-  ) => {
-    let component;
-    await this.asyncHydrationCallback(async () => {
-      component = (await (
-        await this.loadModule(importer)
-      ).default(this)) as HTMLComponent;
+  addCssHelpers = () => {
+    const screenSizes = ['599px', '1023px', '1439px', '1919px'];
+    let css = '';
+    const style = document.createElement('style');
+    const modifiers = ['padding', 'margin'];
+    const directions = ['top', 'bottom', 'left', 'right', 'x', 'y', 'a'];
+    let cssString = '';
+    const sizes = [
+      'auto',
+      '0',
+      '2px',
+      '4px',
+      '8px',
+      '12px',
+      '16px',
+      '32px',
+      '64px'
+    ];
+    const screens = ['xs', 'sm', 'md', 'lg', 'xl'];
+    const sizeVars = [
+      '--auto',
+      '--0',
+      '--2px',
+      '--4px',
+      '--8px',
+      '--12px',
+      '--16px',
+      '--32px',
+      '--64px'
+    ];
+
+    css += ':root {';
+    sizeVars.forEach((sizeVar, index) => {
+      css += `
+                ${sizeVar}: ${sizes[index]};
+                `;
     });
-    return component as ReturnType<T['default']>;
+    screenSizes.forEach((sizeVar, index) => {
+      css += `
+                --${screens[index]}: ${sizeVar};
+                `;
+    });
+    css += '}';
+
+    const iterateDirections = (modifier: string, suffix?: string): void => {
+      directions.forEach((direction) => {
+        iterateVisibility(modifier, direction, suffix);
+      });
+    };
+
+    const fillClass = (
+      modifier: string,
+      classDirection: string,
+      directions: string[],
+      size: string,
+      sizeIndex: number,
+      suffix?: string
+    ): string => {
+      if (modifier === 'padding' && size === 'auto') {
+        return '';
+      }
+
+      let result = `
+                .${modifier.substring(0, 1)}-${classDirection.substring(
+        0,
+        1
+      )}-${size.replaceAll('px', '')}${suffix ? suffix : ''} {`;
+
+      directions.forEach((direction) => {
+        result += `${modifier}-${direction}: var(${sizeVars[sizeIndex]});`;
+      });
+
+      return result + '}';
+    };
+
+    const iterateVisibility = (
+      modifier: string,
+      direction: string,
+      suffix?: string
+    ): void => {
+      sizes.forEach((size, sizeIndex) => {
+        switch (direction) {
+          case 'x':
+            css += fillClass(
+              modifier,
+              direction,
+              ['left', 'right'],
+              size,
+              sizeIndex,
+              suffix
+            );
+            break;
+          case 'y':
+            css += fillClass(
+              modifier,
+              direction,
+              ['top', 'bottom'],
+              size,
+              sizeIndex,
+              suffix
+            );
+            break;
+          case 'a':
+            css += fillClass(
+              modifier,
+              direction,
+              ['left', 'right', 'top', 'bottom'],
+              size,
+              sizeIndex,
+              suffix
+            );
+            break;
+          default:
+            css += fillClass(
+              modifier,
+              direction,
+              [direction],
+              size,
+              sizeIndex,
+              suffix
+            );
+            break;
+        }
+      });
+    };
+
+    const addModifiers = (suffix?: string) => {
+      modifiers.forEach((modifier) => {
+        iterateDirections(modifier, suffix);
+      });
+    };
+    addModifiers('--bp--');
+    cssString = css;
+
+    screens.forEach((screenSize, index) => {
+      if (index === 0) {
+        /* language=css */
+        css += `
+          @media (max-width: ${screenSizes[index]}) {
+            ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
+          }
+        `;
+      } else if (index < screens.length - 1) {
+        /* language=css */
+        css += `
+          @media (max-width: ${screenSizes[index]}) {
+            ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
+          }
+        `;
+
+        /* language=css */
+        css += `
+          @media (min-width: ${screenSizes[index - 1]}) {
+            ${cssString.replaceAll(/--bp--/gs, `-${screenSize}-min`)}
+          }
+        `;
+      } else {
+        /* language=css */
+        css += `
+          @media (min-width: ${screenSizes[index - 1]}) {
+            ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
+          }
+        `;
+      }
+    });
+
+    style.innerHTML = css.replaceAll(/--bp--/gs, '');
+    document.body.append(style);
+    document.body.children[0].setAttribute('style', 'display: inline;');
   };
 
-  parseChildren = (scopes: Record<string, HTMLElementComponentStaticScope>) => {
+  /*we also need to wait for all components to get registered so that we know what modules we need to put in the __modulesLoadedWithSSR array*/
+  asyncRegisterComponent = async (
+    importer: Promise<HTMLComponentModule>
+  ): Promise<HTMLComponent> => {
+    const module = (await importer) as HTMLComponentModule;
+    return await module.default(this);
+  };
+
+  parseChildren = (
+    scopes?: Record<string, HTMLElementComponentStaticScope>
+  ) => {
     return (child: IHTMLElementComponent): void => {
-      if (child.tagName.toLowerCase() !== 'dynamic-html-view-component') {
+      if (scopes) {
         const scopeId = child.getAttribute('xScope');
-        if (scopeId) {
+        const forceInit = child.hasAttribute('xInit');
+        if (
+          forceInit ||
+          (scopeId && Object.keys(scopes).indexOf(scopeId) !== -1)
+        ) {
           void this.asyncHydrationCallback(async () => {
             return window.customElements
               .whenDefined(child.tagName.toLowerCase())
               .then(async () => {
-                const scope = (await scopes[
-                  scopeId
-                ]) as HTMLElementComponentStaticScope;
-
-                if (scope) {
-                  if (
-                    (scope as IHTMLElementComponentStaticScope)
-                      ?.componentName === child.tagName.toLowerCase()
-                  ) {
-                    child.init?.(scope);
-                  } else {
-                    throw new Error(
-                      `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
-                    );
+                if (scopeId) {
+                  const scope = (await scopes?.[
+                    scopeId
+                  ]) as HTMLElementComponentStaticScope;
+                  if (scope) {
+                    if (
+                      (scope as IComponentStaticScope)?.componentName ===
+                      child.tagName.toLowerCase()
+                    ) {
+                      void child.init(scope);
+                    } else {
+                      throw new Error(
+                        `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
+                      );
+                    }
                   }
+                } else {
+                  void child.init?.();
                 }
               });
           });
@@ -208,75 +381,60 @@ class HTMLElementsScope {
   asyncLoadComponentTemplate = async (
     template: IHTMLElementComponentTemplate
   ) => {
-    const promises = [];
+    const promises: (() => Promise<void>)[] = [];
     for (let i = 0; i < template.components.length; i++) {
       if (template.components[i]) {
-        const component = template.components[i];
+        let component = template.components[i];
         if (component) {
-          if (typeof component !== 'string') {
-            promises.push(
-              this.asyncHydrationCallback(async () => {
+          promises.push(() =>
+            this.asyncHydrationCallback(async () => {
+              if (
+                Object.prototype.toString.call(component) ===
+                '[object AsyncFunction]'
+              ) {
+                component = await (
+                  component as () => Promise<IHTMLElementStaticScope>
+                )();
+              }
+              if (typeof component !== 'string') {
                 const componentScope = await component;
                 if (componentScope) {
-                  if (
-                    (componentScope as IHTMLElementComponentStaticScope)
-                      .componentName
-                  ) {
+                  if ((componentScope as IComponentStaticScope).componentName) {
                     return await window.customElements
                       .whenDefined(
-                        (componentScope as IHTMLElementComponentStaticScope)
-                          .componentName
+                        (componentScope as IComponentStaticScope).componentName
                       )
                       .then(async () => {
-                        if (!this.hydrating) {
-                          return (
-                            (await this.appendComponent(
-                              template.target,
-                              (
-                                componentScope as IHTMLElementComponentStaticScope
-                              ).componentName,
-                              i
-                            )) as unknown as Record<
-                              'init',
-                              (scope: unknown) => Promise<void>
-                            >
-                          )?.init(componentScope);
-                        }
-
-                        return (
-                          template.target.children[
-                            this.calculateElementPosition(
-                              i,
-                              template.target
-                                .children as unknown as HTMLElement[]
-                            )
-                          ] as unknown as Record<
-                            'init',
-                            (scope: unknown) => Promise<void>
-                          >
-                        )?.init(componentScope);
+                        const comp = (await this.appendComponent(
+                          template.target,
+                          (componentScope as IComponentStaticScope)
+                            .componentName,
+                          i
+                        )) as unknown as Record<
+                          'init',
+                          (scope: unknown) => Promise<void>
+                        >;
+                        return comp.init(componentScope);
                       });
                   } else if (
                     (componentScope as IHTMLElementStaticScope).template
                   ) {
                     const newElements = [] as Element[];
-                    if (!this.hydrating) {
-                      newElements.push(
-                        ...((await this.appendComponent(
-                          template.target,
-                          (componentScope as IHTMLElementStaticScope).template,
-                          i,
-                          true
-                        )) as HTMLElement[])
-                      );
-                    }
+                    newElements.push(
+                      ...((await this.appendComponent(
+                        template.target,
+                        (componentScope as IHTMLElementStaticScope).template,
+                        i,
+                        true
+                      )) as HTMLElement[])
+                    );
 
                     if (
                       (componentScope as IHTMLElementStaticScope).scopesGetter
                     ) {
                       const _scopes = (
                         componentScope as IHTMLElementStaticScope
-                      ).scopesGetter();
+                      ).scopesGetter?.();
 
                       [
                         ...(template.target
@@ -292,28 +450,133 @@ class HTMLElementsScope {
                     }
                   }
                 }
-                return;
-              })
-            );
-          } else {
-            if (!this.hydrating) {
-              promises.push(
-                this.asyncHydrationCallback(async () => {
-                  await this.appendComponent(
-                    template.target,
-                    component,
-                    i,
-                    true
-                  );
-                })
-              );
-            }
-          }
+              } else {
+                await this.appendComponent(
+                  template.target,
+                  component as string,
+                  i,
+                  true
+                );
+              }
+            })
+          );
         }
       }
     }
-    return Promise.all(promises);
+    return promises.map((promise) => promise());
   };
+
+  appendComponent = async (
+    target: InstanceType<typeof window.HTMLElement>,
+    tagOrTemplate: string,
+    index: number,
+    isTemplate = false
+  ): Promise<IHTMLElementComponent | HTMLElement[] | undefined> => {
+    if (isTemplate) {
+      const result = [] as HTMLElement[];
+      const temp = window.document.createElement('body');
+      temp.innerHTML += tagOrTemplate;
+      const children = [...(temp.children as unknown as HTMLElement[])];
+      temp.remove();
+      for (const child of children) {
+        if (!child.getAttribute('indexInParent')) {
+          child.setAttribute('indexInParent', index.toString());
+          result.push(child);
+          target.appendChild(child);
+        }
+      }
+      result.forEach((child, _index) => {
+        if (_index === 0) {
+          target.children[
+            this.calculateElementPosition(
+              index,
+              target.children as unknown as HTMLElement[]
+            )
+          ].insertAdjacentElement('beforebegin', child);
+        } else {
+          result[_index - 1].insertAdjacentElement('afterend', child);
+        }
+      });
+      return result;
+    } else {
+      const componentConstructor = window.customElements.get(
+        tagOrTemplate
+      ) as CustomElementConstructor;
+      const component = new componentConstructor() as IHTMLElementComponent;
+      component.setAttribute('indexInParent', index.toString());
+
+      if (component) {
+        const indexPosition = this.calculateElementPosition(
+          index,
+          target.children as unknown as HTMLElement[]
+        );
+
+        if (indexPosition < 0) {
+          target.appendChild(component);
+        } else {
+          target.insertBefore(component, target.children[indexPosition]);
+        }
+        return component;
+      }
+    }
+    return undefined;
+  };
+
+  applyBreakpoints(css: string): string {
+    const strings = css.match(
+      /(\/\* start_apply_breakpoints_tag \*\/)(.*)(\/\* end_apply_breakpoints_tag \*\/)/gs
+    );
+    strings &&
+      strings.forEach((string) => {
+        const noTagString = string
+          .replace('/* start_apply_breakpoints_tag */', '')
+          .replace('/* end_apply_breakpoints_tag */', '');
+
+        let result = noTagString.replaceAll(/--bp--/gs, '');
+
+        const screens = ['xs', 'sm', 'md', 'lg', 'xl'];
+        const screenSizes = ['599px', '1023px', '1439px', '1919px'];
+
+        screens.forEach((screenSize, index) => {
+          if (index === 0) {
+            result += `
+                    @media (max-width: ${screenSizes[index]}) {
+                  `;
+
+            result += noTagString.replaceAll(/--bp--/gs, `-${screenSize}`);
+
+            result += '}';
+          } else if (index < screens.length - 1) {
+            result += `
+                    @media (max-width: ${screenSizes[index]}) {
+                  `;
+
+            result += noTagString.replaceAll(/--bp--/gs, `-${screenSize}`);
+
+            result += '}';
+
+            result += `
+                    @media (min-width: ${screenSizes[index - 1]}) {
+                  `;
+
+            result += noTagString.replaceAll(/--bp--/gs, `-${screenSize}`);
+
+            result += '}';
+          } else {
+            result += `
+                    @media (min-width: ${screenSizes[index - 1]}) {
+                  `;
+
+            result += noTagString.replaceAll(/--bp--/gs, `-${screenSize}`);
+
+            result += '}';
+          }
+        });
+
+        css = css.replace(string, result);
+      });
+    return css;
+  }
 
   private calculateElementPosition(
     index: number,
@@ -348,148 +611,6 @@ class HTMLElementsScope {
 
     return Math.max(0, indexPosition);
   }
-
-  appendComponent = async (
-    target: InstanceType<typeof window.HTMLElement>,
-    tagOrTemplate: string,
-    index: number,
-    isTemplate = false
-  ): Promise<IHTMLElementComponent | HTMLElement[] | undefined> => {
-    if (isTemplate) {
-      const result = [] as HTMLElement[];
-      target.innerHTML += tagOrTemplate;
-      const children = [...(target.children as unknown as HTMLElement[])];
-      for (const child of children) {
-        if (!child.getAttribute('indexInParent')) {
-          child.setAttribute('indexInParent', index.toString());
-          result.push(child);
-        }
-      }
-      result.forEach((child, _index) => {
-        if (_index === 0) {
-          target.children[
-            this.calculateElementPosition(index, children)
-          ].insertAdjacentElement('beforebegin', child);
-        } else {
-          result[_index - 1].insertAdjacentElement('afterend', child);
-        }
-      });
-      return result;
-    } else {
-      const componentConstructor = window.customElements.get(
-        tagOrTemplate
-      ) as CustomElementConstructor;
-      const component = new componentConstructor() as IHTMLElementComponent;
-      component.setAttribute('indexInParent', index.toString());
-
-      if (component) {
-        const indexPosition = this.calculateElementPosition(
-          index,
-          target.children as unknown as HTMLElement[]
-        );
-
-        if (indexPosition < 0) {
-          target.appendChild(component);
-        } else {
-          target.insertBefore(component, target.children[indexPosition]);
-        }
-        return component;
-      }
-    }
-    return undefined;
-  };
-
-  /*we need to keep track of imports for the __modulesLoadedWithSSR array used to provide all initial required javascript when serverside rendering*/
-  loadFile = async <T>(
-    importer: () => Promise<T>
-  ): Promise<Promise<string> | string> => {
-    let path = importer
-      .toString()
-      .match(/import\('.*'\)/g)?.[0]
-      .replace("import('", '')
-      .replace("')", '')
-      .split('./')
-      .pop() as string;
-    if (path.includes('node_modules')) {
-      path = '@' + path;
-    } else if (!path.includes('@remoteModules/')) {
-      path = '@remoteModules/' + path;
-    }
-    if (!this.SSR) {
-      const fileData = this.__modulesLoadedWithSSR.find(
-        (module) => module.path === path
-      )?.code;
-      if (fileData) {
-        return fileData as unknown as string;
-      }
-      const parsedPath = '/@remoteModules/../../../../' + path;
-      const result = await (await fetch(parsedPath)).text();
-      this.__modulesLoadedWithSSR.push({
-        path,
-        code: result
-      });
-      return result;
-    } else {
-      return (await fetch(path)) as unknown as string;
-    }
-  };
-
-  loadModule = <T>(importer: () => Promise<T>): Promise<T> => {
-    //TODO: Remove after implementing database only development system
-    let path = importer
-      .toString()
-      .match(/import\('.*'\)/g)?.[0]
-      .replace("import('", '')
-      .replace("')", '')
-      .split('./')
-      .pop() as string;
-    if (path.includes('node_modules')) {
-      path = '@' + path;
-    } else if (!path.includes('@remoteModules/')) {
-      path = '@remoteModules/' + path;
-    }
-
-    /*all files get imported form the same path, so we compute every path relative to this file*/
-    const parsedPath = path
-      .replace('@remoteModules/', '../../../remoteModules/../')
-      .replace('@node_modules/', '../../../../node_modules/');
-    let module;
-    if (
-      (module = this.__modulesLoadedWithSSR.find(
-        (module) => module.path === parsedPath
-      ))
-    ) {
-      const encodedJs = encodeURIComponent(module.code as string);
-      const dataUri = 'data:text/javascript;charset=utf-8,' + encodedJs;
-
-      return import(dataUri) as Promise<T>;
-    }
-
-    if (!this.SSR) {
-      return import(
-        '/' +
-          path.replace(
-            '@node_modules/',
-            '@remoteModules/../../../../node_modules/'
-          )
-      ) as Promise<T>;
-    } else {
-      return import(parsedPath) as Promise<T>;
-    }
-  };
-
-  /*we need to know when we're done rendering on the server so asynchronous components and registry entries need to declare themselves as promises*/
-  asyncInstantiationConnectionFinishedCallback() {
-    if (this.componentHydrationCallbacks.size === 0) {
-      if (window.onHTMLReady) {
-        /*used by SSR to signal everything loaded and page is rendered completely*/
-        window.onHTMLReady();
-      } else {
-        this.hydrated = true;
-        this.hydrating = false;
-      }
-    }
-  }
 }
 
 export const initComponent = (mainScope: HTMLElementsScope) => {
@@ -502,225 +623,32 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
 
     async init() {
       await mainScope.asyncHydrationCallback(async () => {
-        await mainScope
-          .loadModule(() => import('@remoteModules/frontend/engine/store.js'))
-          .then(async ({ useStore }) => {
-            mainScope.store = await useStore(mainScope);
-          });
+        await import('/remoteModules/frontend/engine/store.js').then(
+          async ({ useStore }) => {
+            mainScope.store = await useStore();
+          }
+        );
 
-        await mainScope
-          .loadModule(() => import('@remoteModules/frontend/engine/router.js'))
-          .then(async ({ useRouter }) => {
-            mainScope.router = await useRouter(mainScope);
+        return import('/remoteModules/frontend/engine/router.js').then(
+          async ({ useRouter }) => {
+            return useRouter(mainScope).then(async (router) => {
+              mainScope.router = router;
 
-            const [RouterView] = [
-              mainScope
-                .asyncRegisterComponent(
-                  () =>
-                    import(
-                      '@remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-                    )
-                )
-                .then((component) => {
-                  if (window.SSR) {
-                    component.routerViewRegister.clear();
-                  }
-                  return component;
-                })
-            ];
+              const RouterView = import(
+                '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+              );
 
-            if (!mainScope.hydrating) {
               await mainScope.asyncLoadComponentTemplate({
                 target: this,
                 components: [
-                  RouterView.then((component) => component.useComponent())
+                  RouterView.then(async (component) =>
+                    (await component.default(mainScope)).useComponent()
+                  )
                 ]
               });
-            }
-
-            if (!mainScope.SSR) {
-              const screenSizes = ['599px', '1023px', '1439px', '1919px'];
-              const css = document.createElement('style');
-              const modifiers = ['padding', 'margin'];
-              const directions = [
-                'top',
-                'bottom',
-                'left',
-                'right',
-                'x',
-                'y',
-                'a'
-              ];
-              const sizes = [
-                'auto',
-                '0',
-                '2px',
-                '4px',
-                '8px',
-                '12px',
-                '16px',
-                '32px',
-                '64px'
-              ];
-              const screens = ['xs', 'sm', 'md', 'lg', 'xl'];
-              const sizeVars = [
-                '--auto',
-                '--0',
-                '--2px',
-                '--4px',
-                '--8px',
-                '--12px',
-                '--16px',
-                '--32px',
-                '--64px'
-              ];
-
-              css.innerHTML += ':root {';
-              sizeVars.forEach((sizeVar, index) => {
-                css.innerHTML += `
-                ${sizeVar}: ${sizes[index]};
-                `;
-              });
-              css.innerHTML += '}';
-
-              const iterateDirections = (
-                modifier: string,
-                screenSize?: string
-              ): void => {
-                directions.forEach((direction) => {
-                  iterateVisibility(modifier, direction, screenSize);
-                });
-              };
-
-              const fillClass = (
-                modifier: string,
-                classDirection: string,
-                directions: string[],
-                size: string,
-                sizeIndex: number,
-                screenSize?: string
-              ): string => {
-                if (modifier === 'padding' && size === 'auto') {
-                  return '';
-                }
-
-                let result = `
-                .${modifier.substring(0, 1)}-${classDirection.substring(
-                  0,
-                  1
-                )}-${size.replaceAll('px', '')}${
-                  screenSize ? `-${screenSize}` : ''
-                } {`;
-
-                directions.forEach((direction) => {
-                  result += `${modifier}-${direction}: var(${sizeVars[sizeIndex]});`;
-                });
-
-                return result + '}';
-              };
-
-              const iterateVisibility = (
-                modifier: string,
-                direction: string,
-                screenSize?: string
-              ): void => {
-                sizes.forEach((size, sizeIndex) => {
-                  switch (direction) {
-                    case 'x':
-                      css.innerHTML += fillClass(
-                        modifier,
-                        direction,
-                        ['left', 'right'],
-                        size,
-                        sizeIndex,
-                        screenSize
-                      );
-                      break;
-                    case 'y':
-                      css.innerHTML += fillClass(
-                        modifier,
-                        direction,
-                        ['top', 'bottom'],
-                        size,
-                        sizeIndex,
-                        screenSize
-                      );
-                      break;
-                    case 'a':
-                      css.innerHTML += fillClass(
-                        modifier,
-                        direction,
-                        ['left', 'right', 'top', 'bottom'],
-                        size,
-                        sizeIndex,
-                        screenSize
-                      );
-                      break;
-                    default:
-                      css.innerHTML += fillClass(
-                        modifier,
-                        direction,
-                        [direction],
-                        size,
-                        sizeIndex,
-                        screenSize
-                      );
-                      break;
-                  }
-                });
-              };
-
-              modifiers.forEach((modifier) => {
-                iterateDirections(modifier);
-              });
-
-              screens.forEach((screenSize, index) => {
-                if (index === 0) {
-                  css.innerHTML += `
-                    @media (max-width: ${screenSizes[index]}) {
-                  `;
-
-                  modifiers.forEach((modifier) => {
-                    iterateDirections(modifier, screenSize);
-                  });
-
-                  css.innerHTML += '}';
-                } else if (index < screens.length - 1) {
-                  css.innerHTML += `
-                    @media (max-width: ${screenSizes[index]}) {
-                  `;
-
-                  modifiers.forEach((modifier) => {
-                    iterateDirections(modifier, screenSize);
-                  });
-
-                  css.innerHTML += '}';
-
-                  css.innerHTML += `
-                    @media (min-width: ${screenSizes[index - 1]}) {
-                  `;
-
-                  modifiers.forEach((modifier) => {
-                    iterateDirections(modifier, `${screenSize}-min`);
-                  });
-
-                  css.innerHTML += '}';
-                } else {
-                  css.innerHTML += `
-                    @media (min-width: ${screenSizes[index - 1]}) {
-                  `;
-
-                  modifiers.forEach((modifier) => {
-                    iterateDirections(modifier, screenSize);
-                  });
-
-                  css.innerHTML += '}';
-                }
-              });
-
-              document.body.append(css);
-            }
-          });
+            });
+          }
+        );
       });
     }
 
@@ -735,13 +663,5 @@ export const registerMainComponent = () => {
   const mainScope = new HTMLElementsScope();
   window.customElements.define('main-component', initComponent(mainScope));
 };
-
-if (!window.SSR) {
-  /*entrypoint*/
-  registerMainComponent();
-} else {
-  exports = {
-    /*used for ssr*/
-    registerMainComponent
-  };
-}
+/*entrypoint*/
+registerMainComponent();

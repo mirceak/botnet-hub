@@ -1,4 +1,4 @@
-declare module '@node_modules/path-to-regexp/dist.es2015/index.js' {
+declare module '/node_modules/path-to-regexp/dist.es2015/index.js' {
   export interface ParseOptions {
     /**
      * Set the default delimiter for repeat parameters. (default: `'/'`)

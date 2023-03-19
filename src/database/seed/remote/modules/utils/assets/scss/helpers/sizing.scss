@@ -1,12 +1,16 @@
-.full-height {
+.full-height--bp-- {
   height: 100%;
 }
 
-.full-width {
+.full-width--bp-- {
   width: 100%;
 }
 
-.overflow-scroll-x {
+.fit-content--bp-- {
+  width: fit-content;
+}
+
+.overflow-scroll-x--bp-- {
   max-width: 100%;
   overflow-x: auto;
 }

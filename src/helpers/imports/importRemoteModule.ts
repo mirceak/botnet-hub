@@ -1,18 +1,8 @@
-import { type Script as ScriptModel } from '@database/entities/Script.js';
-import { SourceTextModule, createContext } from 'node:vm';
-import { type IKernelGlobals } from '@src/kernel/Kernel.js';
-import { getFileContentsSync } from '@helpers/imports/io.js';
-
-const watcherPathOverrides = {
-  '../../../../node_modules/path-to-regexp/dist/index.js':
-    '../../../../node_modules/path-to-regexp/dist.es2015/index.js'
-};
+import { type Script as ScriptModel } from '#database/entities/Script.js';
+import { createContext, SourceTextModule } from 'node:vm';
+import { type IKernelGlobals } from '#src/kernel/Kernel.js';
 
 export type linker = (specifier: string) => Promise<void>;
-
-export const dynamicImportWatchers = new Set<
-  { code: string; path: string }[]
->();
 
 export interface Exports {
   nextImportContext?: Record<string, unknown>;
@@ -43,20 +33,10 @@ export const importRemoteModule = async (
     !context.kernelGlobals.remoteModules[moduleInstance.name]
   ) {
     context.exports = {} as Exports;
-    context.dynamicImportWatchers = dynamicImportWatchers;
     context.fetch = async (specifier: string) => {
       /*file imports for backend*/
-      const code = (await context.kernelGlobals?.loadRemoteModule(specifier))
-        ?.script?.code;
-      if (code) {
-        for (const watcher of dynamicImportWatchers) {
-          watcher.push({
-            code,
-            path: specifier
-          });
-        }
-      }
-      return code;
+      return (await context.kernelGlobals?.loadRemoteModule(specifier))?.script
+        ?.code;
     };
     const compiled = new SourceTextModule(moduleInstance.code, {
       identifier: `Remote Module: "${moduleInstance.name}"`,
@@ -64,53 +44,18 @@ export const importRemoteModule = async (
       async importModuleDynamically(specifier) {
         if (
           specifier.indexOf('./') !== -1 &&
-          specifier.indexOf('@node_modules/') === -1
+          specifier.indexOf('#node_modules/') === -1
         ) {
-          if (specifier.includes('./node_modules/')) {
-            // backend node_modules imports for SSR
-            for (const watcher of dynamicImportWatchers) {
-              watcher.push({
-                code: getFileContentsSync(
-                  `node_modules/${
-                    (
-                      watcherPathOverrides[
-                        specifier as keyof typeof watcherPathOverrides
-                      ] ?? specifier
-                    )
-                      .split('./node_modules/')
-                      .pop() || ''
-                  }`
-                ).replaceAll(/^\/\/# sourceMappingURL=.*$/gm, ''),
-                path:
-                  watcherPathOverrides[
-                    specifier as keyof typeof watcherPathOverrides
-                  ] ?? specifier
-              });
-            }
-            return import(specifier.split('./node_modules/').pop() as string);
-          }
-
           const importContext = context.exports?.nextImportContext ?? context;
           delete context.exports?.nextImportContext;
-          for (const watcher of dynamicImportWatchers) {
-            watcher.push({
-              code:
-                (
-                  await context.kernelGlobals?.loadRemoteModule(
-                    `@remoteModules/${specifier.split('./').pop() || ''}`
-                  )
-                )?.script?.code || '',
-              path: specifier
-            });
-          }
           return context.kernelGlobals?.loadAndImportRemoteModule(
-            `@remoteModules/${specifier.split('./').pop() || ''}`,
+            `#remoteModules/${specifier.split('./').pop() || ''}`,
             importContext,
             true
           );
         }
         // naked imports for backend
-        return import(specifier.replace('@node_modules/', ''));
+        return import(specifier.replace('#node_modules/', ''));
       }
     });
     await compiled.link(defaultLinker);

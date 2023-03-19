@@ -1,26 +1,311 @@
-.row {
+.flex--bp-- {
+  display: flex;
+}
+
+.flex-inline--bp-- {
+  display: inline-flex;
+}
+
+.row--bp-- {
   display: flex;
   flex-wrap: wrap;
 }
 
-.col {
-  flex: 10000 1 0;
+.column--bp-- {
+  flex-direction: column;
 }
 
-.gap-8 {
+.reverse--bp-- {
+  flex-direction: column-reverse;
+}
+
+.wrap--bp-- {
+  flex-wrap: wrap;
+}
+
+.no-wrap--bp-- {
+  flex-wrap: nowrap;
+}
+
+.reverse-wrap--bp-- {
+  flex-wrap: wrap-reverse;
+}
+
+.order-last--bp-- {
+  order: 999999999;
+}
+
+.order-first--bp-- {
+  order: -999999999;
+}
+
+.order-none--bp-- {
+  order: 0;
+}
+
+.justify-start--bp-- {
+  justify-content: flex-start;
+}
+
+.justify-end--bp-- {
+  justify-content: flex-end;
+}
+
+.justify-center--bp-- {
+  justify-content: center;
+}
+
+.justify-between--bp-- {
+  justify-content: space-between;
+}
+
+.justify-around--bp-- {
+  justify-content: space-around;
+}
+
+.justify-evenly--bp-- {
+  justify-content: space-evenly;
+}
+
+.items-start--bp-- {
+  align-items: flex-start;
+}
+
+.items-end--bp-- {
+  align-items: flex-end;
+}
+
+.items-center--bp-- {
+  align-items: center;
+}
+
+.items-baseline--bp-- {
+  align-items: baseline;
+}
+
+.items-stretch--bp-- {
+  align-items: stretch;
+}
+
+.align-start--bp-- {
+  align-content: flex-start;
+}
+
+.align-end--bp-- {
+  align-content: flex-end;
+}
+
+.align-center--bp-- {
+  align-content: center;
+}
+
+.align-between--bp-- {
+  align-content: space-between;
+}
+
+.align-around--bp-- {
+  align-content: space-around;
+}
+
+.self-start--bp-- {
+  align-self: flex-start;
+}
+
+.self-end--bp-- {
+  align-self: flex-end;
+}
+
+.self-center--bp-- {
+  align-self: center;
+}
+
+.self-baseline--bp-- {
+  align-self: baseline;
+}
+
+.self-stretch--bp-- {
+  align-self: stretch;
+}
+
+.col--bp-- {
+  flex: 10000 1 0;
+
+  &-1,
+  &-2,
+  &-3,
+  &-4,
+  &-5,
+  &-6,
+  &-7,
+  &-8,
+  &-9,
+  &-10,
+  &-11,
+  &-12 {
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  &-1 {
+    height: auto;
+    width: calc(1 * (100% / 12));
+  }
+
+  &-2 {
+    height: auto;
+    width: calc(2 * (100% / 12));
+  }
+
+  &-3 {
+    height: auto;
+    width: calc(3 * (100% / 12));
+  }
+
+  &-4 {
+    height: auto;
+    width: calc(4 * (100% / 12));
+  }
+
+  &-5 {
+    height: auto;
+    width: calc(5 * (100% / 12));
+  }
+
+  &-6 {
+    height: auto;
+    width: calc(6 * (100% / 12));
+  }
+
+  &-7 {
+    height: auto;
+    width: calc(7 * (100% / 12));
+  }
+
+  &-8 {
+    height: auto;
+    width: calc(8 * (100% / 12));
+  }
+
+  &-9 {
+    height: auto;
+    width: calc(9 * (100% / 12));
+  }
+
+  &-10 {
+    height: auto;
+    width: calc(10 * (100% / 12));
+  }
+
+  &-11 {
+    height: auto;
+    width: calc(11 * (100% / 12));
+  }
+
+  &-12 {
+    height: auto;
+    width: calc(12 * (100% / 12));
+  }
+}
+
+.offset--bp-- {
+  &-1 {
+    margin-left: calc(1 * (100% / 12));
+  }
+
+  &-2 {
+    margin-left: calc(2 * (100% / 12));
+  }
+
+  &-3 {
+    margin-left: calc(3 * (100% / 12));
+  }
+
+  &-4 {
+    margin-left: calc(4 * (100% / 12));
+  }
+
+  &-5 {
+    margin-left: calc(5 * (100% / 12));
+  }
+
+  &-6 {
+    margin-left: calc(6 * (100% / 12));
+  }
+
+  &-7 {
+    margin-left: calc(7 * (100% / 12));
+  }
+
+  &-8 {
+    margin-left: calc(8 * (100% / 12));
+  }
+
+  &-9 {
+    margin-left: calc(9 * (100% / 12));
+  }
+
+  &-10 {
+    margin-left: calc(10 * (100% / 12));
+  }
+
+  &-11 {
+    margin-left: calc(11 * (100% / 12));
+  }
+
+  &-12 {
+    margin-left: calc(12 * (100% / 12));
+  }
+}
+
+.gap-none--bp-- {
+  gap: 0;
+}
+
+.gap-2--bp-- {
+  gap: 2px;
+}
+
+.gap-4--bp-- {
+  gap: 4px;
+}
+
+.gap-6--bp-- {
+  gap: 6px;
+}
+
+.gap-8--bp-- {
   gap: 8px;
 }
 
-.fit-content {
-  width: fit-content;
+.gap-10--bp-- {
+  gap: 10px;
 }
 
-.align-items-center {
-  align-items: center;
-  display: flex;
+.gap-12--bp-- {
+  gap: 12px;
 }
 
-.justify-content-center {
-  display: flex;
-  justify-content: center;
+.gap-16--bp-- {
+  gap: 16px;
+}
+
+.gap-20--bp-- {
+  gap: 20px;
+}
+
+.gap-24--bp-- {
+  gap: 24px;
+}
+
+.gap-28--bp-- {
+  gap: 28px;
+}
+
+.gap-32--bp-- {
+  gap: 32px;
+}
+
+.gap-36--bp-- {
+  gap: 36px;
 }

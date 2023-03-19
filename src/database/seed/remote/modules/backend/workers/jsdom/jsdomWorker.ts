@@ -1,7 +1,7 @@
 import {
   IKernelBackendWorker,
   type IKernelBackendWorkerLoad
-} from '@kernel/Kernel.js';
+} from '#kernel/Kernel.js';
 
 interface JsdomWorkerLoad extends IKernelBackendWorkerLoad {
   id?: string;
@@ -36,80 +36,5 @@ if (cluster.isPrimary) {
     }
   } as IKernelBackendWorker;
 } else {
-  const { JSDOM } = await import('jsdom');
-
-  const htm = /* HTML */ `
-    <!DOCTYPE html>
-    <html xmlns="http://www.w3.org/1999/html" lang="en">
-      <head>
-        <link rel="icon" href="data:," />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>FullStack.js</title>
-
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body />
-    </html>
-  `;
-  let processId: string;
-  const dom = new JSDOM(htm, { runScripts: 'outside-only' });
-  dom.window.SSR = true;
-
-  const dynamicImportWatcher = [] as { code: string; path: string }[];
-  const { registerMainComponent } =
-    (await kernelGlobals.loadAndImportRemoteModule(
-      '@remoteModules/frontend/engine/components/Main.js',
-      {
-        window: dom.window
-      }
-    )) as typeof import('@remoteModules/frontend/engine/components/Main.js');
-  registerMainComponent();
-
-  const mainModuleScript = await kernelGlobals.loadRemoteModule(
-    '@remoteModules/frontend/engine/components/Main.js'
-  );
-
-  dom.window.onHTMLReady = () => {
-    let htmlBody = dom.serialize();
-    dynamicImportWatchers.delete(dynamicImportWatcher);
-    htmlBody = htmlBody.replace(
-      '</body>',
-      /* HTML */ `<script type='module'>${
-        mainModuleScript.script?.code
-          .replace(
-            '__modulesLoadedWithSSR = [];',
-            `__modulesLoadedWithSSR = ${JSON.stringify(dynamicImportWatcher)};`
-          )
-          .replace('hydrating = window._shouldHydrate;', `hydrating = true;`)
-          .replace('SSR = window.SSR;', `SSR = false;`) || ''
-      }</script></body>`
-    );
-    dynamicImportWatcher.splice(0);
-    process.send?.({
-      id: processId,
-      data: htmlBody
-    });
-  };
-
-  const onMessage = ({
-    payload,
-    id
-  }: {
-    payload: Record<string, string>;
-    id: string;
-  }) => {
-    if (!dynamicImportWatchers.has(dynamicImportWatcher)) {
-      dynamicImportWatchers.add(dynamicImportWatcher);
-    }
-    dom.window.pathname = payload.reqUrl.split('?')[0];
-    processId = id;
-    dom.window.document.body.innerHTML = '<main-component>';
-  };
-
-  process.on('message', onMessage);
+  //
 }

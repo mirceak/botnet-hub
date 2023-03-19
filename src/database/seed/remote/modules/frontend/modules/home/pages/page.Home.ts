@@ -1,43 +1,23 @@
 import type {
   IHTMLElementComponent,
-  IHTMLElementsScope
-} from '@remoteModules/frontend/engine/components/Main.js';
+  TMainScope
+} from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponents = (mainScope: IHTMLElementsScope) => ({
-  _DynamicHtmlView: mainScope.asyncRegisterComponent(
-    () =>
+const getComponent = (mainScope: TMainScope) => {
+  const { _Input, _Button } = {
+    _Button: mainScope.asyncRegisterComponent(
       import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
       )
-  ),
-  _Input: mainScope.asyncRegisterComponent(
-    () =>
+    ),
+    _Input: mainScope.asyncRegisterComponent(
       import(
-        '@remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
       )
-  ),
-  _Button: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-      )
-  ),
-  _TemplateList: mainScope.asyncRegisterComponent(
-    () =>
-      import(
-        '@remoteModules/utils/sharedComponents/dynamicViews/template/TemplateListView.js'
-      )
-  )
-});
+    )
+  };
 
-const getClass = (
-  mainScope: IHTMLElementsScope,
-  instance: ReturnType<typeof getSingleton>
-) => {
-  const { _DynamicHtmlView, _Input, _Button, _TemplateList } =
-    instance.registerComponents();
-
-  return class Component
+  class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
   {
@@ -45,8 +25,8 @@ const getClass = (
       super();
     }
 
-    init() {
-      void mainScope.asyncLoadComponentTemplate({
+    async init() {
+      await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           _Input.then(({ useComponent }) =>
@@ -61,149 +41,84 @@ const getClass = (
           _Button.then(({ useComponent }) =>
             useComponent({
               onClick: () => void mainScope.router.push('about'),
-              label: 'Go To About',
-              elementAttributes: {
-                class: 'bg-primary'
-              }
+              label: 'Go To About'
             })
           ),
           _Button.then(({ useComponent }) =>
             useComponent({
               onClick: () => void mainScope.router.push('components'),
-              label: 'Go To Components'
+              label: 'Go To Components',
+              elementAttributes: {
+                class: 'bg-primary'
+              }
             })
           ),
-          _TemplateList.then(({ useComponent }) =>
-            useComponent({
-              noWatcher: true,
-              listGetter: () => [
-                _DynamicHtmlView.then(({ useComponent }) =>
-                  useComponent({
-                    attributes: {
-                      class: ''
-                    },
-                    noWatcher: true,
-                    instant: true,
-                    templateGetter: () => `
-                      <small>Consider this scoped</small>
-                      <input-component x-scope="xInputScope"></input-component>
-                      <button-component x-scope="xButtonScope"></button-component>
-                      <template-list-view-component x-scope="xListViewScope"></template-list-view-component>
-                    `,
-                    scopesGetter: () => ({
-                      xInputScope: _Input.then(({ useComponent }) =>
-                        useComponent({
-                          onInput: (value: string) =>
-                            (mainScope.store.data.home.nameInput = value),
-                          elementAttributes: {
-                            placeholder: 'Test Input'
-                          }
-                        })
-                      ),
-                      xButtonScope: _Button.then(({ useComponent }) =>
-                        useComponent({
-                          label: 'Test Button'
-                        })
-                      ),
-                      xListViewScope: _TemplateList.then(({ useComponent }) =>
-                        useComponent({
-                          noWatcher: true,
-                          listGetter: () => [
-                            _DynamicHtmlView.then(({ useComponent }) =>
-                              useComponent({
-                                templateGetter: () => `
-                                  <small>Consider this nested and scoped</small>
-                                  <input-component x-scope="xInputScope"></input-component>
-                                  <button-component x-scope="xButtonScope"></button-component>
-                                `,
-                                noWatcher: true,
-                                instant: true,
-                                scopesGetter: () => ({
-                                  xInputScope: _Input.then(({ useComponent }) =>
-                                    useComponent({
-                                      onInput: (value: string) =>
-                                        (mainScope.store.data.home.nameInput =
-                                          value),
-                                      elementAttributes: {
-                                        class: 'p-x-16',
-                                        placeholder: 'Test Nested Input'
-                                      }
-                                    })
-                                  ),
-                                  xButtonScope: _Button.then(
-                                    ({ useComponent }) =>
-                                      useComponent({
-                                        label: 'Test Nested Button'
-                                      })
-                                  )
-                                })
-                              })
-                            )
-                          ]
-                        })
-                      )
-                    })
-                  })
-                )
-              ]
+          {
+            /*language=HTML */
+            template: `
+              <div class="row column">
+                <small>Consider this scoped</small>
+                <input-component xScope="xInputScope">
+                </input-component>
+
+                <button-component xScope="xButtonScope">
+                </button-component>
+              </div>
+              <div class="row column">
+                <small>Consider this nested and scoped</small>
+                <input-component xScope="xSecInputScope">
+                </input-component>
+                <button-component xScope="xSecButtonScope">
+                </button-component>
+              </div>
+            `,
+            scopesGetter: () => ({
+              xInputScope: _Input.then(({ useComponent }) =>
+                useComponent({
+                  onInput: (value: string) =>
+                    (mainScope.store.data.home.nameInput = value),
+                  elementAttributes: {
+                    placeholder: 'Test Input'
+                  }
+                })
+              ),
+              xButtonScope: _Button.then(({ useComponent }) =>
+                useComponent({
+                  label: 'Test Button'
+                })
+              ),
+              xSecInputScope: _Input.then(({ useComponent }) =>
+                useComponent({
+                  onInput: (value: string) =>
+                    (mainScope.store.data.home.nameInput = value),
+                  elementAttributes: {
+                    class: 'p-x-16',
+                    placeholder: 'Test Nested Input'
+                  }
+                })
+              ),
+              xSecButtonScope: _Button.then(({ useComponent }) =>
+                useComponent({
+                  label: 'Test Nested Button'
+                })
+              )
             })
-          ),
-          _DynamicHtmlView.then(async ({ useComponent }) => {
-            const scopedCss = await instance.useScopedCss();
-            return useComponent({
-              templateGetter() {
-                return scopedCss;
-              },
-              noWatcher: true,
-              instant: true
-            });
-          })
+          },
+          async () => {
+            const scopedCss = await (
+              await fetch(
+                '/remoteModules/frontend/modules/home/pages/page.Home.scss'
+              )
+            ).text();
+            return instance.getScopedCss(scopedCss);
+          }
         ]
       });
     }
-  };
-};
-
-const getSingleton = (mainScope: IHTMLElementsScope) => {
-  class Instance extends mainScope.HTMLComponent {
-    componentName = 'home-component';
-
-    initComponent = (mainScope: IHTMLElementsScope) => {
-      if (!window.customElements.get(this.componentName)) {
-        this.registerComponent(this.componentName, getClass(mainScope, this));
-      } else if (mainScope.SSR) {
-        this.registerComponents();
-      }
-    };
-
-    registerComponents = () => {
-      return getComponents(mainScope);
-    };
-
-    useComponent = () => {
-      return this.getComponentScope(this.componentName);
-    };
-
-    useScopedCss = async () => {
-      const scopedCss = await mainScope.loadFile(
-        () =>
-          import('@remoteModules/frontend/modules/home/pages/page.Home.scss')
-      );
-      return this.getScopedCss(scopedCss);
-    };
   }
 
-  return new Instance();
+  const instance = new mainScope.HTMLComponent('home-component', Component);
+  return instance;
 };
 
-let componentInstance: ReturnType<typeof getSingleton>;
-
-export default (mainScope: IHTMLElementsScope) => {
-  if (!componentInstance || window.SSR) {
-    if (!componentInstance) {
-      componentInstance = getSingleton(mainScope);
-    }
-    componentInstance.initComponent(mainScope);
-  }
-  return componentInstance;
-};
+export default (mainScope: TMainScope) => getComponent(mainScope);
