@@ -80,7 +80,7 @@ const getComponent = async (mainScope: TMainScope) => {
     }
   }
 
-  const instance = new mainScope.HTMLComponent<ILocalScope>(
+  const instance = new mainScope.HTMLComponent(
     'layout-main-component',
     Component
   );

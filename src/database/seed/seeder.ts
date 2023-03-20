@@ -224,13 +224,13 @@ export const init: IKernelModuleInit = async (context) => {
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
+        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.select.js'
+        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.select.js'
       )
   );
   await loadSeederModule(

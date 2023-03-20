@@ -14,7 +14,7 @@ const getComponent = async (mainScope: TMainScope) => {
 
     async init() {
       const template = window.document.createElement('template');
-      template.innerHTML = `<h1>Page not found!</h1>`;
+      template.innerHTML = /* language=HTML */ `<h1>Page not found!</h1>`;
       this.appendChild(template.content.cloneNode(true));
       template.remove();
     }

@@ -83,7 +83,7 @@ const routes = Object.freeze([
                     path: '#remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
                   },
                   {
-                    path: '#remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
+                    path: '#remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
                   },
                   {
                     path: '#remoteModules/utils/sharedComponents/elements/form/element.form.button.js'

@@ -1,20 +1,35 @@
 import type {
   TMainScope,
-  BaseHTMLComponent,
-  HTMLElementComponentStaticScope,
-  IHTMLElementComponent
+  IHTMLElementComponent,
+  BaseHTMLComponent
+} from '/remoteModules/frontend/engine/components/Main.js';
+import {
+  HTMLComponent,
+  IComponentStaticScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-export interface Route {
+type ScopeType<Type> = Type extends LayoutScope ? Type['scopesGetter'] : number;
+
+type ScopeGetter<Component> = Component extends BaseHTMLComponent<infer Scope>
+  ? ScopeType<Scope>
+  : string;
+
+export interface LayoutScope extends IComponentStaticScope {
+  scopesGetter?: (mainScope: TMainScope) => Promise<{
+    _Header: Promise<HTMLComponent>;
+    _Footer: Promise<HTMLComponent>;
+    _Nav: Promise<HTMLComponent>;
+  }>;
+}
+
+export interface Route<
+  Component = BaseHTMLComponent<LayoutScope | IComponentStaticScope>
+> {
   path: string;
   name?: string;
   redirect?: string;
-  component?: (mainScope: TMainScope) => Promise<BaseHTMLComponent<unknown>>;
-  scopesGetter?: (
-    mainScope: TMainScope
-  ) =>
-    | Promise<Record<string, HTMLElementComponentStaticScope>>
-    | Record<string, HTMLElementComponentStaticScope>;
+  component?: (mainScope: TMainScope) => Promise<Component>;
+  scopesGetter?: ScopeGetter<Component>;
   params?: Record<string, string[]>;
   children?: Route[];
   parent?: Route;
@@ -90,15 +105,21 @@ const {
 };
 
 const mainLayoutComponents = async (mainScope: TMainScope) => ({
-  _Header: import(
-    '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
-  ).then((module) => module.default(mainScope)),
-  _Footer: import(
-    '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
-  ).then((module) => module.default(mainScope)),
-  _Nav: import(
-    '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
-  ).then((module) => module.default(mainScope))
+  _Header: mainScope.asyncRegisterComponent(
+    import(
+      '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+    )
+  ),
+  _Fooster: mainScope.asyncRegisterComponent(
+    import(
+      '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+    )
+  ),
+  _Nav: mainScope.asyncRegisterComponent(
+    import(
+      '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+    )
+  )
 });
 
 const getRouter = (): Router => {
@@ -180,7 +201,7 @@ const getRouter = (): Router => {
   };
 };
 
-export const useRoutes = (mainScope: TMainScope) => [
+export const useRoutes = (mainScope: TMainScope): Route[] => [
   {
     path: '/',
     name: 'root-home',
@@ -189,7 +210,7 @@ export const useRoutes = (mainScope: TMainScope) => [
   {
     path: '/home',
     component: LayoutMainComponent,
-    scopesGetter: (mainScope: TMainScope) => mainLayoutComponents(mainScope),
+    scopesGetter: mainLayoutComponents,
     children: [
       {
         path: '',

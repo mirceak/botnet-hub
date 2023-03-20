@@ -1,10 +1,9 @@
 import type {
-  HTMLElementComponentStaticScope,
   IComponentAttributes,
   IHTMLElementComponent,
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-import { Route } from '/remoteModules/frontend/engine/router.js';
+import { LayoutScope, Route } from '/remoteModules/frontend/engine/router.js';
 
 interface ILocalScope {
   fromConstructor?: boolean;
@@ -71,7 +70,7 @@ const getComponent = async (mainScope: TMainScope) => {
                   return {
                     [`xScope${this._index}`]: useRouteComponent({
                       scopesGetter: route.scopesGetter
-                    }) as HTMLElementComponentStaticScope
+                    } as LayoutScope)
                   };
                 }
               };

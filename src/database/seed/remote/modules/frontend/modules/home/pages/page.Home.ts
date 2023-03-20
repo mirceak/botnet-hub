@@ -12,7 +12,7 @@ const getComponent = (mainScope: TMainScope) => {
     ),
     _Input: mainScope.asyncRegisterComponent(
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
+        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
       )
     )
   };
@@ -56,21 +56,21 @@ const getComponent = (mainScope: TMainScope) => {
           {
             /*language=HTML */
             template: `
-              <div class="row column">
-                <small>Consider this scoped</small>
-                <input-component xScope="xInputScope">
-                </input-component>
+                <div class="row column">
+                    <small>Consider this scoped</small>
+                    <input-component xScope="xInputScope">
+                    </input-component>
 
-                <button-component xScope="xButtonScope">
-                </button-component>
-              </div>
-              <div class="row column">
-                <small>Consider this nested and scoped</small>
-                <input-component xScope="xSecInputScope">
-                </input-component>
-                <button-component xScope="xSecButtonScope">
-                </button-component>
-              </div>
+                    <button-component xScope="xButtonScope">
+                    </button-component>
+                </div>
+                <div class="row column">
+                    <small>Consider this nested and scoped</small>
+                    <input-component xScope="xSecInputScope">
+                    </input-component>
+                    <button-component xScope="xSecButtonScope">
+                    </button-component>
+                </div>
             `,
             scopesGetter: () => ({
               xInputScope: _Input.then(({ useComponent }) =>

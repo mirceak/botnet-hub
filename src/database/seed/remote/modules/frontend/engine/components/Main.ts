@@ -52,7 +52,9 @@ export interface IHTMLElementComponentTemplate {
   target: InstanceType<typeof window.HTMLElement>;
 }
 
-export class BaseHTMLComponent<ILocalScope> implements IHTMLComponent {
+export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
+  implements IHTMLComponent
+{
   scopedCssIdIndex = 0;
   componentName: string;
 
@@ -331,7 +333,7 @@ class HTMLElementsScope {
     importer: Promise<HTMLComponentModule<S>>
   ): Promise<BaseHTMLComponent<S>> => {
     const module = (await importer) as HTMLComponentModule<S>;
-    return await module.default(this);
+    return module.default(this);
   };
 
   parseChildren = (

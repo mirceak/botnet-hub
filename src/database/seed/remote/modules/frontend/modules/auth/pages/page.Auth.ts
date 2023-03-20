@@ -12,7 +12,7 @@ const getComponent = async (mainScope: TMainScope) => {
     ),
     _Input: mainScope.asyncRegisterComponent(
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.input.js'
+        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
       )
     )
   };
