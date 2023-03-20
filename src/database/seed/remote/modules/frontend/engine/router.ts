@@ -1,36 +1,14 @@
 import type {
   TMainScope,
-  IHTMLElementComponent,
-  BaseHTMLComponent
+  IHTMLElementComponent
 } from '/remoteModules/frontend/engine/components/Main.js';
-import {
-  HTMLComponent,
-  IComponentStaticScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import { IComponentStaticScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-type ScopeType<Type> = Type extends LayoutScope ? Type['scopesGetter'] : number;
-
-type ScopeGetter<Component> = Component extends BaseHTMLComponent<infer Scope>
-  ? ScopeType<Scope>
-  : string;
-
-export interface LayoutScope extends IComponentStaticScope {
-  scopesGetter?: (mainScope: TMainScope) => Promise<{
-    _Header: Promise<HTMLComponent>;
-    _Footer: Promise<HTMLComponent>;
-    _Nav: Promise<HTMLComponent>;
-  }>;
-}
-
-export interface Route<
-  Component = BaseHTMLComponent<LayoutScope & IComponentStaticScope>
-> {
+export interface Route {
   path: string;
   name?: string;
   redirect?: string;
-  component?: (mainScope: TMainScope) => Promise<Component>;
-  scopesGetter?: ScopeGetter<Component>;
-  params?: Record<string, string[]>;
+  component?: () => Promise<IComponentStaticScope>;
   children?: Route[];
   parent?: Route;
   computedPath?: string;
@@ -209,29 +187,36 @@ export const useRoutes = (mainScope: TMainScope): Route[] => [
   },
   {
     path: '/home',
-    component: LayoutMainComponent,
-    scopesGetter: mainLayoutComponents,
+    component: () =>
+      LayoutMainComponent(mainScope).then(({ useComponent }) =>
+        useComponent({ scopesGetter: mainLayoutComponents })
+      ),
     children: [
       {
         path: '',
-        component: ProxyRouterViewComponent,
+        component: () => ProxyRouterViewComponent(mainScope),
         children: [
           {
             path: '',
             name: 'home',
-            component: PageHomeComponent
+            component: () => PageHomeComponent(mainScope)
           }
         ]
       },
       {
         path: 'components',
         name: 'components',
-        component: PageComponentsComponent
+        component: () => PageComponentsComponent(mainScope)
       },
       {
         path: 'about',
         name: 'about',
-        component: PageAboutComponent
+        component: () =>
+          PageAboutComponent(mainScope).then(async ({ useComponent }) => {
+            return await useComponent({
+              sex: 'as'
+            });
+          })
       }
     ]
   },

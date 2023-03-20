@@ -53,8 +53,12 @@ const getComponent = async (mainScope: TMainScope) => {
     }
   }
 
-  const instance = new mainScope.HTMLComponent('about-component', Component);
+  const instance = new mainScope.HTMLComponent<L>('about-component', Component);
   return instance;
 };
+
+interface L {
+  sex?: string;
+}
 
 export default async (mainScope: TMainScope) => getComponent(mainScope);

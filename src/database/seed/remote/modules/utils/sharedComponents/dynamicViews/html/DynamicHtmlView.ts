@@ -8,7 +8,9 @@ import type {
 
 interface ILocalScope {
   templateGetter: () => string | undefined;
-  scopesGetter?: () => Record<string, HTMLElementComponentStaticScope>;
+  scopesGetter?: () =>
+    | Promise<Record<string, HTMLElementComponentStaticScope>>
+    | Record<string, HTMLElementComponentStaticScope>;
   noWatcher?: boolean;
   instant?: boolean;
   attributes?: IComponentAttributes;
@@ -92,7 +94,7 @@ const getComponent = async (mainScope: TMainScope) => {
           }
         };
       if (scope.scopesGetter) {
-        const scopes = scope.scopesGetter();
+        const scopes = await scope.scopesGetter();
         [...(this.children as unknown as IHTMLElementComponent[])].forEach(
           parseChildren(scopes)
         );

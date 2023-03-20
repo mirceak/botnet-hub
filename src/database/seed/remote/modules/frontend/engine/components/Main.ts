@@ -34,7 +34,7 @@ export interface IHTMLElementComponent
   init: CallableFunction;
 }
 
-export interface IHTMLElementStaticScope {
+export interface IHTMLElementComponentStaticScope {
   template: string;
   scopesGetter?: CallableFunction;
 }
@@ -46,8 +46,8 @@ export interface IComponentStaticScope {
 export interface IHTMLElementComponentTemplate {
   components: (
     | HTMLElementComponentStaticScope
-    | (() => Promise<IHTMLElementStaticScope | string>)
-    | IHTMLElementStaticScope
+    | (() => Promise<IHTMLElementComponentStaticScope | string>)
+    | IHTMLElementComponentStaticScope
     | string
   )[];
 
@@ -97,7 +97,7 @@ export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
     }
   };
 
-  public useComponent = (scope?: ILocalScope) => {
+  public useComponent = async (scope?: ILocalScope) => {
     return this.getComponentScope(scope);
   };
 }
@@ -401,7 +401,7 @@ class HTMLElementsScope {
                 '[object AsyncFunction]'
               ) {
                 component = await (
-                  component as () => Promise<IHTMLElementStaticScope>
+                  component as () => Promise<IHTMLElementComponentStaticScope>
                 )();
               }
               if (typeof component !== 'string') {
@@ -425,25 +425,23 @@ class HTMLElementsScope {
                         return comp.init(componentScope);
                       });
                   } else if (
-                    (componentScope as IHTMLElementStaticScope).template
+                    (componentScope as IHTMLElementComponentStaticScope)
+                      .template
                   ) {
                     const newElements = [] as Element[];
                     newElements.push(
                       ...((await this.appendComponent(
                         template.target,
-                        (componentScope as IHTMLElementStaticScope).template,
+                        (componentScope as IHTMLElementComponentStaticScope)
+                          .template,
                         i,
                         true
                       )) as HTMLElement[])
                     );
-
-                    if (
-                      (componentScope as IHTMLElementStaticScope).scopesGetter
-                    ) {
-                      const _scopes = (
-                        componentScope as IHTMLElementStaticScope
-                      ).scopesGetter?.();
-
+                    const _scopes = await (
+                      componentScope as IHTMLElementComponentStaticScope
+                    ).scopesGetter?.();
+                    if (_scopes) {
                       [
                         ...(template.target
                           .children as unknown as IHTMLElementComponent[])

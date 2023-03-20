@@ -3,7 +3,7 @@ import type {
   IHTMLElementComponent,
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-import { LayoutScope, Route } from '/remoteModules/frontend/engine/router.js';
+import { Route } from '/remoteModules/frontend/engine/router.js';
 
 interface ILocalScope {
   fromConstructor?: boolean;
@@ -61,16 +61,13 @@ const getComponent = async (mainScope: TMainScope) => {
           target: this,
           components: [
             async () => {
-              const { componentName, useComponent: useRouteComponent } =
-                await routeComponent(mainScope);
+              const componentScope = await routeComponent();
               return {
-                template: `<${componentName} xScope="xScope${this._index}">
-</${componentName}>` /* xScope${this._index} -> avoids nested template parsing errors because the first scope would be sent to all other instances caring the same scope names */,
-                scopesGetter: () => {
+                template: `<${componentScope.componentName} xScope="xScope${this._index}">
+</${componentScope.componentName}>` /* xScope${this._index} -> avoids nested template parsing errors because the first scope would be sent to all other instances caring the same scope names */,
+                scopesGetter: async () => {
                   return {
-                    [`xScope${this._index}`]: useRouteComponent({
-                      scopesGetter: route.scopesGetter
-                    } as LayoutScope)
+                    [`xScope${this._index}`]: componentScope
                   };
                 }
               };

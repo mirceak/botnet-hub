@@ -2,7 +2,15 @@ import type {
   IHTMLElementComponent,
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-import type { LayoutScope as ILocalScope } from '/remoteModules/frontend/engine/router.js';
+import { HTMLComponent } from '/remoteModules/frontend/engine/components/Main.js';
+
+interface ILocalScope {
+  scopesGetter: (mainScope: TMainScope) => Promise<{
+    _Header: Promise<HTMLComponent>;
+    _Footer: Promise<HTMLComponent>;
+    _Nav: Promise<HTMLComponent>;
+  }>;
+}
 
 const getComponent = async (mainScope: TMainScope) => {
   const { _RouterView } = {
@@ -21,17 +29,12 @@ const getComponent = async (mainScope: TMainScope) => {
       super();
     }
 
-    async init(scope: ILocalScope) {
+    /* *Required here and not in the "LayoutScope" because we might want to have layouts without props */
+    async init(scope: Required<ILocalScope>) {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           async () => {
-            if (!scope.scopesGetter) {
-              throw new Error(
-                'This layout component needs the nav, header and footer passed in through a local scope'
-              );
-            }
-
             const { _Nav } = await scope.scopesGetter(mainScope);
             const navComponent = await _Nav;
             const routerViewComponent = await _RouterView;
@@ -72,7 +75,7 @@ const getComponent = async (mainScope: TMainScope) => {
     }
   }
 
-  const instance = new mainScope.HTMLComponent(
+  const instance = new mainScope.HTMLComponent<ILocalScope>(
     'layout-main-component',
     Component
   );
