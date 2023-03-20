@@ -1,11 +1,10 @@
 import type {
   HTMLElementComponentStaticScope,
   IComponentAttributes,
-  IHTMLComponent,
   IHTMLElementComponent,
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-import type { IRoute } from '/remoteModules/frontend/engine/router.js';
+import { Route } from '/remoteModules/frontend/engine/router.js';
 
 interface ILocalScope {
   fromConstructor?: boolean;
@@ -25,7 +24,7 @@ const getComponent = async (mainScope: TMainScope) => {
       super();
     }
 
-    init(scope?: ILocalScope) {
+    async init(scope?: ILocalScope) {
       const matchedRoutesLength = mainScope.router?.matchedRoutes
         ?.length as number;
       if (Object.keys(routerViewRegister).length === matchedRoutesLength) {
@@ -51,11 +50,12 @@ const getComponent = async (mainScope: TMainScope) => {
 
       const route = mainScope.router?.matchedRoutes?.[
         matchedRoutesLength - this._index - 1
-      ] as IRoute;
+      ] as Route;
 
       if (route) {
-        const routeComponent =
-          route.component as unknown as Promise<IHTMLComponent>;
+        const routeComponent = route.component as NonNullable<
+          typeof route.component
+        >;
         this.innerHTML = '';
 
         void mainScope.asyncLoadComponentTemplate({
@@ -63,7 +63,7 @@ const getComponent = async (mainScope: TMainScope) => {
           components: [
             async () => {
               const { componentName, useComponent: useRouteComponent } =
-                await routeComponent;
+                await routeComponent(mainScope);
               return {
                 template: `<${componentName} xScope="xScope${this._index}">
 </${componentName}>` /* xScope${this._index} -> avoids nested template parsing errors because the first scope would be sent to all other instances caring the same scope names */,
@@ -94,4 +94,4 @@ const getComponent = async (mainScope: TMainScope) => {
   );
 };
 
-export default (mainScope: TMainScope) => getComponent(mainScope);
+export default async (mainScope: TMainScope) => getComponent(mainScope);

@@ -56,4 +56,4 @@ const getComponent = async (mainScope: TMainScope) => {
   return new mainScope.HTMLComponent<ILocalScope>('input-component', Component);
 };
 
-export default (mainScope: TMainScope) => getComponent(mainScope);
+export default async (mainScope: TMainScope) => getComponent(mainScope);

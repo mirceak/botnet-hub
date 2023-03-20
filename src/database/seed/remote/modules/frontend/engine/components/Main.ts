@@ -9,8 +9,10 @@ export type HTMLElementComponentStaticScope =
 
 export type HTMLComponent = InstanceType<typeof BaseHTMLComponent>;
 
-export interface HTMLComponentModule {
-  default: CallableFunction;
+export interface HTMLComponentModule<S> {
+  default: (
+    mainScope: HTMLElementsScope
+  ) => Promise<BaseHTMLComponent<S>> | BaseHTMLComponent<S>;
 }
 
 export type TMainScope = InstanceType<typeof HTMLElementsScope>;
@@ -77,7 +79,9 @@ export class BaseHTMLComponent<ILocalScope> implements IHTMLComponent {
       ..._scope,
       componentName: this.componentName
     };
-    return scope as typeof scope & ILocalScope;
+    return scope as ILocalScope extends undefined
+      ? typeof scope
+      : typeof scope & ILocalScope;
   };
 
   public initComponent = (
@@ -323,10 +327,10 @@ class HTMLElementsScope {
   };
 
   /*we also need to wait for all components to get registered so that we know what modules we need to put in the __modulesLoadedWithSSR array*/
-  asyncRegisterComponent = async (
-    importer: Promise<HTMLComponentModule>
-  ): Promise<HTMLComponent> => {
-    const module = (await importer) as HTMLComponentModule;
+  asyncRegisterComponent = async <S>(
+    importer: Promise<HTMLComponentModule<S>>
+  ): Promise<BaseHTMLComponent<S>> => {
+    const module = (await importer) as HTMLComponentModule<S>;
     return await module.default(this);
   };
 
@@ -634,17 +638,15 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
             return useRouter(mainScope).then(async (router) => {
               mainScope.router = router;
 
-              const RouterView = import(
-                '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+              const _RouterView = mainScope.asyncRegisterComponent(
+                import(
+                  '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+                )
               );
 
               await mainScope.asyncLoadComponentTemplate({
                 target: this,
-                components: [
-                  RouterView.then(async (component) =>
-                    (await component.default(mainScope)).useComponent()
-                  )
-                ]
+                components: [_RouterView]
               });
             });
           }

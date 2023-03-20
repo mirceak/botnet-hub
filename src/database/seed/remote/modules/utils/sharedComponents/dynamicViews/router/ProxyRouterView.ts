@@ -3,7 +3,7 @@ import type {
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = (mainScope: TMainScope) => {
+const getComponent = async (mainScope: TMainScope) => {
   const { _RouterView } = {
     _RouterView: mainScope.asyncRegisterComponent(
       import(
@@ -31,4 +31,4 @@ const getComponent = (mainScope: TMainScope) => {
   return new mainScope.HTMLComponent('proxy-router-view-component', Component);
 };
 
-export default (mainScope: TMainScope) => getComponent(mainScope);
+export default async (mainScope: TMainScope) => getComponent(mainScope);

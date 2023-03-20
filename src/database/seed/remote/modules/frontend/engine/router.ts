@@ -1,15 +1,15 @@
 import type {
   TMainScope,
+  BaseHTMLComponent,
   HTMLElementComponentStaticScope,
   IHTMLElementComponent
 } from '/remoteModules/frontend/engine/components/Main.js';
-import { BaseHTMLComponent } from '/remoteModules/frontend/engine/components/Main.js';
 
 export interface Route {
   path: string;
   name?: string;
   redirect?: string;
-  component?: Promise<BaseHTMLComponent<unknown>>;
+  component?: (mainScope: TMainScope) => Promise<BaseHTMLComponent<unknown>>;
   scopesGetter?: (
     mainScope: TMainScope
   ) =>
@@ -20,10 +20,6 @@ export interface Route {
   parent?: Route;
   computedPath?: string;
   _symbol?: symbol;
-}
-
-export interface IRoute extends Route {
-  component: Promise<BaseHTMLComponent<unknown>>;
 }
 
 export interface Router {
@@ -184,7 +180,7 @@ const getRouter = (): Router => {
   };
 };
 
-export const useRoutes = (mainScope: TMainScope): Route[] => [
+export const useRoutes = (mainScope: TMainScope) => [
   {
     path: '/',
     name: 'root-home',
@@ -192,41 +188,41 @@ export const useRoutes = (mainScope: TMainScope): Route[] => [
   },
   {
     path: '/home',
-    component: LayoutMainComponent(mainScope),
+    component: LayoutMainComponent,
     scopesGetter: (mainScope: TMainScope) => mainLayoutComponents(mainScope),
     children: [
       {
         path: '',
-        component: ProxyRouterViewComponent(mainScope),
+        component: ProxyRouterViewComponent,
         children: [
           {
             path: '',
             name: 'home',
-            component: PageHomeComponent(mainScope)
+            component: PageHomeComponent
           }
         ]
       },
       {
         path: 'components',
         name: 'components',
-        component: PageComponentsComponent(mainScope)
+        component: PageComponentsComponent
       },
       {
         path: 'about',
         name: 'about',
-        component: PageAboutComponent(mainScope)
+        component: PageAboutComponent
       }
     ]
   },
   {
     path: '/auth',
     name: 'auth',
-    component: PageAuthComponent(mainScope)
+    component: () => PageAuthComponent(mainScope)
   },
   {
     path: '/not-found',
     name: '404',
-    component: Page404Component(mainScope)
+    component: () => Page404Component(mainScope)
   },
   {
     path: '(.*)',
@@ -244,7 +240,7 @@ export const useRouter = async (mainScope: TMainScope): Promise<Router> => {
     ).then((module) => module.pathToRegexp);
   }
 
-  router.routes.push(...useRoutes(mainScope).map(routeMapper));
+  router.routes.push(...(useRoutes(mainScope) as Route[]).map(routeMapper));
 
   router.matchedRoutes = router.routes.reduce(
     matchedRoutePathReducer(window.location.pathname),

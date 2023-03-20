@@ -5,14 +5,14 @@ import type {
 } from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
-  scopesGetter: (mainScope: TMainScope) => Promise<{
+  scopesGetter?: (mainScope: TMainScope) => Promise<{
     _Header: Promise<HTMLComponent>;
     _Footer: Promise<HTMLComponent>;
     _Nav: Promise<HTMLComponent>;
   }>;
 }
 
-const getComponent = (mainScope: TMainScope) => {
+const getComponent = async (mainScope: TMainScope) => {
   const { _RouterView } = {
     _RouterView: mainScope.asyncRegisterComponent(
       import(
@@ -34,6 +34,12 @@ const getComponent = (mainScope: TMainScope) => {
         target: this,
         components: [
           async () => {
+            if (!scope.scopesGetter) {
+              throw new Error(
+                'This layout component needs the nav, header and footer passed in through a local scope'
+              );
+            }
+
             const { _Nav } = await scope.scopesGetter(mainScope);
             const navComponent = await _Nav;
             const routerViewComponent = await _RouterView;
@@ -81,4 +87,4 @@ const getComponent = (mainScope: TMainScope) => {
   return instance;
 };
 
-export default (mainScope: TMainScope) => getComponent(mainScope);
+export default async (mainScope: TMainScope) => getComponent(mainScope);

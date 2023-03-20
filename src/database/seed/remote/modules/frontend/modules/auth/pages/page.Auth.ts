@@ -3,7 +3,7 @@ import type {
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = (mainScope: TMainScope) => {
+const getComponent = async (mainScope: TMainScope) => {
   const { _Input, _Button } = {
     _Button: mainScope.asyncRegisterComponent(
       import(
@@ -106,4 +106,4 @@ const getComponent = (mainScope: TMainScope) => {
   return instance;
 };
 
-export default (mainScope: TMainScope) => getComponent(mainScope);
+export default async (mainScope: TMainScope) => getComponent(mainScope);

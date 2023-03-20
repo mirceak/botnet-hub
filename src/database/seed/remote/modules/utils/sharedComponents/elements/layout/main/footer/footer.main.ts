@@ -3,7 +3,7 @@ import type {
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = (mainScope: TMainScope) => {
+const getComponent = async (mainScope: TMainScope) => {
   class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
@@ -32,4 +32,4 @@ const getComponent = (mainScope: TMainScope) => {
   return instance;
 };
 
-export default (mainScope: TMainScope) => getComponent(mainScope);
+export default async (mainScope: TMainScope) => getComponent(mainScope);
