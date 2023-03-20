@@ -1,16 +1,8 @@
 import type {
-  HTMLComponent,
   IHTMLElementComponent,
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-
-interface ILocalScope {
-  scopesGetter?: (mainScope: TMainScope) => Promise<{
-    _Header: Promise<HTMLComponent>;
-    _Footer: Promise<HTMLComponent>;
-    _Nav: Promise<HTMLComponent>;
-  }>;
-}
+import type { LayoutScope as ILocalScope } from '/remoteModules/frontend/engine/router.js';
 
 const getComponent = async (mainScope: TMainScope) => {
   const { _RouterView } = {

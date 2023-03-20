@@ -23,7 +23,7 @@ export interface LayoutScope extends IComponentStaticScope {
 }
 
 export interface Route<
-  Component = BaseHTMLComponent<LayoutScope | IComponentStaticScope>
+  Component = BaseHTMLComponent<LayoutScope & IComponentStaticScope>
 > {
   path: string;
   name?: string;
@@ -110,7 +110,7 @@ const mainLayoutComponents = async (mainScope: TMainScope) => ({
       '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
     )
   ),
-  _Fooster: mainScope.asyncRegisterComponent(
+  _Footer: mainScope.asyncRegisterComponent(
     import(
       '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
     )

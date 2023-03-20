@@ -7,7 +7,9 @@ export type HTMLElementComponentStaticScope =
   | IComponentStaticScope
   | GenericFalsy;
 
-export type HTMLComponent = InstanceType<typeof BaseHTMLComponent>;
+export type HTMLComponent = InstanceType<
+  typeof BaseHTMLComponent<IComponentStaticScope>
+>;
 
 export interface HTMLComponentModule<S> {
   default: (
