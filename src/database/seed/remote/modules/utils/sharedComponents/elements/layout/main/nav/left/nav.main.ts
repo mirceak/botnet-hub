@@ -5,7 +5,7 @@ import type {
 
 const getComponent = async (mainScope: TMainScope) => {
   const { _DynamicHtmlView } = {
-    _DynamicHtmlView: mainScope.asyncRegisterComponent(
+    _DynamicHtmlView: mainScope.asyncComponent(
       import(
         '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
       )

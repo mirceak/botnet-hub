@@ -350,11 +350,20 @@ class HTMLElementsScope {
       ?.setAttribute('style', 'display: inline;');
   };
 
-  asyncRegisterComponent = async <S>(
+  asyncComponent = async <S>(
     importer: Promise<HTMLComponentModule<S>>
   ): Promise<BaseHTMLComponent<S>> => {
     const module = (await importer) as HTMLComponentModule<S>;
     return module.default(this);
+  };
+
+  asyncComponentScope = async <S>(
+    importer: Promise<HTMLComponentModule<S>>
+  ): Promise<
+    Awaited<ReturnType<Awaited<BaseHTMLComponent<S>>['useComponent']>>
+  > => {
+    const module = (await importer) as HTMLComponentModule<S>;
+    return ((await module.default(this)).useComponent as CallableFunction)();
   };
 
   parseChildren = (
@@ -661,7 +670,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
             return useRouter(mainScope).then(async (router) => {
               mainScope.router = router;
 
-              const _RouterView = mainScope.asyncRegisterComponent(
+              const _RouterView = mainScope.asyncComponentScope(
                 import(
                   '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
                 )
@@ -669,9 +678,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
 
               await mainScope.asyncLoadComponentTemplate({
                 target: this,
-                components: [
-                  _RouterView.then(({ useComponent }) => useComponent())
-                ]
+                components: [_RouterView]
               });
             });
           }

@@ -5,7 +5,7 @@ import type {
 
 const getComponent = async (mainScope: TMainScope) => {
   const { _RouterView } = {
-    _RouterView: mainScope.asyncRegisterComponent(
+    _RouterView: mainScope.asyncComponentScope(
       import(
         '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
       )
@@ -23,7 +23,7 @@ const getComponent = async (mainScope: TMainScope) => {
     async init() {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
-        components: [_RouterView.then(({ useComponent }) => useComponent())]
+        components: [_RouterView]
       });
     }
   }

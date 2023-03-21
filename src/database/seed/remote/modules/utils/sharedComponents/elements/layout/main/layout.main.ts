@@ -14,7 +14,7 @@ interface ILocalScope {
 
 const getComponent = async (mainScope: TMainScope) => {
   const { _RouterView } = {
-    _RouterView: mainScope.asyncRegisterComponent(
+    _RouterView: mainScope.asyncComponent(
       import(
         '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
       )
@@ -36,8 +36,7 @@ const getComponent = async (mainScope: TMainScope) => {
         components: [
           async () => {
             const { _Nav } = await scope.scopesGetter;
-            const navComponent = await _Nav;
-            const navComponentScope = await navComponent.useComponent();
+            const navComponentScope = await _Nav;
             const routerViewComponent = await _RouterView;
             const routerViewComponentScope =
               await routerViewComponent.useComponent();

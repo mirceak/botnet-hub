@@ -5,7 +5,7 @@ import type {
 
 const getComponent = async (mainScope: TMainScope) => {
   const { _Button } = {
-    _Button: mainScope.asyncRegisterComponent(
+    _Button: mainScope.asyncComponent(
       import(
         '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
       )
