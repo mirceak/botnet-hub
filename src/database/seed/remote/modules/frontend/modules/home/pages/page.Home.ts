@@ -5,23 +5,27 @@ import type {
 
 const getComponent = (mainScope: IMainScope) => {
   const { _Input, _Button } = {
-    _Button: mainScope.asyncComponent(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-        )
+    _Button: mainScope.asyncComponent(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import(
+            '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+          )
+      )
     ),
-    _Input: mainScope.asyncComponent(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
-        )
+    _Input: mainScope.asyncComponent(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import(
+            '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+          )
+      )
     )
   };
 
-  const scopedCss = fetch(
-    '/remoteModules/frontend/modules/home/pages/page.Home.scss'
-  ).then((response) => response.text());
+  const scopedCss = mainScope.asyncStaticFile(
+    () => import('/remoteModules/frontend/modules/home/pages/page.Home.scss')
+  );
 
   class Component
     extends mainScope.HTMLElement

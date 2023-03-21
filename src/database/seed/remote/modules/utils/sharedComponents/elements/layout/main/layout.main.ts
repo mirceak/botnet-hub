@@ -15,17 +15,19 @@ interface ILocalScope extends IComponentScope {
 
 const getComponent = (mainScope: IMainScope) => {
   const { _RouterView } = {
-    _RouterView: mainScope.asyncComponentScope(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-        )
+    _RouterView: mainScope.asyncComponentScope(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import(
+            '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+          )
+      )
     )
   };
 
-  const scopedCss = fetch(
-    '/remoteModules/utils/assets/scss/theme/main/theme.main.scss'
-  ).then((response) => response.text());
+  const scopedCss = mainScope.asyncStaticFile(
+    () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
+  );
 
   class Component
     extends mainScope.HTMLElement

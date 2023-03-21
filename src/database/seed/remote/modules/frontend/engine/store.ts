@@ -1,4 +1,5 @@
 import type { ProxyObject as IProxyObject } from '/remoteModules/utils/reactivity/objectProxy.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 interface HomeModuleState {
   title?: string;
@@ -41,9 +42,9 @@ export const useProxyState = (
   return ProxyObject(useState());
 };
 
-export const useStore = async () => {
-  const { ProxyObject } = await import(
-    '/remoteModules/utils/reactivity/objectProxy.js'
+export const useStore = async (mainScope: IMainScope) => {
+  const { ProxyObject } = await mainScope.asyncStaticModule(
+    () => import('/remoteModules/utils/reactivity/objectProxy.js')
   );
   const proxyObject = useProxyState(ProxyObject);
   startComputing(proxyObject);

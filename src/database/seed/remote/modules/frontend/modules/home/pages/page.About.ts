@@ -5,17 +5,19 @@ import type {
 
 const getComponent = async (mainScope: IMainScope) => {
   const { _Button } = {
-    _Button: mainScope.asyncComponent(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-        )
+    _Button: mainScope.asyncComponent(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import(
+            '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+          )
+      )
     )
   };
 
-  const scopedCss = fetch(
-    '/remoteModules/frontend/modules/home/pages/page.About.scss'
-  ).then((response) => response.text());
+  const scopedCss = mainScope.asyncStaticFile(
+    () => import('/remoteModules/frontend/modules/home/pages/page.About.scss')
+  );
 
   class Component
     extends mainScope.HTMLElement

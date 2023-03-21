@@ -1,8 +1,8 @@
 import type {
-  IMainScope,
-  IHTMLElementComponent
+  IComponentStaticScope,
+  IHTMLElementComponent,
+  IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-import { IComponentStaticScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 export interface Route {
   path: string;
@@ -111,9 +111,13 @@ export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
   const router = getRouter();
   if (!pathToRegexp) {
     /*TODO: Replace with own implementation of path interpreter*/
-    pathToRegexp = await import(
-      `${'/node_modules/path-to-regexp/dist.es2015/index.js'}`
-    ).then((module) => module.pathToRegexp);
+    pathToRegexp = await mainScope
+      .asyncStaticModule(
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        () => import('/node_modules/path-to-regexp/dist.es2015/index.js')
+      )
+      .then((module) => module.pathToRegexp);
   }
 
   router.routes.push(...(useRoutes(mainScope) as Route[]).map(routeMapper));
@@ -303,72 +307,93 @@ const {
   Page404Component
 } = {
   ProxyRouterViewComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
-        )
+    return mainScope.asyncComponentScope(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import(
+            '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+          )
+      )
     );
   },
   LayoutMainComponent(mainScope: IMainScope) {
     return mainScope
-      .asyncComponent(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
-          )
+      .asyncComponent(() =>
+        mainScope.asyncStaticModule(
+          () =>
+            import(
+              '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+            )
+        )
       )
       .then(({ getScope }) =>
         getScope({ scopesGetter: mainLayoutComponents(mainScope) })
       );
   },
   PageHomeComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      () => import('/remoteModules/frontend/modules/home/pages/page.Home.js')
+    return mainScope.asyncComponentScope(() =>
+      mainScope.asyncStaticModule(
+        () => import('/remoteModules/frontend/modules/home/pages/page.Home.js')
+      )
     );
   },
   PageAuthComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      () => import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
+    return mainScope.asyncComponentScope(() =>
+      mainScope.asyncStaticModule(
+        () => import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
+      )
     );
   },
   PageAboutComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      () => import('/remoteModules/frontend/modules/home/pages/page.About.js')
+    return mainScope.asyncComponentScope(() =>
+      mainScope.asyncStaticModule(
+        () => import('/remoteModules/frontend/modules/home/pages/page.About.js')
+      )
     );
   },
   PageComponentsComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      () =>
-        import(
-          '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
-        )
+    return mainScope.asyncComponentScope(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import(
+            '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
+          )
+      )
     );
   },
   Page404Component(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      () => import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
+    return mainScope.asyncComponentScope(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
+      )
     );
   }
 };
 
 const mainLayoutComponents = async (mainScope: IMainScope) => ({
-  _Header: mainScope.asyncComponentScope(
-    () =>
-      import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
-      )
+  _Header: mainScope.asyncComponentScope(() =>
+    mainScope.asyncStaticModule(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+        )
+    )
   ),
-  _Footer: mainScope.asyncComponentScope(
-    () =>
-      import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
-      )
+  _Footer: mainScope.asyncComponentScope(() =>
+    mainScope.asyncStaticModule(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+        )
+    )
   ),
-  _Nav: mainScope.asyncComponentScope(
-    () =>
-      import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
-      )
+  _Nav: mainScope.asyncComponentScope(() =>
+    mainScope.asyncStaticModule(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+        )
+    )
   )
 });

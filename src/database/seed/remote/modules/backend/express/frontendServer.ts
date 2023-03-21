@@ -204,8 +204,13 @@ app.get('/(.*)', (...[req, res]) => {
           async
           type="module"
       >
-        window.preloadedRequests = ${JSON.stringify(scriptData)};
-        ${mainModule}
+        ${mainModule.replace(
+          `preloadedRequests = [];`,
+          `preloadedRequests = ${JSON.stringify(scriptData).replaceAll(
+            /#remoteModules/g,
+            '/remoteModules'
+          )}`
+        )}
       </script>
       </body>
       </html>

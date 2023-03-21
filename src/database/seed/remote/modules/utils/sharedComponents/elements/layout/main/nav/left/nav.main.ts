@@ -5,17 +5,22 @@ import type {
 
 const getComponent = async (mainScope: IMainScope) => {
   const { _DynamicHtmlView } = {
-    _DynamicHtmlView: mainScope.asyncComponent(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-        )
+    _DynamicHtmlView: mainScope.asyncComponent(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import(
+            '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
+          )
+      )
     )
   };
 
-  const scopedCss = fetch(
-    '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.scss'
-  ).then((response) => response.text());
+  const scopedCss = mainScope.asyncStaticFile(
+    () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.scss'
+      )
+  );
 
   class Component
     extends mainScope.HTMLElement

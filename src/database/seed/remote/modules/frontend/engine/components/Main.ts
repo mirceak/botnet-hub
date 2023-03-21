@@ -99,14 +99,14 @@ export class BaseComponent<ILocalScope = IComponentStaticScope>
     this.init(constructor, this, options);
   }
 
-  getScopedCss(css: string) {
+  public getScopedCss = (css: string) => {
     /* language=HTML */
     return `
       <style staticScope=${this.scopedCssIdIndex++}>${css}</style>
     `;
-  }
+  };
 
-  protected init(
+  private init(
     constructor: CustomElementConstructor,
     target: BaseComponent<ILocalScope>,
     options?: ElementDefinitionOptions
@@ -130,6 +130,8 @@ class HTMLElementsScope {
 
   HTMLComponent = BaseComponent;
   HTMLElement = HTMLElement;
+
+  preloadedRequests: Record<'code' | 'path', string>[] = [];
 
   asyncHydrationCallbackIndex = 0;
 
@@ -156,7 +158,7 @@ class HTMLElementsScope {
       );
   };
 
-  getAttributesString = (scope?: { elementAttributes?: object }) => {
+  getAttributesString(scope?: { elementAttributes?: object }) {
     if (scope?.elementAttributes) {
       return Object.keys(scope.elementAttributes).reduce((reduced, current) => {
         reduced += `${current}${
@@ -169,7 +171,47 @@ class HTMLElementsScope {
       }, '');
     }
     return '';
-  };
+  }
+
+  asyncStaticModule<S>(importer: () => S) {
+    const parsedPath = importer
+      .toString()
+      .match(/import\('.*'\)/g)?.[0]
+      .replace("import('", '')
+      .replace("')", '')
+      .split('./')
+      .pop() as string;
+
+    for (const module of this.preloadedRequests) {
+      if (module.path === parsedPath) {
+        const encodedJs = encodeURIComponent(module.code as string);
+        const dataUri = 'data:text/javascript;charset=utf-8,' + encodedJs;
+
+        return import(dataUri) as S;
+      }
+    }
+
+    return import(parsedPath) as S;
+  }
+
+  asyncStaticFile(importer: () => unknown) {
+    const parsedPath = importer
+      .toString()
+      .match(/import\('.*'\)/g)?.[0]
+      .replace("import('", '')
+      .replace("')", '')
+      .split('./')
+      .pop() as string;
+
+    console.log(parsedPath);
+    for (const module of this.preloadedRequests) {
+      if (module.path === parsedPath) {
+        return module.code;
+      }
+    }
+
+    return fetch(parsedPath).then((res) => res.json());
+  }
 
   asyncComponent = async <S>(
     importer: () => Promise<HTMLComponentModule<S>>
@@ -233,12 +275,12 @@ class HTMLElementsScope {
                         (componentScope as IComponentStaticScope).componentName
                       )
                       .then(async () => {
-                        const comp = (await this.appendComponent(
+                        const comp = this.appendComponent(
                           template.target,
                           (componentScope as IComponentStaticScope)
                             .componentName,
                           i
-                        )) as IHTMLElementComponent;
+                        ) as IHTMLElementComponent;
                         return comp.initElement(componentScope as never);
                       });
                   } else if (
@@ -247,13 +289,13 @@ class HTMLElementsScope {
                   ) {
                     const newElements = [] as Element[];
                     newElements.push(
-                      ...((await this.appendComponent(
+                      ...(this.appendComponent(
                         template.target,
                         (componentScope as IHTMLElementComponentStaticScope)
                           .template,
                         i,
                         true
-                      )) as HTMLElement[])
+                      ) as HTMLElement[])
                     );
                     const _scopes = await (
                       componentScope as IHTMLElementComponentStaticScope
@@ -265,8 +307,7 @@ class HTMLElementsScope {
                       ]
                         .filter((child) => {
                           return (
-                            +(child.getAttribute('indexInParent') as string) ===
-                            i
+                            +(child.getAttribute('wcOrder') as string) === i
                           );
                         })
                         .forEach(this.parseChildren('wcScope', _scopes));
@@ -274,7 +315,7 @@ class HTMLElementsScope {
                   }
                 }
               } else {
-                await this.appendComponent(
+                this.appendComponent(
                   template.target,
                   component as string,
                   i,
@@ -289,22 +330,22 @@ class HTMLElementsScope {
     return promises.map((promise) => promise());
   };
 
-  appendComponent = async (
+  appendComponent = (
     target: InstanceType<typeof window.HTMLElement>,
     tagOrTemplate: string,
     index: number,
     isTemplate = false
-  ): Promise<IHTMLElementComponent | HTMLElement[] | undefined> => {
+  ): IHTMLElementComponent | HTMLElement[] | undefined => {
     if (isTemplate) {
       const result = [] as HTMLElement[];
-      const temp = window.document.createElement('div');
+      const temp = document.createElement('div');
       temp.setAttribute('style', 'display: none');
       temp.innerHTML += tagOrTemplate;
       const children = [...(temp.children as unknown as HTMLElement[])];
       temp.remove();
       for (const child of children) {
-        if (!child.getAttribute('indexInParent')) {
-          child.setAttribute('indexInParent', index.toString());
+        if (!child.getAttribute('wcOrder')) {
+          child.setAttribute('wcOrder', index.toString());
           result.push(child);
           target.appendChild(child);
         }
@@ -327,7 +368,7 @@ class HTMLElementsScope {
         tagOrTemplate
       ) as CustomElementConstructor;
       const component = new componentConstructor() as IHTMLElementComponent;
-      component.setAttribute('indexInParent', index.toString());
+      component.setAttribute('wcOrder', index.toString());
 
       if (component) {
         const indexPosition = this.getIndexPositionInParent(
@@ -362,6 +403,7 @@ class HTMLElementsScope {
               const scope = await scopes?.[scopeId];
               if (scope) {
                 if (scope.componentName === child.tagName.toLowerCase()) {
+                  child.removeAttribute(scopeTag);
                   void child.initElement(scope as never);
                 } else {
                   throw new Error(
@@ -370,6 +412,7 @@ class HTMLElementsScope {
                 }
               }
             } else {
+              child.removeAttribute(scopeTag);
               void child.initElement();
             }
           });
@@ -398,20 +441,14 @@ class HTMLElementsScope {
     };
   };
 
-  private getIndexPositionInParent(
-    index: number,
-    children: HTMLElement[]
-  ): number {
+  getIndexPositionInParent(index: number, children: HTMLElement[]): number {
     let maxIndexValue = 0;
 
     for (let i = 0; i < children.length; i++) {
-      if (
-        +(children[i].getAttribute('indexInParent') as string) >= maxIndexValue
-      ) {
-        if (index > +(children[i].getAttribute('indexInParent') as string)) {
-          maxIndexValue = +(children[i].getAttribute(
-            'indexInParent'
-          ) as string);
+      const attr = children[i].getAttribute('wcOrder') as string;
+      if (+attr >= maxIndexValue) {
+        if (index > +attr) {
+          maxIndexValue = +attr;
         } else {
           return Math.max(0, i);
         }
@@ -420,7 +457,7 @@ class HTMLElementsScope {
     return -1;
   }
 
-  addCssHelpers = () => {
+  addCssHelpers() {
     const screenSizes = ['599px', '1023px', '1439px', '1919px'];
     let css = '';
     const style = document.createElement('style');
@@ -588,10 +625,8 @@ class HTMLElementsScope {
 
     style.innerHTML = css.replaceAll(/--bp--/gs, '');
     document.body.append(style);
-    document
-      .getElementById('main-component')
-      ?.setAttribute('style', 'display: inline;');
-  };
+    document.getElementById('main-component')?.removeAttribute('style');
+  }
 
   applyBreakpoints(css: string): string {
     const strings = css.match(
@@ -661,32 +696,37 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
     }
 
     async init() {
-      await mainScope.asyncHydrationCallback(async () => {
-        await import('/remoteModules/frontend/engine/store.js').then(
-          async ({ useStore }) => {
-            mainScope.store = await useStore();
-          }
-        );
+      await mainScope
+        .asyncStaticModule(
+          () => import('/remoteModules/frontend/engine/store.js')
+        )
+        .then(async ({ useStore }) => {
+          mainScope.store = await useStore(mainScope);
+        });
 
-        return import('/remoteModules/frontend/engine/router.js').then(
-          async ({ useRouter }) =>
-            useRouter(mainScope).then(async (router) => {
-              mainScope.router = router;
+      return mainScope
+        .asyncStaticModule(
+          () => import('/remoteModules/frontend/engine/router.js')
+        )
+        .then(async ({ useRouter }) =>
+          useRouter(mainScope).then(async (router) => {
+            mainScope.router = router;
 
-              const _RouterView = mainScope.asyncComponentScope(
+            const _RouterView = mainScope.asyncComponentScope(() =>
+              mainScope.asyncStaticModule(
                 () =>
                   import(
                     '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
                   )
-              );
+              )
+            );
 
-              await mainScope.asyncLoadComponentTemplate({
-                target: this,
-                components: [_RouterView]
-              });
-            })
+            await mainScope.asyncLoadComponentTemplate({
+              target: this,
+              components: [_RouterView]
+            });
+          })
         );
-      });
     }
 
     disconnectedCallback() {
@@ -700,5 +740,6 @@ export const registerMainComponent = () => {
   const mainScope = new HTMLElementsScope();
   window.customElements.define('main-component', initComponent(mainScope));
 };
+
 /*entrypoint*/
 registerMainComponent();

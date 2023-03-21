@@ -13,15 +13,14 @@ const getComponent = async (mainScope: IMainScope) => {
     }
 
     async initElement() {
-      await mainScope.asyncHydrationCallback(async () => {
-        const scopedCss = await (
-          await fetch(
+      const scopedCss = await mainScope.asyncStaticFile(
+        () =>
+          import(
             '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.scss'
           )
-        ).text();
-        this.innerHTML =
-          `<h1>Footer</h1>` + instance.getScopedCss(scopedCss.toString());
-      });
+      );
+      this.innerHTML =
+        `<h1>Footer</h1>` + instance.getScopedCss(scopedCss.toString());
     }
   }
 
