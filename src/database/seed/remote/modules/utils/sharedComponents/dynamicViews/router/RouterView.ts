@@ -22,7 +22,7 @@ const getComponent = async (mainScope: IMainScope) => {
       super();
     }
 
-    async init(scope?: ILocalScope) {
+    async initElement(scope?: ILocalScope) {
       const matchedRoutesLength = mainScope.router?.matchedRoutes
         ?.length as number;
       if (Object.keys(routerViewRegister).length === matchedRoutesLength) {

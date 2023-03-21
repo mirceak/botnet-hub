@@ -3,14 +3,13 @@ import type {
   IMainScope,
   HTMLElementComponentStaticScope,
   IComponentStaticScope,
+  IHTMLElementComponentStaticScope,
   IComponentScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope extends IComponentScope {
   templateGetter: () => string | undefined;
-  scopesGetter?: () =>
-    | Promise<Record<string, HTMLElementComponentStaticScope>>
-    | Record<string, HTMLElementComponentStaticScope>;
+  scopesGetter?: IHTMLElementComponentStaticScope['scopesGetter'];
   noWatcher?: boolean;
   instant?: boolean;
 }
@@ -29,7 +28,7 @@ const getComponent = async (mainScope: IMainScope) => {
       super();
     }
 
-    async init(scope: ILocalScope) {
+    async initElement(scope: ILocalScope) {
       if (scope.attributes) {
         Object.keys(scope.attributes).forEach((key) => {
           this.setAttribute(
@@ -76,7 +75,7 @@ const getComponent = async (mainScope: IMainScope) => {
                     (scope as IComponentStaticScope)?.componentName ===
                     child.tagName.toLowerCase()
                   ) {
-                    child.init(scope);
+                    child.initElement(scope);
                   } else {
                     throw new Error(
                       `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`

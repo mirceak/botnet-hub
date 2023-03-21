@@ -24,29 +24,29 @@ const getComponent = async (mainScope: IMainScope) => {
       super();
     }
 
-    async init() {
+    async initElement() {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           {
-            /*language=HTML */
+            /* language=HTML */
             template: `
               <h1>About Page</h1>
               <button-component xScope="xButtonScope">
               </button-component>
             `,
             scopesGetter: async () => ({
-              xButtonScope: _Button.then(({ useComponent }) =>
-                useComponent({
-                  onClick: () => void mainScope.router.push('home'),
+              xButtonScope: _Button.then(({ getScope }) =>
+                getScope({
+                  onClick() {
+                    mainScope.router.push('home');
+                  },
                   label: 'Go Home'
                 })
               )
             })
           },
-          async () => {
-            return instance.getScopedCss(await scopedCss);
-          }
+          instance.getScopedCss(await scopedCss)
         ]
       });
     }

@@ -24,23 +24,21 @@ const getComponent = async (mainScope: IMainScope) => {
       super();
     }
 
-    async init() {
+    async initElement() {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          _DynamicHtmlView.then(async ({ useComponent }) => {
-            return useComponent({
-              templateGetter: () => {
-                /*language=HTML */
+          _DynamicHtmlView.then(async ({ getScope }) => {
+            return getScope({
+              templateGetter() {
+                /* language=HTML */
                 return `<h1>
                   ${mainScope.store.data.home.titleWithName || ''}
                 </h1>`;
               }
             });
           }),
-          async () => {
-            return instance.getScopedCss(await scopedCss);
-          }
+          instance.getScopedCss(await scopedCss)
         ]
       });
     }

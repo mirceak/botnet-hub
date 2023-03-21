@@ -29,13 +29,13 @@ const getComponent = async (mainScope: IMainScope) => {
       super();
     }
 
-    async init() {
+    async initElement() {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           async () => {
             return {
-              /*language=HTML */
+              /* language=HTML */
               template: `
                 <div class="card gap-8 m-a-16 fit-content">
                   <div class="header row items-center">
@@ -104,91 +104,93 @@ const getComponent = async (mainScope: IMainScope) => {
                     </div>
                   </div>
                 </div>`,
-              scopesGetter: () => ({
-                xButtonBack: _Button.then(({ useComponent }) => {
-                  return useComponent({
-                    onClick: () => void mainScope.router.push('home'),
-                    label: 'Go Back'
-                  });
-                }),
-                xButtonDefault: _Button.then(({ useComponent }) => {
-                  return useComponent({
-                    label: 'Default'
-                  });
-                }),
-                xButtonPrimary: _Button.then(({ useComponent }) => {
-                  return useComponent({
-                    label: 'Primary'
-                  });
-                }),
-                xButtonSecondary: _Button.then(({ useComponent }) => {
-                  return useComponent({
-                    label: 'Secondary'
-                  });
-                }),
-                xButtonInfo: _Button.then(({ useComponent }) => {
-                  return useComponent({
-                    label: 'Info'
-                  });
-                }),
-                xButtonWarning: _Button.then(({ useComponent }) => {
-                  return useComponent({
-                    label: 'Warning'
-                  });
-                }),
-                xButtonDanger: _Button.then(({ useComponent }) => {
-                  return useComponent({
-                    label: 'Danger'
-                  });
-                }),
-                xInputDefault: _Input.then(({ useComponent }) => {
-                  return useComponent({
-                    elementAttributes: {
-                      placeholder: 'Default'
-                    }
-                  });
-                }),
-                xInputPrimary: _Input.then(({ useComponent }) => {
-                  return useComponent({
-                    elementAttributes: {
-                      placeholder: 'Primary'
-                    }
-                  });
-                }),
-                xInputSecondary: _Input.then(({ useComponent }) => {
-                  return useComponent({
-                    elementAttributes: {
-                      placeholder: 'Secondary'
-                    }
-                  });
-                }),
-                xInputInfo: _Input.then(({ useComponent }) => {
-                  return useComponent({
-                    elementAttributes: {
-                      placeholder: 'Info'
-                    }
-                  });
-                }),
-                xInputWarning: _Input.then(({ useComponent }) => {
-                  return useComponent({
-                    elementAttributes: {
-                      placeholder: 'Warning'
-                    }
-                  });
-                }),
-                xInputDanger: _Input.then(({ useComponent }) => {
-                  return useComponent({
-                    elementAttributes: {
-                      placeholder: 'Danger'
-                    }
-                  });
-                })
-              })
+              scopesGetter() {
+                return {
+                  xButtonBack: _Button.then(({ getScope }) => {
+                    return getScope({
+                      onClick() {
+                        mainScope.router.push('home');
+                      },
+                      label: 'Go Back'
+                    });
+                  }),
+                  xButtonDefault: _Button.then(({ getScope }) => {
+                    return getScope({
+                      label: 'Default'
+                    });
+                  }),
+                  xButtonPrimary: _Button.then(({ getScope }) => {
+                    return getScope({
+                      label: 'Primary'
+                    });
+                  }),
+                  xButtonSecondary: _Button.then(({ getScope }) => {
+                    return getScope({
+                      label: 'Secondary'
+                    });
+                  }),
+                  xButtonInfo: _Button.then(({ getScope }) => {
+                    return getScope({
+                      label: 'Info'
+                    });
+                  }),
+                  xButtonWarning: _Button.then(({ getScope }) => {
+                    return getScope({
+                      label: 'Warning'
+                    });
+                  }),
+                  xButtonDanger: _Button.then(({ getScope }) => {
+                    return getScope({
+                      label: 'Danger'
+                    });
+                  }),
+                  xInputDefault: _Input.then(({ getScope }) => {
+                    return getScope({
+                      elementAttributes: {
+                        placeholder: 'Default'
+                      }
+                    });
+                  }),
+                  xInputPrimary: _Input.then(({ getScope }) => {
+                    return getScope({
+                      elementAttributes: {
+                        placeholder: 'Primary'
+                      }
+                    });
+                  }),
+                  xInputSecondary: _Input.then(({ getScope }) => {
+                    return getScope({
+                      elementAttributes: {
+                        placeholder: 'Secondary'
+                      }
+                    });
+                  }),
+                  xInputInfo: _Input.then(({ getScope }) => {
+                    return getScope({
+                      elementAttributes: {
+                        placeholder: 'Info'
+                      }
+                    });
+                  }),
+                  xInputWarning: _Input.then(({ getScope }) => {
+                    return getScope({
+                      elementAttributes: {
+                        placeholder: 'Warning'
+                      }
+                    });
+                  }),
+                  xInputDanger: _Input.then(({ getScope }) => {
+                    return getScope({
+                      elementAttributes: {
+                        placeholder: 'Danger'
+                      }
+                    });
+                  })
+                };
+              }
             };
           },
-          async () => {
-            return instance.getScopedCss(await scopedCss);
-          }
+          instance.getScopedCss(await scopedCss)
         ]
       });
     }

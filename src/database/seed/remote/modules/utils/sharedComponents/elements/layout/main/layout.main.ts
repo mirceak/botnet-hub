@@ -35,7 +35,7 @@ const getComponent = async (mainScope: IMainScope) => {
     }
 
     /* *Required here and not in the "LayoutScope" because we might want to have layouts without props */
-    async init(scope: Required<ILocalScope>) {
+    async initElement(scope: Required<ILocalScope>) {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
@@ -44,7 +44,7 @@ const getComponent = async (mainScope: IMainScope) => {
             const navComponentScope = await _Nav;
             const routerViewComponentScope = await _RouterView;
             return {
-              /*language=HTML */
+              /* language=HTML */
               template: `
                 <header-main-component xInit>
                 </header-main-component>
@@ -61,10 +61,12 @@ const getComponent = async (mainScope: IMainScope) => {
                 <footer-main-component xInit>
                 </footer-main-component>
               `,
-              scopesGetter: () => ({
-                xNavScope: navComponentScope,
-                xRouterViewScope: routerViewComponentScope
-              })
+              scopesGetter() {
+                return {
+                  xNavScope: navComponentScope,
+                  xRouterViewScope: routerViewComponentScope
+                };
+              }
             };
           },
           async () => {

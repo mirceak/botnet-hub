@@ -29,28 +29,33 @@ const getComponent = (mainScope: IMainScope) => {
       super();
     }
 
-    async init() {
+    async initElement() {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          _Input.then(({ useComponent }) =>
-            useComponent({
-              onInput: (value: string) =>
-                (mainScope.store.data.home.nameInput = value),
+          _Input.then(({ getScope }) =>
+            getScope({
+              onInput(value: string) {
+                mainScope.store.data.home.nameInput = value;
+              },
               elementAttributes: {
                 placeholder: 'Enter Your Name...'
               }
             })
           ),
-          _Button.then(({ useComponent }) =>
-            useComponent({
-              onClick: () => void mainScope.router.push('about'),
+          _Button.then(({ getScope }) =>
+            getScope({
+              onClick() {
+                mainScope.router.push('about');
+              },
               label: 'Go To About'
             })
           ),
-          _Button.then(({ useComponent }) =>
-            useComponent({
-              onClick: () => void mainScope.router.push('components'),
+          _Button.then(({ getScope }) =>
+            getScope({
+              onClick() {
+                mainScope.router.push('components');
+              },
               label: 'Go To Components',
               elementAttributes: {
                 class: 'bg-primary'
@@ -58,7 +63,7 @@ const getComponent = (mainScope: IMainScope) => {
             })
           ),
           {
-            /*language=HTML */
+            /* language=HTML */
             template: `
                 <div class="row column">
                     <small>Consider this scoped</small>
@@ -76,41 +81,43 @@ const getComponent = (mainScope: IMainScope) => {
                     </button-component>
                 </div>
             `,
-            scopesGetter: () => ({
-              xInputScope: _Input.then(({ useComponent }) =>
-                useComponent({
-                  onInput: (value: string) =>
-                    (mainScope.store.data.home.nameInput = value),
-                  elementAttributes: {
-                    placeholder: 'Test Input'
-                  }
-                })
-              ),
-              xButtonScope: _Button.then(({ useComponent }) =>
-                useComponent({
-                  label: 'Test Button'
-                })
-              ),
-              xSecInputScope: _Input.then(({ useComponent }) =>
-                useComponent({
-                  onInput: (value: string) =>
-                    (mainScope.store.data.home.nameInput = value),
-                  elementAttributes: {
-                    class: 'p-x-16',
-                    placeholder: 'Test Nested Input'
-                  }
-                })
-              ),
-              xSecButtonScope: _Button.then(({ useComponent }) =>
-                useComponent({
-                  label: 'Test Nested Button'
-                })
-              )
-            })
+            scopesGetter() {
+              return {
+                xInputScope: _Input.then(({ getScope }) =>
+                  getScope({
+                    onInput(value: string) {
+                      mainScope.store.data.home.nameInput = value;
+                    },
+                    elementAttributes: {
+                      placeholder: 'Test Input'
+                    }
+                  })
+                ),
+                xButtonScope: _Button.then(({ getScope }) =>
+                  getScope({
+                    label: 'Test Button'
+                  })
+                ),
+                xSecInputScope: _Input.then(({ getScope }) =>
+                  getScope({
+                    onInput(value: string) {
+                      mainScope.store.data.home.nameInput = value;
+                    },
+                    elementAttributes: {
+                      class: 'p-x-16',
+                      placeholder: 'Test Nested Input'
+                    }
+                  })
+                ),
+                xSecButtonScope: _Button.then(({ getScope }) =>
+                  getScope({
+                    label: 'Test Nested Button'
+                  })
+                )
+              };
+            }
           },
-          async () => {
-            return instance.getScopedCss(await scopedCss);
-          }
+          instance.getScopedCss(await scopedCss)
         ]
       });
     }

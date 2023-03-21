@@ -46,44 +46,51 @@ const {
   PageComponentsComponent,
   Page404Component
 } = {
-  ProxyRouterViewComponent: (mainScope: IMainScope) =>
-    mainScope.asyncComponentScope(
+  ProxyRouterViewComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
       import(
         '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
       )
-    ),
-  LayoutMainComponent: (mainScope: IMainScope) =>
-    mainScope
+    );
+  },
+  LayoutMainComponent(mainScope: IMainScope) {
+    return mainScope
       .asyncComponent(
         import(
           '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
         )
       )
-      .then(({ useComponent }) =>
-        useComponent({ scopesGetter: mainLayoutComponents(mainScope) })
-      ),
-  PageHomeComponent: (mainScope: IMainScope) =>
-    mainScope.asyncComponentScope(
+      .then(({ getScope }) =>
+        getScope({ scopesGetter: mainLayoutComponents(mainScope) })
+      );
+  },
+  PageHomeComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
       import('/remoteModules/frontend/modules/home/pages/page.Home.js')
-    ),
-  PageAuthComponent: (mainScope: IMainScope) =>
-    mainScope.asyncComponentScope(
+    );
+  },
+  PageAuthComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
       import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
-    ),
-  PageAboutComponent: (mainScope: IMainScope) =>
-    mainScope.asyncComponentScope(
+    );
+  },
+  PageAboutComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
       import('/remoteModules/frontend/modules/home/pages/page.About.js')
-    ),
-  PageComponentsComponent: (mainScope: IMainScope) =>
-    mainScope.asyncComponentScope(
+    );
+  },
+  PageComponentsComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
       import(
         '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
       )
-    ),
-  Page404Component: (mainScope: IMainScope) =>
-    mainScope.asyncComponentScope(
+    );
+  },
+  Page404Component(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
       import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
-    )
+    );
+  }
 };
 
 const mainLayoutComponents = async (mainScope: IMainScope) => ({
@@ -170,7 +177,7 @@ const getRouter = (): Router => {
               window.document.getElementById(
                 `${firstMatchingRouteIndex}`
               ) as IHTMLElementComponent
-            )?.init();
+            )?.initElement();
           }
         }
       } else {
@@ -191,40 +198,54 @@ export const useRoutes = (mainScope: IMainScope): Route[] => [
   },
   {
     path: '/home',
-    component: () => LayoutMainComponent(mainScope),
+    component() {
+      return LayoutMainComponent(mainScope);
+    },
     children: [
       {
         path: '',
-        component: () => ProxyRouterViewComponent(mainScope),
+        component() {
+          return ProxyRouterViewComponent(mainScope);
+        },
         children: [
           {
             path: '',
             name: 'home',
-            component: () => PageHomeComponent(mainScope)
+            component() {
+              return PageHomeComponent(mainScope);
+            }
           }
         ]
       },
       {
         path: 'components',
         name: 'components',
-        component: () => PageComponentsComponent(mainScope)
+        component() {
+          return PageComponentsComponent(mainScope);
+        }
       },
       {
         path: 'about',
         name: 'about',
-        component: () => PageAboutComponent(mainScope)
+        component() {
+          return PageAboutComponent(mainScope);
+        }
       }
     ]
   },
   {
     path: '/auth',
     name: 'auth',
-    component: () => PageAuthComponent(mainScope)
+    component() {
+      return PageAuthComponent(mainScope);
+    }
   },
   {
     path: '/not-found',
     name: '404',
-    component: () => Page404Component(mainScope)
+    component() {
+      return Page404Component(mainScope);
+    }
   },
   {
     path: '(.*)',

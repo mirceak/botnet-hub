@@ -32,12 +32,12 @@ const getComponent = async (mainScope: IMainScope) => {
       super();
     }
 
-    async init() {
+    async initElement() {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           {
-            /*language=HTML */
+            /* language=HTML */
             template: `
               <div class="card glow">
                 <div class="m-b-16">
@@ -61,32 +61,40 @@ const getComponent = async (mainScope: IMainScope) => {
                   </button-component>
                 </div>
               </div>`,
-            scopesGetter: () => ({
-              xButtonScope: _Button.then(({ useComponent }) => {
-                return useComponent({
-                  onClick: () => void mainScope.router.push('home'),
-                  label: 'Log In'
-                });
-              }),
-              xInputUserScope: _Input.then(({ useComponent }) => {
-                return useComponent({
-                  onInput: (value: string) => void console.log(value),
-                  elementAttributes: {
-                    placeholder: 'Username'
-                  }
-                });
-              }),
-              xInputPassScope: _Input.then(({ useComponent }) => {
-                return useComponent({
-                  onInput: (value: string) => void console.log(value),
-                  elementAttributes: {
-                    placeholder: 'Password',
-                    type: 'password',
-                    autocomplete: 'new-password'
-                  }
-                });
-              })
-            })
+            scopesGetter() {
+              return {
+                xButtonScope: _Button.then(({ getScope }) => {
+                  return getScope({
+                    onClick() {
+                      mainScope.router.push('home');
+                    },
+                    label: 'Log In'
+                  });
+                }),
+                xInputUserScope: _Input.then(({ getScope }) => {
+                  return getScope({
+                    onInput(value: string) {
+                      console.log(value);
+                    },
+                    elementAttributes: {
+                      placeholder: 'Username'
+                    }
+                  });
+                }),
+                xInputPassScope: _Input.then(({ getScope }) => {
+                  return getScope({
+                    onInput(value: string) {
+                      console.log(value);
+                    },
+                    elementAttributes: {
+                      placeholder: 'Password',
+                      type: 'password',
+                      autocomplete: 'new-password'
+                    }
+                  });
+                })
+              };
+            }
           },
           async () => {
             return (

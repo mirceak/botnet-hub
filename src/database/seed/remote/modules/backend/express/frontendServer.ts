@@ -189,7 +189,7 @@ app.get('/(.*)', (...[req, res]) => {
       }
     })
   ).then(() => {
-    /*language=HTML */
+    /* language=HTML */
     return res.send(`
       <!DOCTYPE html>
       <html xmlns="http://www.w3.org/1999/html" lang="en">

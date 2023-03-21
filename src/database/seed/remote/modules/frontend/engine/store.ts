@@ -61,6 +61,4 @@ export const useStore = async () => {
   };
 };
 
-export type IStore = Parameters<
-  NonNullable<Parameters<ReturnType<typeof useStore>['then']>[0]>
->[0];
+export type IStore = Awaited<ReturnType<typeof useStore>>;

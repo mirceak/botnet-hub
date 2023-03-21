@@ -24,14 +24,14 @@ const getComponent = async (mainScope: IMainScope) => {
       super();
     }
 
-    async init(scope: ILocalScope) {
+    async initElement(scope: ILocalScope) {
       this.render(scope);
 
       if (scope.onInput) {
         this.removeInputListener = mainScope.registerEventListener(
           this.children[0],
           'input',
-          (e: InputEvent) => {
+          (e) => {
             scope.onInput?.((e.target as HTMLInputElement).value);
           }
         );

@@ -12,7 +12,7 @@ const getComponent = async (mainScope: IMainScope) => {
       super();
     }
 
-    async init() {
+    async initElement() {
       await mainScope.asyncHydrationCallback(async () => {
         const scopedCss = await (
           await fetch(

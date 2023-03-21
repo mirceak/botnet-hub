@@ -2,6 +2,12 @@ import type { IStore } from '/remoteModules/frontend/engine/store.js';
 import type { Router } from '/remoteModules/frontend/engine/router.js';
 import type { GenericFalsy } from '/remoteModules/utils/types/genericTypes.js';
 
+type EventListenerCallbackEvent<E> = E extends keyof GlobalEventHandlersEventMap
+  ? GlobalEventHandlersEventMap[E]
+  : E extends keyof WindowEventHandlersEventMap
+  ? WindowEventHandlersEventMap[E]
+  : undefined;
+
 type RequiredFieldsOnly<T> = {
   [K in keyof T as T[K] extends Required<T>[K] ? K : never]: T[K];
 };
@@ -21,13 +27,6 @@ type AsyncComponentScopeReturnType<ILocalScope> = ILocalScope extends undefined
   ? IComponentStaticScope
   : ILocalScope & IComponentStaticScope;
 
-type AsyncComponentScopeParams<ILocalScope> =
-  ILocalScope extends IComponentStaticScope
-    ? [scope?: ILocalScope]
-    : HasRequired<ILocalScope> extends false
-    ? [scope?: ILocalScope]
-    : [scope: ILocalScope];
-
 export type HTMLElementComponentStaticScope =
   | Promise<IComponentStaticScope>
   | IComponentStaticScope
@@ -43,6 +42,10 @@ export interface IComponentScope {
   };
 }
 
+export interface IComponentStaticScope {
+  componentName: string;
+}
+
 export interface IHTMLElementComponentStaticScope {
   template: string;
   scopesGetter?: () =>
@@ -50,27 +53,23 @@ export interface IHTMLElementComponentStaticScope {
     | Record<string, HTMLElementComponentStaticScope>;
 }
 
-export interface IComponentStaticScope {
-  componentName: string;
-}
-
 export interface HTMLComponentModule<S> {
   default: (
     mainScope: HTMLElementsScope
-  ) => Promise<BaseHTMLComponent<S>> | BaseHTMLComponent<S>;
+  ) => Promise<BaseComponent<S>> | BaseComponent<S>;
 }
 
 export type HTMLComponent = InstanceType<
-  typeof BaseHTMLComponent<IComponentStaticScope>
+  typeof BaseComponent<IComponentStaticScope>
 >;
 
 export interface IHTMLComponent {
-  useComponent: CallableFunction;
+  getScope: CallableFunction;
 }
 
 export interface IHTMLElementComponent
   extends InstanceType<typeof window.HTMLElement> {
-  init: CallableFunction;
+  initElement: CallableFunction;
 }
 
 export interface IHTMLElementComponentTemplate {
@@ -84,7 +83,7 @@ export interface IHTMLElementComponentTemplate {
   target: InstanceType<typeof window.HTMLElement>;
 }
 
-export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
+export class BaseComponent<ILocalScope = IComponentStaticScope>
   implements IHTMLComponent
 {
   private readonly componentName: string;
@@ -97,45 +96,31 @@ export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
     options?: ElementDefinitionOptions
   ) {
     this.componentName = componentName;
-    this.initComponent(constructor, this, options);
-  }
-
-  registerComponent(
-    component: CustomElementConstructor,
-    target: BaseHTMLComponent<ILocalScope>,
-    options?: ElementDefinitionOptions
-  ) {
-    window.customElements.define(target.componentName, component, options);
+    this.init(constructor, this, options);
   }
 
   getScopedCss(css: string) {
+    /* language=HTML */
     return `
       <style staticScope=${this.scopedCssIdIndex++}>${css}</style>
     `;
   }
 
-  public getComponentScope = (_scope: ILocalScope | undefined) => {
-    const scope = {
-      ...(_scope || {}),
+  protected init(
+    constructor: CustomElementConstructor,
+    target: BaseComponent<ILocalScope>,
+    options?: ElementDefinitionOptions
+  ) {
+    if (!window.customElements.get(target.componentName)) {
+      window.customElements.define(target.componentName, constructor, options);
+    }
+  }
+
+  public getScope = async (...attrs: UseComponentsParams<ILocalScope>) => {
+    return {
+      ...(attrs[0] || {}),
       componentName: this.componentName
     };
-    return scope as ILocalScope extends undefined
-      ? typeof scope
-      : typeof scope & ILocalScope;
-  };
-
-  public initComponent = (
-    constructor: CustomElementConstructor,
-    target: BaseHTMLComponent<ILocalScope>,
-    options?: ElementDefinitionOptions
-  ) => {
-    if (!window.customElements.get(target.componentName)) {
-      this.registerComponent(constructor, target, options);
-    }
-  };
-
-  public useComponent = async (...attrs: UseComponentsParams<ILocalScope>) => {
-    return this.getComponentScope(attrs[0]);
   };
 }
 
@@ -143,15 +128,20 @@ class HTMLElementsScope {
   store!: IStore;
   router!: Router;
 
-  HTMLComponent = BaseHTMLComponent;
+  HTMLComponent = BaseComponent;
   HTMLElement = HTMLElement;
 
   asyncHydrationCallbackIndex = 0;
 
-  registerEventListener = <T extends Element | Window, E extends Event>(
+  registerEventListener = <
+    T extends Element | Window,
+    E extends
+      | keyof GlobalEventHandlersEventMap
+      | keyof WindowEventHandlersEventMap
+  >(
     target: T,
-    event: Parameters<T['addEventListener']>[0],
-    callback: (e: E) => void,
+    event: E,
+    callback: (e: EventListenerCallbackEvent<E>) => void,
     options?: Parameters<T['addEventListener']>[2]
   ) => {
     target.addEventListener(
@@ -181,7 +171,22 @@ class HTMLElementsScope {
     return '';
   };
 
-  /* we add blocking - NON-SSR logic after everything finished loading and rendering */
+  asyncComponent = async <S>(importer: Promise<HTMLComponentModule<S>>) => {
+    const module = (await importer) as HTMLComponentModule<S>;
+    return module.default(this);
+  };
+
+  asyncComponentScope = async <S>(
+    importer: Promise<HTMLComponentModule<S>>,
+    ...attrs: UseComponentsParams<S>
+  ): Promise<AsyncComponentScopeReturnType<S>> => {
+    const module = (await importer) as HTMLComponentModule<S>;
+    return ((await module.default(this)).getScope as CallableFunction)(
+      attrs[0]
+    );
+  };
+
+  /* we add blocking logic after everything finished loading and rendering */
   asyncHydrationCallback = async <T>(callback: () => Promise<T>) => {
     if (this.asyncHydrationCallbackIndex !== -1) {
       this.asyncHydrationCallbackIndex++;
@@ -195,6 +200,228 @@ class HTMLElementsScope {
       this.addCssHelpers();
     }
   };
+
+  /*lazy loads components*/
+  asyncLoadComponentTemplate = async (
+    template: IHTMLElementComponentTemplate
+  ) => {
+    const promises: (() => Promise<void>)[] = [];
+    for (let i = 0; i < template.components.length; i++) {
+      if (template.components[i]) {
+        let component = template.components[i];
+        if (component) {
+          promises.push(() =>
+            this.asyncHydrationCallback(async () => {
+              if (
+                Object.prototype.toString.call(component) ===
+                '[object AsyncFunction]'
+              ) {
+                component = await (
+                  component as () => Promise<IHTMLElementComponentStaticScope>
+                )();
+              }
+              if (typeof component !== 'string') {
+                const componentScope = await component;
+                if (componentScope) {
+                  if ((componentScope as IComponentStaticScope).componentName) {
+                    return await window.customElements
+                      .whenDefined(
+                        (componentScope as IComponentStaticScope).componentName
+                      )
+                      .then(async () => {
+                        const comp = (await this.appendComponent(
+                          template.target,
+                          (componentScope as IComponentStaticScope)
+                            .componentName,
+                          i
+                        )) as IHTMLElementComponent;
+                        return comp.initElement(componentScope);
+                      });
+                  } else if (
+                    (componentScope as IHTMLElementComponentStaticScope)
+                      .template
+                  ) {
+                    const newElements = [] as Element[];
+                    newElements.push(
+                      ...((await this.appendComponent(
+                        template.target,
+                        (componentScope as IHTMLElementComponentStaticScope)
+                          .template,
+                        i,
+                        true
+                      )) as HTMLElement[])
+                    );
+                    const _scopes = await (
+                      componentScope as IHTMLElementComponentStaticScope
+                    ).scopesGetter?.();
+                    if (_scopes) {
+                      [
+                        ...(template.target
+                          .children as unknown as IHTMLElementComponent[])
+                      ]
+                        .filter((child) => {
+                          return (
+                            +(child.getAttribute('indexInParent') as string) ===
+                            i
+                          );
+                        })
+                        .forEach(this.parseChildren(_scopes));
+                    }
+                  }
+                }
+              } else {
+                await this.appendComponent(
+                  template.target,
+                  component as string,
+                  i,
+                  true
+                );
+              }
+            })
+          );
+        }
+      }
+    }
+    return promises.map((promise) => promise());
+  };
+
+  appendComponent = async (
+    target: InstanceType<typeof window.HTMLElement>,
+    tagOrTemplate: string,
+    index: number,
+    isTemplate = false
+  ): Promise<IHTMLElementComponent | HTMLElement[] | undefined> => {
+    if (isTemplate) {
+      const result = [] as HTMLElement[];
+      const temp = window.document.createElement('div');
+      temp.setAttribute('style', 'display: none');
+      temp.innerHTML += tagOrTemplate;
+      const children = [...(temp.children as unknown as HTMLElement[])];
+      temp.remove();
+      for (const child of children) {
+        if (!child.getAttribute('indexInParent')) {
+          child.setAttribute('indexInParent', index.toString());
+          result.push(child);
+          target.appendChild(child);
+        }
+      }
+      result.forEach((child, _index) => {
+        if (_index === 0) {
+          target.children[
+            this.getIndexPositionInParent(
+              index,
+              target.children as unknown as HTMLElement[]
+            )
+          ].insertAdjacentElement('beforebegin', child);
+        } else {
+          result[_index - 1].insertAdjacentElement('afterend', child);
+        }
+      });
+      return result;
+    } else {
+      const componentConstructor = window.customElements.get(
+        tagOrTemplate
+      ) as CustomElementConstructor;
+      const component = new componentConstructor() as IHTMLElementComponent;
+      component.setAttribute('indexInParent', index.toString());
+
+      if (component) {
+        const indexPosition = this.getIndexPositionInParent(
+          index,
+          target.children as unknown as HTMLElement[]
+        );
+
+        if (indexPosition < 0) {
+          target.appendChild(component);
+        } else {
+          target.insertBefore(component, target.children[indexPosition]);
+        }
+        return component;
+      }
+    }
+    return undefined;
+  };
+
+  parseChildren = (
+    scopes?: Record<string, HTMLElementComponentStaticScope>
+  ) => {
+    return (child: IHTMLElementComponent): void => {
+      if (scopes) {
+        const scopeId = child.getAttribute('xScope');
+        const forceInit = child.hasAttribute('xInit');
+        if (
+          forceInit ||
+          (scopeId && Object.keys(scopes).indexOf(scopeId) !== -1)
+        ) {
+          void this.asyncHydrationCallback(async () => {
+            return window.customElements
+              .whenDefined(child.tagName.toLowerCase())
+              .then(async () => {
+                if (scopeId) {
+                  const scope = (await scopes?.[
+                    scopeId
+                  ]) as HTMLElementComponentStaticScope;
+                  if (scope) {
+                    if (
+                      (scope as IComponentStaticScope)?.componentName ===
+                      child.tagName.toLowerCase()
+                    ) {
+                      void child.initElement(scope);
+                    } else {
+                      throw new Error(
+                        `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
+                      );
+                    }
+                  }
+                } else {
+                  void child.initElement?.();
+                }
+              });
+          });
+        }
+
+        if (child.children.length) {
+          return [
+            ...(child.children as unknown as IHTMLElementComponent[])
+          ].forEach(this.parseChildren(scopes));
+        }
+      }
+    };
+  };
+
+  private getIndexPositionInParent(
+    index: number,
+    children: HTMLElement[]
+  ): number {
+    let indexPosition = -1;
+    let maxIndexValue = 0;
+
+    while (indexPosition < children.length) {
+      indexPosition++;
+
+      if (indexPosition == children.length) {
+        break;
+      }
+
+      if (
+        +(children[indexPosition].getAttribute('indexInParent') as string) >=
+        maxIndexValue
+      ) {
+        if (
+          index >
+          +(children[indexPosition].getAttribute('indexInParent') as string)
+        ) {
+          maxIndexValue = +(children[indexPosition].getAttribute(
+            'indexInParent'
+          ) as string);
+        } else {
+          break;
+        }
+      }
+    }
+
+    return Math.max(0, indexPosition);
+  }
 
   addCssHelpers = () => {
     const screenSizes = ['599px', '1023px', '1439px', '1919px'];
@@ -369,212 +596,6 @@ class HTMLElementsScope {
       ?.setAttribute('style', 'display: inline;');
   };
 
-  asyncComponent = async <S>(importer: Promise<HTMLComponentModule<S>>) => {
-    const module = (await importer) as HTMLComponentModule<S>;
-    return module.default(this);
-  };
-
-  asyncComponentScope = async <S>(
-    importer: Promise<HTMLComponentModule<S>>,
-    ...attrs: AsyncComponentScopeParams<S>
-  ): Promise<AsyncComponentScopeReturnType<S>> => {
-    const module = (await importer) as HTMLComponentModule<S>;
-    return ((await module.default(this)).useComponent as CallableFunction)(
-      attrs[0]
-    );
-  };
-
-  parseChildren = (
-    scopes?: Record<string, HTMLElementComponentStaticScope>
-  ) => {
-    return (child: IHTMLElementComponent): void => {
-      if (scopes) {
-        const scopeId = child.getAttribute('xScope');
-        const forceInit = child.hasAttribute('xInit');
-        if (
-          forceInit ||
-          (scopeId && Object.keys(scopes).indexOf(scopeId) !== -1)
-        ) {
-          void this.asyncHydrationCallback(async () => {
-            return window.customElements
-              .whenDefined(child.tagName.toLowerCase())
-              .then(async () => {
-                if (scopeId) {
-                  const scope = (await scopes?.[
-                    scopeId
-                  ]) as HTMLElementComponentStaticScope;
-                  if (scope) {
-                    if (
-                      (scope as IComponentStaticScope)?.componentName ===
-                      child.tagName.toLowerCase()
-                    ) {
-                      void child.init(scope);
-                    } else {
-                      throw new Error(
-                        `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
-                      );
-                    }
-                  }
-                } else {
-                  void child.init?.();
-                }
-              });
-          });
-        }
-
-        if (child.children.length) {
-          return [
-            ...(child.children as unknown as IHTMLElementComponent[])
-          ].forEach(this.parseChildren(scopes));
-        }
-      }
-    };
-  };
-
-  /*lazy loads components*/
-  asyncLoadComponentTemplate = async (
-    template: IHTMLElementComponentTemplate
-  ) => {
-    const promises: (() => Promise<void>)[] = [];
-    for (let i = 0; i < template.components.length; i++) {
-      if (template.components[i]) {
-        let component = template.components[i];
-        if (component) {
-          promises.push(() =>
-            this.asyncHydrationCallback(async () => {
-              if (
-                Object.prototype.toString.call(component) ===
-                '[object AsyncFunction]'
-              ) {
-                component = await (
-                  component as () => Promise<IHTMLElementComponentStaticScope>
-                )();
-              }
-              if (typeof component !== 'string') {
-                const componentScope = await component;
-                if (componentScope) {
-                  if ((componentScope as IComponentStaticScope).componentName) {
-                    return await window.customElements
-                      .whenDefined(
-                        (componentScope as IComponentStaticScope).componentName
-                      )
-                      .then(async () => {
-                        const comp = (await this.appendComponent(
-                          template.target,
-                          (componentScope as IComponentStaticScope)
-                            .componentName,
-                          i
-                        )) as unknown as Record<
-                          'init',
-                          (scope: unknown) => Promise<void>
-                        >;
-                        return comp.init(componentScope);
-                      });
-                  } else if (
-                    (componentScope as IHTMLElementComponentStaticScope)
-                      .template
-                  ) {
-                    const newElements = [] as Element[];
-                    newElements.push(
-                      ...((await this.appendComponent(
-                        template.target,
-                        (componentScope as IHTMLElementComponentStaticScope)
-                          .template,
-                        i,
-                        true
-                      )) as HTMLElement[])
-                    );
-                    const _scopes = await (
-                      componentScope as IHTMLElementComponentStaticScope
-                    ).scopesGetter?.();
-                    if (_scopes) {
-                      [
-                        ...(template.target
-                          .children as unknown as IHTMLElementComponent[])
-                      ]
-                        .filter((child) => {
-                          return (
-                            +(child.getAttribute('indexInParent') as string) ===
-                            i
-                          );
-                        })
-                        .forEach(this.parseChildren(_scopes));
-                    }
-                  }
-                }
-              } else {
-                await this.appendComponent(
-                  template.target,
-                  component as string,
-                  i,
-                  true
-                );
-              }
-            })
-          );
-        }
-      }
-    }
-    return promises.map((promise) => promise());
-  };
-
-  appendComponent = async (
-    target: InstanceType<typeof window.HTMLElement>,
-    tagOrTemplate: string,
-    index: number,
-    isTemplate = false
-  ): Promise<IHTMLElementComponent | HTMLElement[] | undefined> => {
-    if (isTemplate) {
-      const result = [] as HTMLElement[];
-      const temp = window.document.createElement('div');
-      temp.setAttribute('style', 'display: none');
-      temp.innerHTML += tagOrTemplate;
-      const children = [...(temp.children as unknown as HTMLElement[])];
-      temp.remove();
-      for (const child of children) {
-        if (!child.getAttribute('indexInParent')) {
-          child.setAttribute('indexInParent', index.toString());
-          result.push(child);
-          target.appendChild(child);
-        }
-      }
-      result.forEach((child, _index) => {
-        if (_index === 0) {
-          target.children[
-            this.calculateElementPosition(
-              index,
-              target.children as unknown as HTMLElement[]
-            )
-          ].insertAdjacentElement('beforebegin', child);
-        } else {
-          result[_index - 1].insertAdjacentElement('afterend', child);
-        }
-      });
-      return result;
-    } else {
-      const componentConstructor = window.customElements.get(
-        tagOrTemplate
-      ) as CustomElementConstructor;
-      const component = new componentConstructor() as IHTMLElementComponent;
-      component.setAttribute('indexInParent', index.toString());
-
-      if (component) {
-        const indexPosition = this.calculateElementPosition(
-          index,
-          target.children as unknown as HTMLElement[]
-        );
-
-        if (indexPosition < 0) {
-          target.appendChild(component);
-        } else {
-          target.insertBefore(component, target.children[indexPosition]);
-        }
-        return component;
-      }
-    }
-    return undefined;
-  };
-
   applyBreakpoints(css: string): string {
     const strings = css.match(
       /(\/\* start_apply_breakpoints_tag \*\/)(.*)(\/\* end_apply_breakpoints_tag \*\/)/gs
@@ -629,40 +650,6 @@ class HTMLElementsScope {
         css = css.replace(string, result);
       });
     return css;
-  }
-
-  private calculateElementPosition(
-    index: number,
-    children: HTMLElement[]
-  ): number {
-    let indexPosition = -1;
-    let maxIndexValue = 0;
-
-    while (indexPosition < children.length) {
-      indexPosition++;
-
-      if (indexPosition == children.length) {
-        break;
-      }
-
-      if (
-        +(children[indexPosition].getAttribute('indexInParent') as string) >=
-        maxIndexValue
-      ) {
-        if (
-          index >
-          +(children[indexPosition].getAttribute('indexInParent') as string)
-        ) {
-          maxIndexValue = +(children[indexPosition].getAttribute(
-            'indexInParent'
-          ) as string);
-        } else {
-          break;
-        }
-      }
-    }
-
-    return Math.max(0, indexPosition);
   }
 }
 
