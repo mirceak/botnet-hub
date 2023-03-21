@@ -47,57 +47,81 @@ const {
   Page404Component
 } = {
   ProxyRouterViewComponent: (mainScope: TMainScope) =>
-    mainScope.asyncRegisterComponent(
-      import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+    mainScope
+      .asyncRegisterComponent(
+        import(
+          '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+        )
       )
-    ),
+      .then(({ useComponent }) => useComponent()),
   LayoutMainComponent: (mainScope: TMainScope) =>
-    mainScope.asyncRegisterComponent(
-      import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+    mainScope
+      .asyncRegisterComponent(
+        import(
+          '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+        )
       )
-    ),
+      .then(({ useComponent }) =>
+        useComponent({ scopesGetter: mainLayoutComponents(mainScope) })
+      ),
   PageHomeComponent: (mainScope: TMainScope) =>
-    mainScope.asyncRegisterComponent(
-      import('/remoteModules/frontend/modules/home/pages/page.Home.js')
-    ),
-  PageAuthComponent: (mainScope: TMainScope) =>
-    mainScope.asyncRegisterComponent(
-      import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
-    ),
-  PageAboutComponent: (mainScope: TMainScope) =>
-    mainScope.asyncRegisterComponent(
-      import('/remoteModules/frontend/modules/home/pages/page.About.js')
-    ),
-  PageComponentsComponent: (mainScope: TMainScope) =>
-    mainScope.asyncRegisterComponent(
-      import(
-        '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
+    mainScope
+      .asyncRegisterComponent(
+        import('/remoteModules/frontend/modules/home/pages/page.Home.js')
       )
-    ),
+      .then(({ useComponent }) => useComponent()),
+  PageAuthComponent: (mainScope: TMainScope) =>
+    mainScope
+      .asyncRegisterComponent(
+        import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
+      )
+      .then(({ useComponent }) => useComponent()),
+  PageAboutComponent: (mainScope: TMainScope) =>
+    mainScope
+      .asyncRegisterComponent(
+        import('/remoteModules/frontend/modules/home/pages/page.About.js')
+      )
+      .then(({ useComponent }) => useComponent()),
+  PageComponentsComponent: (mainScope: TMainScope) =>
+    mainScope
+      .asyncRegisterComponent(
+        import(
+          '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
+        )
+      )
+      .then(({ useComponent }) => useComponent()),
   Page404Component: (mainScope: TMainScope) =>
-    mainScope.asyncRegisterComponent(
-      import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
-    )
+    mainScope
+      .asyncRegisterComponent(
+        import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
+      )
+      .then(({ useComponent }) => useComponent())
 };
 
 const mainLayoutComponents = async (mainScope: TMainScope) => ({
-  _Header: mainScope.asyncRegisterComponent(
-    import(
-      '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+  _Header: mainScope
+    .asyncRegisterComponent(
+      import(
+        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+      )
     )
-  ),
-  _Footer: mainScope.asyncRegisterComponent(
-    import(
-      '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+    .then(({ useComponent }) => useComponent()),
+  _Footer: mainScope
+    .asyncRegisterComponent(
+      import(
+        '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+      )
     )
-  ),
-  _Nav: mainScope.asyncRegisterComponent(
-    import(
-      '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+    .then(({ useComponent }) => {
+      return useComponent();
+    }),
+  _Nav: mainScope
+    .asyncRegisterComponent(
+      import(
+        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+      )
     )
-  )
+    .then(({ useComponent }) => useComponent())
 });
 
 const getRouter = (): Router => {
@@ -187,10 +211,7 @@ export const useRoutes = (mainScope: TMainScope): Route[] => [
   },
   {
     path: '/home',
-    component: () =>
-      LayoutMainComponent(mainScope).then(({ useComponent }) =>
-        useComponent({ scopesGetter: mainLayoutComponents })
-      ),
+    component: () => LayoutMainComponent(mainScope),
     children: [
       {
         path: '',
@@ -211,12 +232,7 @@ export const useRoutes = (mainScope: TMainScope): Route[] => [
       {
         path: 'about',
         name: 'about',
-        component: () =>
-          PageAboutComponent(mainScope).then(async ({ useComponent }) => {
-            return await useComponent({
-              sex: 'as'
-            });
-          })
+        component: () => PageAboutComponent(mainScope)
       }
     ]
   },

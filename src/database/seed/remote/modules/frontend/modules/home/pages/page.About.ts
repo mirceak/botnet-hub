@@ -31,7 +31,7 @@ const getComponent = async (mainScope: TMainScope) => {
               <button-component xScope="xButtonScope">
               </button-component>
             `,
-            scopesGetter: () => ({
+            scopesGetter: async () => ({
               xButtonScope: _Button.then(({ useComponent }) =>
                 useComponent({
                   onClick: () => void mainScope.router.push('home'),
@@ -53,12 +53,8 @@ const getComponent = async (mainScope: TMainScope) => {
     }
   }
 
-  const instance = new mainScope.HTMLComponent<L>('about-component', Component);
+  const instance = new mainScope.HTMLComponent('about-component', Component);
   return instance;
 };
-
-interface L {
-  sex?: string;
-}
 
 export default async (mainScope: TMainScope) => getComponent(mainScope);

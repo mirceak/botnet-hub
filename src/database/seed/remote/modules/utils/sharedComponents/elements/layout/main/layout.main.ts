@@ -2,13 +2,13 @@ import type {
   IHTMLElementComponent,
   TMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-import { HTMLComponent } from '/remoteModules/frontend/engine/components/Main.js';
+import { IComponentScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope {
-  scopesGetter: (mainScope: TMainScope) => Promise<{
-    _Header: Promise<HTMLComponent>;
-    _Footer: Promise<HTMLComponent>;
-    _Nav: Promise<HTMLComponent>;
+  scopesGetter: Promise<{
+    _Header: Promise<IComponentScope>;
+    _Footer: Promise<IComponentScope>;
+    _Nav: Promise<IComponentScope>;
   }>;
 }
 
@@ -35,9 +35,12 @@ const getComponent = async (mainScope: TMainScope) => {
         target: this,
         components: [
           async () => {
-            const { _Nav } = await scope.scopesGetter(mainScope);
+            const { _Nav } = await scope.scopesGetter;
             const navComponent = await _Nav;
+            const navComponentScope = await navComponent.useComponent();
             const routerViewComponent = await _RouterView;
+            const routerViewComponentScope =
+              await routerViewComponent.useComponent();
             return {
               /*language=HTML */
               template: `
@@ -45,20 +48,20 @@ const getComponent = async (mainScope: TMainScope) => {
                 </header-main-component>
                 <div class="layout--content">
                   <div class="row full-height full-width">
-                    <${navComponent.componentName} xScope="xNavScope"
+                    <${navComponentScope.componentName} xScope="xNavScope"
                                                    class="col">
-                    </${navComponent.componentName}>
-                    <${routerViewComponent.componentName} xScope="xRouterViewScope"
+                    </${navComponentScope.componentName}>
+                    <${routerViewComponentScope.componentName} xScope="xRouterViewScope"
                                                           class="col">
-                    </${routerViewComponent.componentName}>
+                    </${routerViewComponentScope.componentName}>
                   </div>
                 </div>
                 <footer-main-component xInit>
                 </footer-main-component>
               `,
               scopesGetter: () => ({
-                xNavScope: navComponent.useComponent(),
-                xRouterViewScope: routerViewComponent.useComponent()
+                xNavScope: navComponentScope,
+                xRouterViewScope: routerViewComponentScope
               })
             };
           },
@@ -79,6 +82,7 @@ const getComponent = async (mainScope: TMainScope) => {
     'layout-main-component',
     Component
   );
+
   return instance;
 };
 

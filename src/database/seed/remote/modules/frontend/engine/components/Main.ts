@@ -25,8 +25,6 @@ export interface IComponentAttributes {
 
 export interface IHTMLComponent {
   useComponent: CallableFunction;
-  componentName: string;
-  useScopedCss?: (idIndex: number) => Promise<string> | string;
 }
 
 export interface IHTMLElementComponent
@@ -36,11 +34,17 @@ export interface IHTMLElementComponent
 
 export interface IHTMLElementComponentStaticScope {
   template: string;
-  scopesGetter?: CallableFunction;
+  scopesGetter?: () =>
+    | Promise<Record<string, HTMLElementComponentStaticScope>>
+    | Record<string, HTMLElementComponentStaticScope>;
 }
 
 export interface IComponentStaticScope {
   componentName: string;
+}
+
+export interface IComponentScope extends IComponentStaticScope {
+  [x: string]: any;
 }
 
 export interface IHTMLElementComponentTemplate {
@@ -58,7 +62,7 @@ export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
   implements IHTMLComponent
 {
   scopedCssIdIndex = 0;
-  componentName: string;
+  private componentName: string;
 
   constructor(componentName: string, constructor: CustomElementConstructor) {
     this.componentName = componentName;
@@ -78,9 +82,9 @@ export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
     `;
   }
 
-  public getComponentScope = (_scope?: ILocalScope) => {
+  public getComponentScope = (_scope: ILocalScope | undefined) => {
     const scope = {
-      ..._scope,
+      ...(_scope || {}),
       componentName: this.componentName
     };
     return scope as ILocalScope extends undefined
@@ -97,10 +101,24 @@ export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
     }
   };
 
-  public useComponent = async (scope?: ILocalScope) => {
-    return this.getComponentScope(scope);
+  public useComponent = async (...attrs: UseComponentsParams<ILocalScope>) => {
+    return this.getComponentScope(attrs[0]);
   };
 }
+type RequiredFieldsOnly<T> = {
+  [K in keyof T as T[K] extends Required<T>[K] ? K : never]: T[K];
+};
+
+type HasRequired<Type> = RequiredFieldsOnly<Type> extends Record<string, never>
+  ? false
+  : true;
+
+type UseComponentsParams<ILocalScope> =
+  ILocalScope extends IComponentStaticScope
+    ? [scope?: ILocalScope]
+    : HasRequired<ILocalScope> extends false
+    ? [scope?: ILocalScope]
+    : [scope: ILocalScope];
 
 class HTMLElementsScope {
   store!: IStore;
@@ -327,10 +345,11 @@ class HTMLElementsScope {
 
     style.innerHTML = css.replaceAll(/--bp--/gs, '');
     document.body.append(style);
-    document.body.children[0].setAttribute('style', 'display: inline;');
+    document
+      .getElementById('main-component')
+      ?.setAttribute('style', 'display: inline;');
   };
 
-  /*we also need to wait for all components to get registered so that we know what modules we need to put in the __modulesLoadedWithSSR array*/
   asyncRegisterComponent = async <S>(
     importer: Promise<HTMLComponentModule<S>>
   ): Promise<BaseHTMLComponent<S>> => {
@@ -624,6 +643,8 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
     constructor() {
       super();
 
+      this.setAttribute('id', 'main-component');
+
       void this.init();
     }
 
@@ -648,7 +669,9 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
 
               await mainScope.asyncLoadComponentTemplate({
                 target: this,
-                components: [_RouterView]
+                components: [
+                  _RouterView.then(({ useComponent }) => useComponent())
+                ]
               });
             });
           }
