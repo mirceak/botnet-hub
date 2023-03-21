@@ -1,12 +1,11 @@
 import type {
-  TMainScope,
+  IMainScope,
   IHTMLElementComponent,
-  IComponentAttributes
+  IComponentScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope {
+interface ILocalScope extends IComponentScope {
   onInput?: (value: string) => void;
-  attributes?: IComponentAttributes;
   elementAttributes?: IInputElementAttributes;
 }
 
@@ -14,7 +13,7 @@ interface IInputElementAttributes {
   placeholder?: string;
 }
 
-const getComponent = async (mainScope: TMainScope) => {
+const getComponent = async (mainScope: IMainScope) => {
   class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
@@ -56,4 +55,6 @@ const getComponent = async (mainScope: TMainScope) => {
   );
 };
 
-export default async (mainScope: TMainScope) => getComponent(mainScope);
+let singleton: ReturnType<typeof getComponent> | undefined;
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

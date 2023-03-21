@@ -1,9 +1,9 @@
 import type {
   IHTMLElementComponent,
-  TMainScope
+  IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: TMainScope) => {
+const getComponent = async (mainScope: IMainScope) => {
   const { _Input, _Button } = {
     _Button: mainScope.asyncComponent(
       import(
@@ -16,6 +16,13 @@ const getComponent = async (mainScope: TMainScope) => {
       )
     )
   };
+
+  const scopedCss = fetch(
+    '/remoteModules/frontend/modules/auth/pages/page.Auth.scss'
+  ).then((response) => response.text());
+  const scssMainTheme = fetch(
+    '/remoteModules/utils/assets/scss/theme/main/theme.main.scss'
+  ).then((response) => response.text());
 
   class Component
     extends mainScope.HTMLElement
@@ -82,19 +89,11 @@ const getComponent = async (mainScope: TMainScope) => {
             })
           },
           async () => {
-            const scopedCss = await (
-              await fetch(
-                '/remoteModules/frontend/modules/auth/pages/page.Auth.scss'
-              )
-            ).text();
-            const scssMainTheme = await (
-              await fetch(
-                '/remoteModules/utils/assets/scss/theme/main/theme.main.scss'
-              )
-            ).text();
             return (
-              instance.getScopedCss(scopedCss) +
-              instance.getScopedCss(mainScope.applyBreakpoints(scssMainTheme))
+              instance.getScopedCss(await scopedCss) +
+              instance.getScopedCss(
+                mainScope.applyBreakpoints(await scssMainTheme)
+              )
             );
           }
         ]
@@ -106,4 +105,6 @@ const getComponent = async (mainScope: TMainScope) => {
   return instance;
 };
 
-export default async (mainScope: TMainScope) => getComponent(mainScope);
+let singleton: ReturnType<typeof getComponent> | undefined;
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

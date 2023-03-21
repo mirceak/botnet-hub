@@ -2,34 +2,45 @@ import type { IStore } from '/remoteModules/frontend/engine/store.js';
 import type { Router } from '/remoteModules/frontend/engine/router.js';
 import type { GenericFalsy } from '/remoteModules/utils/types/genericTypes.js';
 
+type RequiredFieldsOnly<T> = {
+  [K in keyof T as T[K] extends Required<T>[K] ? K : never]: T[K];
+};
+
+type HasRequired<Type> = RequiredFieldsOnly<Type> extends Record<string, never>
+  ? false
+  : true;
+
+type UseComponentsParams<ILocalScope> =
+  ILocalScope extends IComponentStaticScope
+    ? [scope?: ILocalScope]
+    : HasRequired<ILocalScope> extends false
+    ? [scope?: ILocalScope]
+    : [scope: ILocalScope];
+
+type AsyncComponentScopeReturnType<ILocalScope> = ILocalScope extends undefined
+  ? IComponentStaticScope
+  : ILocalScope & IComponentStaticScope;
+
+type AsyncComponentScopeParams<ILocalScope> =
+  ILocalScope extends IComponentStaticScope
+    ? [scope?: ILocalScope]
+    : HasRequired<ILocalScope> extends false
+    ? [scope?: ILocalScope]
+    : [scope: ILocalScope];
+
 export type HTMLElementComponentStaticScope =
   | Promise<IComponentStaticScope>
   | IComponentStaticScope
   | GenericFalsy;
 
-export type HTMLComponent = InstanceType<
-  typeof BaseHTMLComponent<IComponentStaticScope>
->;
+export type IMainScope = InstanceType<typeof HTMLElementsScope>;
 
-export interface HTMLComponentModule<S> {
-  default: (
-    mainScope: HTMLElementsScope
-  ) => Promise<BaseHTMLComponent<S>> | BaseHTMLComponent<S>;
-}
+export type IComponentComposedScope = IComponentStaticScope & object;
 
-export type TMainScope = InstanceType<typeof HTMLElementsScope>;
-
-export interface IComponentAttributes {
-  class?: string;
-}
-
-export interface IHTMLComponent {
-  useComponent: CallableFunction;
-}
-
-export interface IHTMLElementComponent
-  extends InstanceType<typeof window.HTMLElement> {
-  init: CallableFunction;
+export interface IComponentScope {
+  attributes?: {
+    class?: string;
+  };
 }
 
 export interface IHTMLElementComponentStaticScope {
@@ -43,8 +54,23 @@ export interface IComponentStaticScope {
   componentName: string;
 }
 
-export interface IComponentScope extends IComponentStaticScope {
-  [x: string]: any;
+export interface HTMLComponentModule<S> {
+  default: (
+    mainScope: HTMLElementsScope
+  ) => Promise<BaseHTMLComponent<S>> | BaseHTMLComponent<S>;
+}
+
+export type HTMLComponent = InstanceType<
+  typeof BaseHTMLComponent<IComponentStaticScope>
+>;
+
+export interface IHTMLComponent {
+  useComponent: CallableFunction;
+}
+
+export interface IHTMLElementComponent
+  extends InstanceType<typeof window.HTMLElement> {
+  init: CallableFunction;
 }
 
 export interface IHTMLElementComponentTemplate {
@@ -61,19 +87,25 @@ export interface IHTMLElementComponentTemplate {
 export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
   implements IHTMLComponent
 {
-  scopedCssIdIndex = 0;
-  private componentName: string;
+  private readonly componentName: string;
 
-  constructor(componentName: string, constructor: CustomElementConstructor) {
+  private scopedCssIdIndex = 0;
+
+  constructor(
+    componentName: string,
+    constructor: CustomElementConstructor,
+    options?: ElementDefinitionOptions
+  ) {
     this.componentName = componentName;
-    this.initComponent(constructor, this);
+    this.initComponent(constructor, this, options);
   }
 
   registerComponent(
     component: CustomElementConstructor,
-    target: BaseHTMLComponent<ILocalScope>
+    target: BaseHTMLComponent<ILocalScope>,
+    options?: ElementDefinitionOptions
   ) {
-    window.customElements.define(target.componentName, component);
+    window.customElements.define(target.componentName, component, options);
   }
 
   getScopedCss(css: string) {
@@ -94,10 +126,11 @@ export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
 
   public initComponent = (
     constructor: CustomElementConstructor,
-    target: BaseHTMLComponent<ILocalScope>
+    target: BaseHTMLComponent<ILocalScope>,
+    options?: ElementDefinitionOptions
   ) => {
     if (!window.customElements.get(target.componentName)) {
-      this.registerComponent(constructor, target);
+      this.registerComponent(constructor, target, options);
     }
   };
 
@@ -105,20 +138,6 @@ export class BaseHTMLComponent<ILocalScope = IComponentStaticScope>
     return this.getComponentScope(attrs[0]);
   };
 }
-type RequiredFieldsOnly<T> = {
-  [K in keyof T as T[K] extends Required<T>[K] ? K : never]: T[K];
-};
-
-type HasRequired<Type> = RequiredFieldsOnly<Type> extends Record<string, never>
-  ? false
-  : true;
-
-type UseComponentsParams<ILocalScope> =
-  ILocalScope extends IComponentStaticScope
-    ? [scope?: ILocalScope]
-    : HasRequired<ILocalScope> extends false
-    ? [scope?: ILocalScope]
-    : [scope: ILocalScope];
 
 class HTMLElementsScope {
   store!: IStore;
@@ -350,20 +369,19 @@ class HTMLElementsScope {
       ?.setAttribute('style', 'display: inline;');
   };
 
-  asyncComponent = async <S>(
-    importer: Promise<HTMLComponentModule<S>>
-  ): Promise<BaseHTMLComponent<S>> => {
+  asyncComponent = async <S>(importer: Promise<HTMLComponentModule<S>>) => {
     const module = (await importer) as HTMLComponentModule<S>;
     return module.default(this);
   };
 
   asyncComponentScope = async <S>(
-    importer: Promise<HTMLComponentModule<S>>
-  ): Promise<
-    Awaited<ReturnType<Awaited<BaseHTMLComponent<S>>['useComponent']>>
-  > => {
+    importer: Promise<HTMLComponentModule<S>>,
+    ...attrs: AsyncComponentScopeParams<S>
+  ): Promise<AsyncComponentScopeReturnType<S>> => {
     const module = (await importer) as HTMLComponentModule<S>;
-    return ((await module.default(this)).useComponent as CallableFunction)();
+    return ((await module.default(this)).useComponent as CallableFunction)(
+      attrs[0]
+    );
   };
 
   parseChildren = (
@@ -508,7 +526,8 @@ class HTMLElementsScope {
   ): Promise<IHTMLElementComponent | HTMLElement[] | undefined> => {
     if (isTemplate) {
       const result = [] as HTMLElement[];
-      const temp = window.document.createElement('body');
+      const temp = window.document.createElement('div');
+      temp.setAttribute('style', 'display: none');
       temp.innerHTML += tagOrTemplate;
       const children = [...(temp.children as unknown as HTMLElement[])];
       temp.remove();

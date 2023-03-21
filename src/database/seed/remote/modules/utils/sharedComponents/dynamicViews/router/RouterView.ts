@@ -1,16 +1,15 @@
 import type {
-  IComponentAttributes,
+  IComponentScope,
   IHTMLElementComponent,
-  TMainScope
+  IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 import { Route } from '/remoteModules/frontend/engine/router.js';
 
-interface ILocalScope {
+interface ILocalScope extends IComponentScope {
   fromConstructor?: boolean;
-  attributes?: IComponentAttributes;
 }
 
-const getComponent = async (mainScope: TMainScope) => {
+const getComponent = async (mainScope: IMainScope) => {
   const routerViewRegister = new Set();
 
   class Component
@@ -90,4 +89,6 @@ const getComponent = async (mainScope: TMainScope) => {
   );
 };
 
-export default async (mainScope: TMainScope) => getComponent(mainScope);
+let singleton: ReturnType<typeof getComponent> | undefined;
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

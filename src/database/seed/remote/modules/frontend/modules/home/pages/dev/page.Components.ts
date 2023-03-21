@@ -1,9 +1,9 @@
 import type {
   IHTMLElementComponent,
-  TMainScope
+  IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: TMainScope) => {
+const getComponent = async (mainScope: IMainScope) => {
   const { _Input, _Button } = {
     _Button: mainScope.asyncComponent(
       import(
@@ -16,6 +16,10 @@ const getComponent = async (mainScope: TMainScope) => {
       )
     )
   };
+
+  const scopedCss = fetch(
+    '/remoteModules/frontend/modules/home/pages/dev/page.Components.scss'
+  ).then((response) => response.text());
 
   class Component
     extends mainScope.HTMLElement
@@ -183,12 +187,7 @@ const getComponent = async (mainScope: TMainScope) => {
             };
           },
           async () => {
-            const scopedCss = await (
-              await fetch(
-                '/remoteModules/frontend/modules/home/pages/dev/page.Components.scss'
-              )
-            ).text();
-            return instance.getScopedCss(scopedCss);
+            return instance.getScopedCss(await scopedCss);
           }
         ]
       });
@@ -202,4 +201,6 @@ const getComponent = async (mainScope: TMainScope) => {
   return instance;
 };
 
-export default async (mainScope: TMainScope) => getComponent(mainScope);
+let singleton: ReturnType<typeof getComponent> | undefined;
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

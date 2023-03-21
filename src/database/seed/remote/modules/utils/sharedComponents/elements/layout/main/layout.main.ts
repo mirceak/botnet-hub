@@ -1,25 +1,30 @@
 import type {
   IHTMLElementComponent,
-  TMainScope
+  IComponentComposedScope,
+  IComponentScope,
+  IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-import { IComponentScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope {
+interface ILocalScope extends IComponentScope {
   scopesGetter: Promise<{
-    _Header: Promise<IComponentScope>;
-    _Footer: Promise<IComponentScope>;
-    _Nav: Promise<IComponentScope>;
+    _Header: Promise<IComponentComposedScope>;
+    _Footer: Promise<IComponentComposedScope>;
+    _Nav: Promise<IComponentComposedScope>;
   }>;
 }
 
-const getComponent = async (mainScope: TMainScope) => {
+const getComponent = async (mainScope: IMainScope) => {
   const { _RouterView } = {
-    _RouterView: mainScope.asyncComponent(
+    _RouterView: mainScope.asyncComponentScope(
       import(
         '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
       )
     )
   };
+
+  const scopedCss = fetch(
+    '/remoteModules/utils/assets/scss/theme/main/theme.main.scss'
+  ).then((response) => response.text());
 
   class Component
     extends mainScope.HTMLElement
@@ -37,9 +42,7 @@ const getComponent = async (mainScope: TMainScope) => {
           async () => {
             const { _Nav } = await scope.scopesGetter;
             const navComponentScope = await _Nav;
-            const routerViewComponent = await _RouterView;
-            const routerViewComponentScope =
-              await routerViewComponent.useComponent();
+            const routerViewComponentScope = await _RouterView;
             return {
               /*language=HTML */
               template: `
@@ -65,12 +68,9 @@ const getComponent = async (mainScope: TMainScope) => {
             };
           },
           async () => {
-            const scopedCss = await (
-              await fetch(
-                '/remoteModules/utils/assets/scss/theme/main/theme.main.scss'
-              )
-            ).text();
-            return instance.getScopedCss(mainScope.applyBreakpoints(scopedCss));
+            return instance.getScopedCss(
+              mainScope.applyBreakpoints(await scopedCss)
+            );
           }
         ]
       });
@@ -85,4 +85,6 @@ const getComponent = async (mainScope: TMainScope) => {
   return instance;
 };
 
-export default async (mainScope: TMainScope) => getComponent(mainScope);
+let singleton: ReturnType<typeof getComponent> | undefined;
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

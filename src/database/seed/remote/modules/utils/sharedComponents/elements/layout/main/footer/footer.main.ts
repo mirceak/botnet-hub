@@ -1,9 +1,9 @@
 import type {
   IHTMLElementComponent,
-  TMainScope
+  IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: TMainScope) => {
+const getComponent = async (mainScope: IMainScope) => {
   class Component
     extends mainScope.HTMLElement
     implements IHTMLElementComponent
@@ -32,4 +32,6 @@ const getComponent = async (mainScope: TMainScope) => {
   return instance;
 };
 
-export default async (mainScope: TMainScope) => getComponent(mainScope);
+let singleton: ReturnType<typeof getComponent> | undefined;
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

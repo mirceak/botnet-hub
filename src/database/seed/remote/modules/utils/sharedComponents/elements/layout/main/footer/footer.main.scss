@@ -8,8 +8,8 @@ main-component {
   footer-main-component {
     background-color: $light-blue;
     color: #fff;
-    max-height: var(--header-height);
-    min-height: var(--header-height);
+    max-height: var(--footer-height);
+    min-height: var(--footer-height);
     width: 100%;
   }
 }

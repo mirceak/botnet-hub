@@ -1,5 +1,5 @@
 import type {
-  TMainScope,
+  IMainScope,
   IHTMLElementComponent
 } from '/remoteModules/frontend/engine/components/Main.js';
 import { IComponentStaticScope } from '/remoteModules/frontend/engine/components/Main.js';
@@ -46,13 +46,13 @@ const {
   PageComponentsComponent,
   Page404Component
 } = {
-  ProxyRouterViewComponent: (mainScope: TMainScope) =>
+  ProxyRouterViewComponent: (mainScope: IMainScope) =>
     mainScope.asyncComponentScope(
       import(
         '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
       )
     ),
-  LayoutMainComponent: (mainScope: TMainScope) =>
+  LayoutMainComponent: (mainScope: IMainScope) =>
     mainScope
       .asyncComponent(
         import(
@@ -62,31 +62,31 @@ const {
       .then(({ useComponent }) =>
         useComponent({ scopesGetter: mainLayoutComponents(mainScope) })
       ),
-  PageHomeComponent: (mainScope: TMainScope) =>
+  PageHomeComponent: (mainScope: IMainScope) =>
     mainScope.asyncComponentScope(
       import('/remoteModules/frontend/modules/home/pages/page.Home.js')
     ),
-  PageAuthComponent: (mainScope: TMainScope) =>
+  PageAuthComponent: (mainScope: IMainScope) =>
     mainScope.asyncComponentScope(
       import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
     ),
-  PageAboutComponent: (mainScope: TMainScope) =>
+  PageAboutComponent: (mainScope: IMainScope) =>
     mainScope.asyncComponentScope(
       import('/remoteModules/frontend/modules/home/pages/page.About.js')
     ),
-  PageComponentsComponent: (mainScope: TMainScope) =>
+  PageComponentsComponent: (mainScope: IMainScope) =>
     mainScope.asyncComponentScope(
       import(
         '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
       )
     ),
-  Page404Component: (mainScope: TMainScope) =>
+  Page404Component: (mainScope: IMainScope) =>
     mainScope.asyncComponentScope(
       import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
     )
 };
 
-const mainLayoutComponents = async (mainScope: TMainScope) => ({
+const mainLayoutComponents = async (mainScope: IMainScope) => ({
   _Header: mainScope.asyncComponentScope(
     import(
       '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
@@ -183,7 +183,7 @@ const getRouter = (): Router => {
   };
 };
 
-export const useRoutes = (mainScope: TMainScope): Route[] => [
+export const useRoutes = (mainScope: IMainScope): Route[] => [
   {
     path: '/',
     name: 'root-home',
@@ -233,7 +233,7 @@ export const useRoutes = (mainScope: TMainScope): Route[] => [
   }
 ];
 
-export const useRouter = async (mainScope: TMainScope): Promise<Router> => {
+export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
   const router = getRouter();
   if (!pathToRegexp) {
     /*TODO: Replace with own implementation of path interpreter*/
