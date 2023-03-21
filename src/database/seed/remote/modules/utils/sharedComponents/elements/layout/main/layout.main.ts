@@ -13,12 +13,13 @@ interface ILocalScope extends IComponentScope {
   }>;
 }
 
-const getComponent = async (mainScope: IMainScope) => {
+const getComponent = (mainScope: IMainScope) => {
   const { _RouterView } = {
     _RouterView: mainScope.asyncComponentScope(
-      import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-      )
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+        )
     )
   };
 
@@ -46,19 +47,19 @@ const getComponent = async (mainScope: IMainScope) => {
             return {
               /* language=HTML */
               template: `
-                <header-main-component xInit>
+                <header-main-component wcInit>
                 </header-main-component>
                 <div class="layout--content">
                   <div class="row full-height full-width">
-                    <${navComponentScope.componentName} xScope="xNavScope"
+                    <${navComponentScope.componentName} wcScope="xNavScope"
                                                    class="col">
                     </${navComponentScope.componentName}>
-                    <${routerViewComponentScope.componentName} xScope="xRouterViewScope"
+                    <${routerViewComponentScope.componentName} wcScope="xRouterViewScope"
                                                           class="col">
                     </${routerViewComponentScope.componentName}>
                   </div>
                 </div>
-                <footer-main-component xInit>
+                <footer-main-component wcInit>
                 </footer-main-component>
               `,
               scopesGetter() {

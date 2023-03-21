@@ -6,14 +6,16 @@ import type {
 const getComponent = async (mainScope: IMainScope) => {
   const { _Input, _Button } = {
     _Button: mainScope.asyncComponent(
-      import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-      )
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        )
     ),
     _Input: mainScope.asyncComponent(
-      import(
-        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
-      )
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+        )
     )
   };
 
@@ -41,7 +43,7 @@ const getComponent = async (mainScope: IMainScope) => {
                   <div class="header row items-center">
                     <button-component
                         class="bg-primary m-r-16"
-                        xScope="xButtonBack">
+                        wcScope="xButtonBack">
                     </button-component>
                     <h1>Components</h1>
                   </div>
@@ -50,27 +52,27 @@ const getComponent = async (mainScope: IMainScope) => {
                       <h1>Buttons</h1>
                     </div>
                     <div class="row gap-8">
-                      <button-component xScope="xButtonDefault">
+                      <button-component wcScope="xButtonDefault">
                       </button-component>
                       <button-component
                           class="bg-primary"
-                          xScope="xButtonPrimary">
+                          wcScope="xButtonPrimary">
                       </button-component>
                       <button-component
                           class="bg-secondary"
-                          xScope="xButtonSecondary">
+                          wcScope="xButtonSecondary">
                       </button-component>
                       <button-component
                           class="bg-info"
-                          xScope="xButtonInfo">
+                          wcScope="xButtonInfo">
                       </button-component>
                       <button-component
                           class="bg-warning"
-                          xScope="xButtonWarning">
+                          wcScope="xButtonWarning">
                       </button-component>
                       <button-component
                           class="bg-danger"
-                          xScope="xButtonDanger">
+                          wcScope="xButtonDanger">
                       </button-component>
                     </div>
                   </div>
@@ -79,27 +81,27 @@ const getComponent = async (mainScope: IMainScope) => {
                       <h1>Inputs</h1>
                     </div>
                     <div class="row gap-8">
-                      <input-component xScope="xInputDefault">
+                      <input-component wcScope="xInputDefault">
                       </input-component>
                       <input-component
                           class="bg-primary"
-                          xScope="xInputPrimary">
+                          wcScope="xInputPrimary">
                       </input-component>
                       <input-component
                           class="bg-secondary"
-                          xScope="xInputSecondary">
+                          wcScope="xInputSecondary">
                       </input-component>
                       <input-component
                           class="bg-info"
-                          xScope="xInputInfo">
+                          wcScope="xInputInfo">
                       </input-component>
                       <input-component
                           class="bg-warning"
-                          xScope="xInputWarning">
+                          wcScope="xInputWarning">
                       </input-component>
                       <input-component
                           class="bg-danger"
-                          xScope="xInputDanger">
+                          wcScope="xInputDanger">
                       </input-component>
                     </div>
                   </div>
@@ -190,7 +192,9 @@ const getComponent = async (mainScope: IMainScope) => {
               }
             };
           },
-          instance.getScopedCss(await scopedCss)
+          async () => {
+            return instance.getScopedCss(await scopedCss);
+          }
         ]
       });
     }

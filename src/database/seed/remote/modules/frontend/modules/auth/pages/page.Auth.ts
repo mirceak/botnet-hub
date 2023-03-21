@@ -6,14 +6,16 @@ import type {
 const getComponent = async (mainScope: IMainScope) => {
   const { _Input, _Button } = {
     _Button: mainScope.asyncComponent(
-      import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-      )
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        )
     ),
     _Input: mainScope.asyncComponent(
-      import(
-        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
-      )
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+        )
     )
   };
 
@@ -45,18 +47,18 @@ const getComponent = async (mainScope: IMainScope) => {
                 </div>
                 <input-component
                     class="bg-default m-b-8"
-                    xScope="xInputUserScope"
+                    wcScope="xInputUserScope"
                 >
                 </input-component>
                 <input-component
                     class="bg-default"
-                    xScope="xInputPassScope"
+                    wcScope="xInputPassScope"
                 >
                 </input-component>
                 <div class="actions">
                   <button-component
                       class="bg-primary"
-                      xScope="xButtonScope"
+                      wcScope="xButtonScope"
                   >
                   </button-component>
                 </div>

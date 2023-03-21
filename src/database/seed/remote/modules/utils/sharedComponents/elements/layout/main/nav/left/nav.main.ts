@@ -6,9 +6,10 @@ import type {
 const getComponent = async (mainScope: IMainScope) => {
   const { _DynamicHtmlView } = {
     _DynamicHtmlView: mainScope.asyncComponent(
-      import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-      )
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
+        )
     )
   };
 
@@ -38,7 +39,9 @@ const getComponent = async (mainScope: IMainScope) => {
               }
             });
           }),
-          instance.getScopedCss(await scopedCss)
+          async () => {
+            return instance.getScopedCss(await scopedCss);
+          }
         ]
       });
     }

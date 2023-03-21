@@ -1,8 +1,6 @@
 import type {
   IHTMLElementComponent,
   IMainScope,
-  HTMLElementComponentStaticScope,
-  IComponentStaticScope,
   IHTMLElementComponentStaticScope,
   IComponentScope
 } from '/remoteModules/frontend/engine/components/Main.js';
@@ -59,42 +57,10 @@ const getComponent = async (mainScope: IMainScope) => {
         this.render(scope.templateGetter());
       }
 
-      const parseChildren =
-        (scopes: Record<string, HTMLElementComponentStaticScope>) =>
-        (child: IHTMLElementComponent) => {
-          if (child.tagName.toLowerCase() !== 'dynamic-html-view-component') {
-            const scopeId = child.attributes.getNamedItem('x-scope')?.value;
-            if (scopeId) {
-              void window.customElements
-                .whenDefined(child.tagName.toLowerCase())
-                .then(async () => {
-                  const scope = (await scopes[
-                    scopeId
-                  ]) as HTMLElementComponentStaticScope;
-                  if (
-                    (scope as IComponentStaticScope)?.componentName ===
-                    child.tagName.toLowerCase()
-                  ) {
-                    child.initElement(scope);
-                  } else {
-                    throw new Error(
-                      `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
-                    );
-                  }
-                });
-            }
-
-            if (child.children.length) {
-              return [
-                ...(child.children as unknown as IHTMLElementComponent[])
-              ].forEach(parseChildren(scopes));
-            }
-          }
-        };
       if (scope.scopesGetter) {
         const scopes = await scope.scopesGetter();
         [...(this.children as unknown as IHTMLElementComponent[])].forEach(
-          parseChildren(scopes)
+          mainScope.parseChildren('dhvScope', scopes)
         );
       }
     }

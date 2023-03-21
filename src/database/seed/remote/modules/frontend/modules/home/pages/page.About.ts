@@ -6,9 +6,10 @@ import type {
 const getComponent = async (mainScope: IMainScope) => {
   const { _Button } = {
     _Button: mainScope.asyncComponent(
-      import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-      )
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        )
     )
   };
 
@@ -32,7 +33,7 @@ const getComponent = async (mainScope: IMainScope) => {
             /* language=HTML */
             template: `
               <h1>About Page</h1>
-              <button-component xScope="xButtonScope">
+              <button-component wcScope="xButtonScope">
               </button-component>
             `,
             scopesGetter: async () => ({
@@ -46,7 +47,9 @@ const getComponent = async (mainScope: IMainScope) => {
               )
             })
           },
-          instance.getScopedCss(await scopedCss)
+          async () => {
+            return instance.getScopedCss(await scopedCss);
+          }
         ]
       });
     }

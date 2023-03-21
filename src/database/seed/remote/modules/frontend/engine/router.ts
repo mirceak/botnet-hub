@@ -37,80 +37,6 @@ interface IBrowserHistoryState {
 
 let pathToRegexp: typeof import('path-to-regexp/dist/index.js')['pathToRegexp'];
 
-const {
-  ProxyRouterViewComponent,
-  LayoutMainComponent,
-  PageHomeComponent,
-  PageAuthComponent,
-  PageAboutComponent,
-  PageComponentsComponent,
-  Page404Component
-} = {
-  ProxyRouterViewComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
-      )
-    );
-  },
-  LayoutMainComponent(mainScope: IMainScope) {
-    return mainScope
-      .asyncComponent(
-        import(
-          '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
-        )
-      )
-      .then(({ getScope }) =>
-        getScope({ scopesGetter: mainLayoutComponents(mainScope) })
-      );
-  },
-  PageHomeComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      import('/remoteModules/frontend/modules/home/pages/page.Home.js')
-    );
-  },
-  PageAuthComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
-    );
-  },
-  PageAboutComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      import('/remoteModules/frontend/modules/home/pages/page.About.js')
-    );
-  },
-  PageComponentsComponent(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      import(
-        '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
-      )
-    );
-  },
-  Page404Component(mainScope: IMainScope) {
-    return mainScope.asyncComponentScope(
-      import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
-    );
-  }
-};
-
-const mainLayoutComponents = async (mainScope: IMainScope) => ({
-  _Header: mainScope.asyncComponentScope(
-    import(
-      '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
-    )
-  ),
-  _Footer: mainScope.asyncComponentScope(
-    import(
-      '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
-    )
-  ),
-  _Nav: mainScope.asyncComponentScope(
-    import(
-      '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
-    )
-  )
-});
-
 const getRouter = (): Router => {
   return {
     routes: [] as Route[],
@@ -122,7 +48,10 @@ const getRouter = (): Router => {
     },
     async push(name, replaceRoute = false) {
       const matched = this.routes.reduce(
-        matchedRouteNameReducer(name),
+        generalReducer.bind({
+          searchVal: name,
+          condition: matchedRouteNameCondition
+        }),
         [] as Route[]
       );
 
@@ -130,21 +59,19 @@ const getRouter = (): Router => {
         if (matched[0].redirect) {
           return this.redirect(matched[0].redirect);
         }
+
+        const reversedMatchedRoutes =
+          this.matchedRoutes?.slice().reverse() || [];
         const firstMatchingRouteIndex = matched
           ?.slice()
           .reverse()
           .findIndex((currentRoute, index) => {
             return (
-              currentRoute._symbol !==
-              this.matchedRoutes?.slice().reverse()[index]?._symbol
+              currentRoute._symbol !== reversedMatchedRoutes[index]?._symbol
             );
           });
-        const oldMatchedRoutes = this.matchedRoutes?.splice(
-          0,
-          this.matchedRoutes.length,
-          ...matched
-        );
         this.currentRoute = matched[0];
+        this.matchedRoutes?.splice(0, this.matchedRoutes.length, ...matched);
 
         if (!replaceRoute) {
           window.history.pushState(
@@ -164,20 +91,10 @@ const getRouter = (): Router => {
         /*Remove all router-views whose route is no longer matching and add the first one of those back and let it pull in its new component*/
         if (firstMatchingRouteIndex !== -1) {
           const firstRouterView = window.document.getElementById(
-            `${firstMatchingRouteIndex}`
+            `rv-id-${firstMatchingRouteIndex}`
           );
-          const firstRouterViewParent = firstRouterView?.parentElement;
-          if (firstRouterViewParent) {
-            oldMatchedRoutes?.forEach((_route, index) => {
-              if (index >= firstMatchingRouteIndex + 1) {
-                window.document.getElementById(`${index}`)?.remove();
-              }
-            });
-            await (
-              window.document.getElementById(
-                `${firstMatchingRouteIndex}`
-              ) as IHTMLElementComponent
-            )?.initElement();
+          if (firstRouterView) {
+            void (firstRouterView as IHTMLElementComponent)?.initElement();
           }
         }
       } else {
@@ -188,6 +105,128 @@ const getRouter = (): Router => {
       return this.push(name, true);
     }
   };
+};
+
+export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
+  const router = getRouter();
+  if (!pathToRegexp) {
+    /*TODO: Replace with own implementation of path interpreter*/
+    pathToRegexp = await import(
+      `${'/node_modules/path-to-regexp/dist.es2015/index.js'}`
+    ).then((module) => module.pathToRegexp);
+  }
+
+  router.routes.push(...(useRoutes(mainScope) as Route[]).map(routeMapper));
+
+  router.matchedRoutes = router.routes.reduce(
+    generalReducer.bind({
+      searchVal: window.location.pathname,
+      condition: matchedRoutePathCondition
+    }),
+    [] as Route[]
+  );
+
+  if (router.matchedRoutes.length) {
+    router.currentRoute = router.matchedRoutes[0];
+  } else {
+    throw new Error('No route matched path');
+  }
+
+  if (router.currentRoute && router.currentRoute.redirect) {
+    await router.redirect(router.currentRoute.redirect);
+  }
+
+  window.history.replaceState(
+    {
+      name: router.currentRoute.name,
+      computedPath: router.currentRoute.computedPath
+    },
+    '',
+    (router.currentRoute.computedPath as string) +
+      (window.location.search || '')
+  );
+
+  router.removePopstateListener = mainScope.registerEventListener(
+    window,
+    'popstate',
+    router.onPopState.bind(router)
+  );
+
+  router.ready = true;
+
+  return router;
+};
+
+const routeMapper = (currentRoute: Route): Route => {
+  if (currentRoute.children?.length) {
+    currentRoute.children = currentRoute.children.map((childRoute) => {
+      childRoute.parent = currentRoute;
+      childRoute.computedPath =
+        (currentRoute.computedPath || currentRoute.path) +
+        (childRoute.path ? '/' + childRoute.path : '');
+      return childRoute;
+    });
+    currentRoute.computedPath = currentRoute.path;
+    currentRoute.children?.map(routeMapper);
+  } else {
+    if (!currentRoute.children && !currentRoute.parent) {
+      currentRoute.computedPath = currentRoute.path;
+    }
+  }
+  currentRoute._symbol = Symbol();
+  return currentRoute;
+};
+
+const generalReducer = function <
+  Original extends Current[],
+  Current extends {
+    children?: Current[];
+    parent?: Current;
+  }
+>(
+  this: {
+    condition: CallableFunction;
+    searchVal: string;
+    _any: Original;
+  },
+  reduced: Current[],
+  current: Current
+): Original | Current[] {
+  if (reduced.length) {
+    return reduced;
+  }
+  if (current.children?.length) {
+    current.children.reduce(generalReducer.bind(this), reduced);
+  } else {
+    if (this.condition(current, this.searchVal)) {
+      let parent = current.parent;
+      reduced.push(current);
+      while (parent) {
+        reduced.push(parent);
+        parent = reduced[reduced.length - 1].parent;
+      }
+    }
+  }
+  return reduced;
+};
+
+const matchedRoutePathCondition = (
+  currentRoute: Route,
+  searchVal: string
+): boolean => {
+  return !!(
+    pathToRegexp(currentRoute.computedPath as string).exec(searchVal) ||
+    (currentRoute.path === '' && currentRoute.parent
+      ? pathToRegexp(currentRoute.parent.computedPath as string).exec(searchVal)
+      : undefined)
+  );
+};
+
+const matchedRouteNameCondition = (
+  currentRoute: Route,
+  searchVal: string
+): boolean => {
+  return currentRoute.name === searchVal;
 };
 
 export const useRoutes = (mainScope: IMainScope): Route[] => [
@@ -254,122 +293,82 @@ export const useRoutes = (mainScope: IMainScope): Route[] => [
   }
 ];
 
-export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
-  const router = getRouter();
-  if (!pathToRegexp) {
-    /*TODO: Replace with own implementation of path interpreter*/
-    pathToRegexp = await import(
-      `${'/node_modules/path-to-regexp/dist.es2015/index.js'}`
-    ).then((module) => module.pathToRegexp);
-  }
-
-  router.routes.push(...(useRoutes(mainScope) as Route[]).map(routeMapper));
-
-  router.matchedRoutes = router.routes.reduce(
-    matchedRoutePathReducer(window.location.pathname),
-    [] as Route[]
-  );
-
-  if (router.matchedRoutes.length) {
-    router.currentRoute = router.matchedRoutes[0];
-  } else {
-    throw new Error('No route matched path');
-  }
-
-  if (router.currentRoute && router.currentRoute.redirect) {
-    await router.redirect(router.currentRoute.redirect);
-  }
-
-  window.history.replaceState(
-    {
-      name: router.currentRoute.name,
-      computedPath: router.currentRoute.computedPath
-    },
-    '',
-    (router.currentRoute.computedPath as string) +
-      (window.location.search || '')
-  );
-
-  router.removePopstateListener = mainScope.registerEventListener(
-    window,
-    'popstate',
-    router.onPopState.bind(router)
-  );
-
-  router.ready = true;
-
-  return router;
-};
-
-const routeMapper = (currentRoute: Route): Route => {
-  if (currentRoute.children?.length) {
-    currentRoute.children = currentRoute.children.map((childRoute) => {
-      childRoute.parent = currentRoute;
-      childRoute.computedPath =
-        (currentRoute.computedPath || currentRoute.path) +
-        (childRoute.path ? '/' + childRoute.path : '');
-      return childRoute;
-    });
-    currentRoute.computedPath = currentRoute.path;
-    currentRoute.children?.map(routeMapper);
-  } else {
-    if (!currentRoute.children && !currentRoute.parent) {
-      currentRoute.computedPath = currentRoute.path;
-    }
-  }
-  currentRoute._symbol = Symbol();
-  return currentRoute;
-};
-
-const matchedRoutePathReducer =
-  (fullPath: string) =>
-  (reduced: Route[], currentRoute: Route): Route[] => {
-    if (reduced.length) {
-      return reduced;
-    }
-    if (currentRoute.children?.length) {
-      currentRoute.children?.reduce(matchedRoutePathReducer(fullPath), reduced);
-    } else {
-      const matched =
-        pathToRegexp(currentRoute.computedPath as string).exec(fullPath) ||
-        (currentRoute.path === '' && currentRoute.parent
-          ? pathToRegexp(currentRoute.parent.computedPath as string).exec(
-              fullPath
-            )
-          : undefined);
-      if (matched) {
-        let parent = currentRoute.parent;
-        reduced.push(currentRoute);
-        while (parent) {
-          reduced.push(parent);
-          parent = reduced[reduced.length - 1].parent;
-        }
-      }
-    }
-    return reduced;
-  };
-
-const matchedRouteNameReducer =
-  (requestedRouteName: string) =>
-  (reduced: Route[], currentRoute: Route): Route[] => {
-    if (reduced.length) {
-      return reduced;
-    }
-    if (currentRoute.children?.length) {
-      currentRoute.children?.reduce(
-        matchedRouteNameReducer(requestedRouteName),
-        reduced
+const {
+  ProxyRouterViewComponent,
+  LayoutMainComponent,
+  PageHomeComponent,
+  PageAuthComponent,
+  PageAboutComponent,
+  PageComponentsComponent,
+  Page404Component
+} = {
+  ProxyRouterViewComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+        )
+    );
+  },
+  LayoutMainComponent(mainScope: IMainScope) {
+    return mainScope
+      .asyncComponent(
+        () =>
+          import(
+            '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+          )
+      )
+      .then(({ getScope }) =>
+        getScope({ scopesGetter: mainLayoutComponents(mainScope) })
       );
-    } else {
-      const matched = currentRoute.name === requestedRouteName;
-      if (matched) {
-        let parent = currentRoute.parent;
-        reduced.push(currentRoute);
-        while (parent) {
-          reduced.push(parent);
-          parent = reduced[reduced.length - 1].parent;
-        }
-      }
-    }
-    return reduced;
-  };
+  },
+  PageHomeComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
+      () => import('/remoteModules/frontend/modules/home/pages/page.Home.js')
+    );
+  },
+  PageAuthComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
+      () => import('/remoteModules/frontend/modules/auth/pages/page.Auth.js')
+    );
+  },
+  PageAboutComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
+      () => import('/remoteModules/frontend/modules/home/pages/page.About.js')
+    );
+  },
+  PageComponentsComponent(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
+      () =>
+        import(
+          '/remoteModules/frontend/modules/home/pages/dev/page.Components.js'
+        )
+    );
+  },
+  Page404Component(mainScope: IMainScope) {
+    return mainScope.asyncComponentScope(
+      () => import('/remoteModules/frontend/modules/not-found/page.NotFound.js')
+    );
+  }
+};
+
+const mainLayoutComponents = async (mainScope: IMainScope) => ({
+  _Header: mainScope.asyncComponentScope(
+    () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+      )
+  ),
+  _Footer: mainScope.asyncComponentScope(
+    () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+      )
+  ),
+  _Nav: mainScope.asyncComponentScope(
+    () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+      )
+  )
+});

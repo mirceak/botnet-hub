@@ -6,9 +6,10 @@ import type {
 const getComponent = async (mainScope: IMainScope) => {
   const { _RouterView } = {
     _RouterView: mainScope.asyncComponentScope(
-      import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-      )
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+        )
     )
   };
 

@@ -69,7 +69,7 @@ export interface IHTMLComponent {
 
 export interface IHTMLElementComponent
   extends InstanceType<typeof window.HTMLElement> {
-  initElement: CallableFunction;
+  initElement: (...attr: never[]) => Promise<void> | void;
 }
 
 export interface IHTMLElementComponentTemplate {
@@ -171,16 +171,18 @@ class HTMLElementsScope {
     return '';
   };
 
-  asyncComponent = async <S>(importer: Promise<HTMLComponentModule<S>>) => {
-    const module = (await importer) as HTMLComponentModule<S>;
+  asyncComponent = async <S>(
+    importer: () => Promise<HTMLComponentModule<S>>
+  ) => {
+    const module = (await importer()) as HTMLComponentModule<S>;
     return module.default(this);
   };
 
   asyncComponentScope = async <S>(
-    importer: Promise<HTMLComponentModule<S>>,
+    importer: () => Promise<HTMLComponentModule<S>>,
     ...attrs: UseComponentsParams<S>
   ): Promise<AsyncComponentScopeReturnType<S>> => {
-    const module = (await importer) as HTMLComponentModule<S>;
+    const module = (await importer()) as HTMLComponentModule<S>;
     return ((await module.default(this)).getScope as CallableFunction)(
       attrs[0]
     );
@@ -194,10 +196,12 @@ class HTMLElementsScope {
 
     await callback();
 
-    this.asyncHydrationCallbackIndex--;
-    if (this.asyncHydrationCallbackIndex === 0) {
-      this.asyncHydrationCallbackIndex = -1;
-      this.addCssHelpers();
+    if (this.asyncHydrationCallbackIndex >= 0) {
+      this.asyncHydrationCallbackIndex--;
+      if (this.asyncHydrationCallbackIndex === 0) {
+        this.asyncHydrationCallbackIndex = -1;
+        this.addCssHelpers();
+      }
     }
   };
 
@@ -235,7 +239,7 @@ class HTMLElementsScope {
                             .componentName,
                           i
                         )) as IHTMLElementComponent;
-                        return comp.initElement(componentScope);
+                        return comp.initElement(componentScope as never);
                       });
                   } else if (
                     (componentScope as IHTMLElementComponentStaticScope)
@@ -265,7 +269,7 @@ class HTMLElementsScope {
                             i
                           );
                         })
-                        .forEach(this.parseChildren(_scopes));
+                        .forEach(this.parseChildren('wcScope', _scopes));
                     }
                   }
                 }
@@ -342,49 +346,54 @@ class HTMLElementsScope {
     return undefined;
   };
 
+  initiateComponentElement = async (
+    scopeTag: 'wcScope' | 'dhvScope',
+    child: IHTMLElementComponent,
+    scopes: Record<string, HTMLElementComponentStaticScope>
+  ) => {
+    const scopeId = child.getAttribute(scopeTag);
+    const forceInit = child.hasAttribute('wcInit');
+    if (forceInit || (scopeId && Object.keys(scopes).indexOf(scopeId) !== -1)) {
+      void this.asyncHydrationCallback(async () => {
+        return window.customElements
+          .whenDefined(child.tagName.toLowerCase())
+          .then(async () => {
+            if (scopeId) {
+              const scope = await scopes?.[scopeId];
+              if (scope) {
+                if (scope.componentName === child.tagName.toLowerCase()) {
+                  void child.initElement(scope as never);
+                } else {
+                  throw new Error(
+                    `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
+                  );
+                }
+              }
+            } else {
+              void child.initElement();
+            }
+          });
+      });
+    }
+  };
+
   parseChildren = (
+    scopeTag: Parameters<typeof this.initiateComponentElement>[0],
     scopes?: Record<string, HTMLElementComponentStaticScope>
   ) => {
     return (child: IHTMLElementComponent): void => {
-      if (scopes) {
-        const scopeId = child.getAttribute('xScope');
-        const forceInit = child.hasAttribute('xInit');
-        if (
-          forceInit ||
-          (scopeId && Object.keys(scopes).indexOf(scopeId) !== -1)
-        ) {
-          void this.asyncHydrationCallback(async () => {
-            return window.customElements
-              .whenDefined(child.tagName.toLowerCase())
-              .then(async () => {
-                if (scopeId) {
-                  const scope = (await scopes?.[
-                    scopeId
-                  ]) as HTMLElementComponentStaticScope;
-                  if (scope) {
-                    if (
-                      (scope as IComponentStaticScope)?.componentName ===
-                      child.tagName.toLowerCase()
-                    ) {
-                      void child.initElement(scope);
-                    } else {
-                      throw new Error(
-                        `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
-                      );
-                    }
-                  }
-                } else {
-                  void child.initElement?.();
-                }
-              });
-          });
-        }
+      if (
+        (scopeTag === 'wcScope' ||
+          child.tagName.toLowerCase() !== 'dynamic-html-view-component') &&
+        scopes
+      ) {
+        void this.initiateComponentElement(scopeTag, child, scopes);
+      }
 
-        if (child.children.length) {
-          return [
-            ...(child.children as unknown as IHTMLElementComponent[])
-          ].forEach(this.parseChildren(scopes));
-        }
+      if (child.children.length) {
+        return [
+          ...(child.children as unknown as IHTMLElementComponent[])
+        ].forEach(this.parseChildren(scopeTag, scopes));
       }
     };
   };
@@ -393,34 +402,22 @@ class HTMLElementsScope {
     index: number,
     children: HTMLElement[]
   ): number {
-    let indexPosition = -1;
     let maxIndexValue = 0;
 
-    while (indexPosition < children.length) {
-      indexPosition++;
-
-      if (indexPosition == children.length) {
-        break;
-      }
-
+    for (let i = 0; i < children.length; i++) {
       if (
-        +(children[indexPosition].getAttribute('indexInParent') as string) >=
-        maxIndexValue
+        +(children[i].getAttribute('indexInParent') as string) >= maxIndexValue
       ) {
-        if (
-          index >
-          +(children[indexPosition].getAttribute('indexInParent') as string)
-        ) {
-          maxIndexValue = +(children[indexPosition].getAttribute(
+        if (index > +(children[i].getAttribute('indexInParent') as string)) {
+          maxIndexValue = +(children[i].getAttribute(
             'indexInParent'
           ) as string);
         } else {
-          break;
+          return Math.max(0, i);
         }
       }
     }
-
-    return Math.max(0, indexPosition);
+    return -1;
   }
 
   addCssHelpers = () => {
@@ -672,22 +669,22 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
         );
 
         return import('/remoteModules/frontend/engine/router.js').then(
-          async ({ useRouter }) => {
-            return useRouter(mainScope).then(async (router) => {
+          async ({ useRouter }) =>
+            useRouter(mainScope).then(async (router) => {
               mainScope.router = router;
 
               const _RouterView = mainScope.asyncComponentScope(
-                import(
-                  '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-                )
+                () =>
+                  import(
+                    '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+                  )
               );
 
               await mainScope.asyncLoadComponentTemplate({
                 target: this,
                 components: [_RouterView]
               });
-            });
-          }
+            })
         );
       });
     }
