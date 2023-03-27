@@ -8,15 +8,13 @@ import type {
 interface ILocalScope extends IComponentScope {
   templateGetter: () => string | undefined;
   scopesGetter?: IHTMLElementComponentStaticScope['scopesGetter'];
+  simplifiedComputeProps?: CallableFunction | CallableFunction[];
   noWatcher?: boolean;
   instant?: boolean;
 }
 
-const getComponent = async (mainScope: IMainScope) => {
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+  class Element extends mainScope.HTMLElement {
     private computeRender?: {
       props: CallableFunction[];
       computed: CallableFunction;
@@ -40,7 +38,15 @@ const getComponent = async (mainScope: IMainScope) => {
 
       if (!scope.noWatcher) {
         this.computeRender = {
-          props: [() => scope.templateGetter()],
+          props: [
+            ...(scope.simplifiedComputeProps?.length !== undefined
+              ? (scope.simplifiedComputeProps as CallableFunction[]).map(
+                  (prop) => () => prop()
+                )
+              : scope.simplifiedComputeProps
+              ? [() => scope.simplifiedComputeProps]
+              : [() => scope.templateGetter()])
+          ],
           computed: () => {
             this.render(scope.templateGetter());
           }
@@ -80,11 +86,11 @@ const getComponent = async (mainScope: IMainScope) => {
   }
 
   return new mainScope.HTMLComponent<ILocalScope>(
-    'dynamic-html-view-component',
-    Component
+    tagName || 'dynamic-html-view-component',
+    Element
   );
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

@@ -1,0 +1,13 @@
+the HTMLElement builds it's scope out of the parameters passed down
+    it then asks the store if the data is reactive and registers a listener for it
+
+
+change the reactive model
+    need to add the option to listen deep for changes in the store
+
+    the objects return a watch method that receives an array of props to watch or true (void = this works for numbers strings, [...props] no props = all props, true = deep)
+    
+    can add dynamic weak ref store modules that will get removed along with the elements referencing them
+    or static modules 
+        
+    when trying to listen for a value that has not yet been added just construct the reactive model up to that point

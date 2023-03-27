@@ -1,12 +1,11 @@
 import type {
   IMainScope,
-  IHTMLElementComponent,
   IComponentScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope extends IComponentScope {
   onClick?: () => void;
-  label?: string;
+  label: string;
   elementAttributes?: IButtonElementAttributes;
 }
 
@@ -15,28 +14,25 @@ interface IButtonElementAttributes {
   type?: string;
 }
 
-const getComponent = async (mainScope: IMainScope) => {
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+  class Element extends mainScope.HTMLElement {
     private removeClickListener?: CallableFunction;
 
     constructor() {
       super();
     }
 
-    async initElement(scope: ILocalScope) {
-      if (scope.label) {
+    async initElement(scope?: ILocalScope) {
+      if (scope?.label) {
         this.render(scope);
       }
 
-      if (scope.onClick) {
+      if (scope?.onClick) {
         this.removeClickListener = mainScope.registerEventListener(
           this.children[0],
           'click',
           () => {
-            scope.onClick?.();
+            scope?.onClick?.();
           }
         );
       }
@@ -56,11 +52,11 @@ const getComponent = async (mainScope: IMainScope) => {
   }
 
   return new mainScope.HTMLComponent<ILocalScope>(
-    'button-component',
-    Component
+    tagName || 'button-component',
+    Element
   );
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

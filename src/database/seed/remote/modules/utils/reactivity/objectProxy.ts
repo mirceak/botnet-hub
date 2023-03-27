@@ -1,11 +1,9 @@
-type IWeakMap = {
-  get: CallableFunction;
-  has: CallableFunction;
-  set: CallableFunction;
-  delete: CallableFunction;
-};
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-type IOptions<T> = {
+type IOptions<T = InstanceType<typeof WeakMap>> = {
+  helpers: {
+    isObjectOrArray: (val: unknown) => boolean;
+  };
   watchedProxiesMap: T;
   registeringNestedOnChangeCallback: boolean;
   reRegisteringOnChangeCallback: boolean;
@@ -18,17 +16,25 @@ type IOptions<T> = {
   ) => void;
 };
 
-const isObject = (val: unknown) => {
-  return (
-    ['[object Object]', '[object Array]'].indexOf(
-      Object.prototype.toString.call(val)
-    ) > -1
-  );
-};
+type Nested<T> = T & Record<string, T>;
 
-const registerWatchedProxy = <ProxyMap extends IWeakMap>(
+export type ExternalNested<T> = T & Nested<T & ProxyExternalProps<T>>;
+type ProxyExternalProps<T> = T & {
+  __removeTree?: never;
+};
+type ProxyInternalProps<T> = Nested<
+  T & {
+    _proxySet: InstanceType<typeof Map<string, T>> & T;
+    _thisProp: string;
+    _parent?: T & Nested<ProxyInternalProps<T>>;
+
+    get: (prop: string) => void /* used to trigger watching */;
+  }
+>;
+
+const registerWatchedProxy = <ProxyMap extends InstanceType<typeof WeakMap>>(
   obj: object,
-  prop: symbol,
+  prop: string,
   options: IOptions<ProxyMap>
 ) => {
   let watchers = options.watchedProxiesMap.get(obj) as Map<
@@ -79,9 +85,9 @@ const registerWatchedProxy = <ProxyMap extends IWeakMap>(
   }
 };
 
-const triggerWatchers = <ProxyMap extends IWeakMap>(
+const triggerWatchers = <ProxyMap extends InstanceType<typeof WeakMap>>(
   obj: object,
-  prop: symbol,
+  prop: string,
   options: IOptions<ProxyMap>
 ) => {
   const watchers = options.watchedProxiesMap.get(obj) as Map<
@@ -96,63 +102,61 @@ const triggerWatchers = <ProxyMap extends IWeakMap>(
       const propCallbacks = [..._propCallbacks];
       const callbacks = [..._callbacks];
       for (let i = 0; i < callbacks.length; i++) {
-        if (options.reRegisteringOnChangeCallback) {
-          options.registerOnChangeCallback(
-            propCallbacks[i] as unknown as CallableFunction[],
-            callbacks[i]
-          );
-        }
-        let foundChange = false;
-        const newValues = [] as unknown[];
-        Object.keys(propCallbacks[i]).forEach((key, index) => {
-          if (!isNaN(+key) && typeof +key === 'number') {
-            const newValue = propCallbacks[i][+key]();
-            const oldValue = (
-              propCallbacks[i]['_oldValues'] as unknown as Record<
-                string | number,
-                () => unknown
-              >
-            )[index] as unknown;
-            if (newValue !== oldValue) {
-              foundChange = true;
-            }
-            newValues.push(newValue);
+        if (propCallbacks[i]) {
+          if (options.reRegisteringOnChangeCallback) {
+            options.registerOnChangeCallback(
+              propCallbacks[i] as unknown as CallableFunction[],
+              callbacks[i]
+            );
           }
-        });
-        if (foundChange) {
-          (propCallbacks[i]['_oldValues'] as unknown as Array<unknown>).splice(
-            0,
-            propCallbacks[i]['_oldValues'].length,
-            ...newValues
-          );
-          (callbacks[i] as CallableFunction)();
+          let foundChange = false;
+          const newValues = [] as unknown[];
+          Object.keys(propCallbacks[i]).forEach((key, index) => {
+            if (!isNaN(+key) && typeof +key === 'number') {
+              const newValue = propCallbacks[i][+key]();
+              const oldValue = (
+                propCallbacks[i]['_oldValues'] as unknown as Record<
+                  string | number,
+                  () => unknown
+                >
+              )[index] as unknown;
+              if (newValue !== oldValue) {
+                foundChange = true;
+              }
+              newValues.push(newValue);
+            }
+          });
+          if (foundChange) {
+            (
+              propCallbacks[i]['_oldValues'] as unknown as Array<unknown>
+            ).splice(0, propCallbacks[i]['_oldValues'].length, ...newValues);
+            (callbacks[i] as CallableFunction)();
+          }
         }
       }
     }
   }
 };
-const handler = <
-  ObjectType extends Record<symbol, ObjectType>,
-  ProxyMap extends IWeakMap,
-  Parent extends Record<string, Parent>
->(
-  options: IOptions<ProxyMap>,
-  _parent: Parent & ObjectType,
+
+const handler = <ObjectType>(
+  options: IOptions,
+  _parent: undefined | ProxyInternalProps<ObjectType>,
   _thisProp: string | 'root'
 ) => ({
   _proxySet: new Map(),
   _thisProp,
   _parent,
-  get(obj: ObjectType, prop: symbol, receiver: unknown): unknown {
-    if (isObject(obj[prop])) {
+  get(
+    obj: ProxyInternalProps<ObjectType>,
+    prop: string,
+    receiver: ProxyInternalProps<ObjectType>
+  ) {
+    if (options.helpers.isObjectOrArray(obj[prop])) {
       if (!this._proxySet.has(prop)) {
         Reflect.set(
           obj,
           prop,
-          new Proxy(
-            obj[prop],
-            handler(options, this, prop as unknown as string)
-          ),
+          new Proxy(obj[prop], handler(options, this as never, prop)),
           receiver
         );
         this._proxySet.set(prop, obj[prop]);
@@ -163,28 +167,36 @@ const handler = <
       return this._proxySet.get(prop);
     }
 
-    if (options.callbackToRegister) {
-      registerWatchedProxy(this, prop, options);
+    if (options.callbackToRegister || !(prop === undefined)) {
+      if (prop !== undefined) {
+        registerWatchedProxy(this, prop, options);
+      }
       if (!options.registeringNestedOnChangeCallback) {
         options.registeringNestedOnChangeCallback = true;
         let parent = this._parent;
         while (parent) {
           if (parent._parent) {
-            (parent._parent as unknown as Record<'get', CallableFunction>).get(
-              parent._parent,
-              parent._thisProp as unknown as keyof typeof parent._parent
-            );
+            parent._parent.get(parent._thisProp);
           }
-          parent = parent._parent as typeof parent;
+          parent = parent._parent;
         }
         options.registeringNestedOnChangeCallback = false;
       }
     }
 
+    if (prop === undefined) {
+      return undefined;
+    }
+
     return Reflect.get(obj, prop, receiver);
   },
-  set(obj: ObjectType, prop: symbol, value: ObjectType, receiver: unknown) {
-    if (isObject(value)) {
+  set(
+    obj: ProxyInternalProps<ObjectType>,
+    prop: string,
+    value: unknown,
+    receiver: ProxyInternalProps<ObjectType>
+  ) {
+    if (options.helpers.isObjectOrArray(value)) {
       /* keep all previous references alive. removing this would replace references to existing variables invalidating existing watchers using external variables to reference the tree */
       if (this._proxySet.has(prop)) {
         if (obj[prop] != null) {
@@ -195,7 +207,10 @@ const handler = <
           Reflect.set(obj, prop, value, receiver);
           this._proxySet.set(
             prop,
-            new Proxy(value, handler(options, this, prop as unknown as string))
+            new Proxy(
+              value as ProxyInternalProps<ObjectType>,
+              handler(options, this as never, prop)
+            )
           );
         }
       } else {
@@ -203,7 +218,10 @@ const handler = <
         Reflect.set(
           obj,
           prop,
-          new Proxy(value, handler(options, this, prop as unknown as string)),
+          new Proxy(
+            value as ProxyInternalProps<ObjectType>,
+            handler(options, this as never, prop)
+          ),
           receiver
         );
         this._proxySet.set(prop, obj[prop]);
@@ -221,25 +239,18 @@ const handler = <
 
     return true;
   },
-  deleteProperty(obj: ObjectType, prop: symbol) {
+  deleteProperty(obj: ProxyInternalProps<ObjectType>, prop: string) {
     /* this removes references to existing variables invalidating existing watchers using external variables to reference the tree */
-    if (prop.toString() === '__removeTree') {
-      if (
-        (
-          this._parent._proxySet as unknown as Record<'has', CallableFunction>
-        ).has(this._thisProp)
-      ) {
-        (
-          this._parent._proxySet as unknown as Record<
-            'delete',
-            CallableFunction
-          >
-        ).delete(this._thisProp);
+    if (`${prop}` === '__removeTree') {
+      if (this._parent) {
+        if (this._parent._proxySet.has(this._thisProp)) {
+          this._parent._proxySet.delete(this._thisProp);
+          Reflect.deleteProperty(this._parent, this._thisProp);
+        }
       }
-      Reflect.deleteProperty(this._parent, this._thisProp);
-    } else {
-      Reflect.deleteProperty(obj, prop);
     }
+
+    Reflect.deleteProperty(obj, prop);
     if (options.watchedProxiesMap.get(this)) {
       triggerWatchers(this, prop, options);
     }
@@ -247,13 +258,20 @@ const handler = <
   }
 });
 
-/*If an object's structure is like a two-dimensional tree, a ProxyObject's structure is like a three-dimensional tree where it's main structure mirrors the original object's and some branches have depth because we need multiple instances of the same structures.*/
-/*The ProxyObject is built dynamically whenever it is accessed. This means that it does not initially have the original object's structure but that it is also limited by it.*/
-/*Whenever a branch of the tree is reassigned (a nested property that is an object) the ProxyObject will keep it's old branch and just update the values to reflect the changes. This is done to prevent references to the tree being lost.*/
-/*Whenever a branch of the tree is removed (a nested property that is an object) the ProxyObject's branch will still exist because we still have references that watch the old branch instance. If the branch gets reassigned a new value, a new ProxyObject branch will get created but the old one will still exist as ghost branches.*/
+/*If an object's structure is like a two-dimensional tree, a Proxy's structure is like a three-dimensional tree where it's main structure mirrors the original object's and some branches have depth because we need multiple instances of the same structures.*/
+/*The ProxyInternalProps is built dynamically whenever it is accessed. This means that it does not initially have the original object's structure but that it is also limited by it.*/
+/*Whenever a branch of the tree is reassigned (a nested property that is an object) the Proxy will keep it's old branch and just update the values to reflect the changes. This is done to prevent references to the tree being lost.*/
+/*Whenever a branch of the tree is removed (a nested property that is an object) the Proxy's branch will still exist because we still have references that watch the old branch instance. If the branch gets reassigned a new value, a new ProxyInternalProps branch will get created but the old one will still exist as ghost branches.*/
 /*Ghost branches (duplicated branches) can be removed by unregistering the watchers that referenced them*/
-export const ProxyObject = <T>(obj: T) => {
+export const ProxyObject = async <T>(obj: T, mainScope: IMainScope) => {
+  const { isObjectOrArray } = await mainScope.asyncStaticModule(
+    () => import('/remoteModules/utils/helpers/shared/utils.js')
+  );
+
   const options = {
+    helpers: {
+      isObjectOrArray
+    },
     watchedProxiesMap: new WeakMap(),
     registeringNestedOnChangeCallback: false,
     unRegisteringOnChangeCallback: false,
@@ -283,7 +301,10 @@ export const ProxyObject = <T>(obj: T) => {
   };
   return {
     /*need to make this entire object a proxy and protect data from deletion as well as make sure new entries */
-    data: new Proxy(obj, handler(options, undefined, 'root')) as T,
+    data: new Proxy(
+      obj as never,
+      handler(options, undefined, 'root')
+    ) as ProxyExternalProps<T>,
     registerOnChangeCallback: options.registerOnChangeCallback.bind(options),
     unRegisterOnChangeCallback:
       options.unRegisterOnChangeCallback.bind(options),

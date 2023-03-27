@@ -1,9 +1,6 @@
-import type {
-  IHTMLElementComponent,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope) => {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { _Input, _Button } = {
     _Button: mainScope.asyncComponent(() =>
       mainScope.asyncStaticModule(
@@ -30,10 +27,7 @@ const getComponent = async (mainScope: IMainScope) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.HTMLElement {
     constructor() {
       super();
     }
@@ -115,10 +109,13 @@ const getComponent = async (mainScope: IMainScope) => {
     }
   }
 
-  const instance = new mainScope.HTMLComponent('auth-component', Component);
+  const instance = new mainScope.HTMLComponent(
+    tagName || 'auth-component',
+    Element
+  );
   return instance;
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

@@ -1,6 +1,5 @@
 import type {
   IMainScope,
-  IHTMLElementComponent,
   IComponentScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
@@ -16,11 +15,8 @@ interface IInputElementAttributes {
   autocomplete?: string;
 }
 
-const getComponent = async (mainScope: IMainScope) => {
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+  class Element extends mainScope.HTMLElement {
     private removeInputListener?: CallableFunction;
 
     constructor() {
@@ -29,7 +25,6 @@ const getComponent = async (mainScope: IMainScope) => {
 
     async initElement(scope: ILocalScope) {
       this.render(scope);
-
       if (scope.onInput) {
         this.removeInputListener = mainScope.registerEventListener(
           this.children[0] as HTMLInputElement,
@@ -52,9 +47,12 @@ const getComponent = async (mainScope: IMainScope) => {
     }
   }
 
-  return new mainScope.HTMLComponent<ILocalScope>('input-component', Component);
+  return new mainScope.HTMLComponent<ILocalScope>(
+    tagName || 'input-component',
+    Element
+  );
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

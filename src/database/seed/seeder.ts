@@ -174,6 +174,10 @@ export const init: IKernelModuleInit = async (context) => {
   );
 
   await loadSeederModule(
+    () => import('/remoteModules/utils/helpers/shared/utils.js')
+  );
+
+  await loadSeederModule(
     () =>
       import(
         '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'

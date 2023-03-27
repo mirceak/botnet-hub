@@ -1,11 +1,10 @@
-import type {
-  IHTMLElementComponent,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope) => {
-  const { _Button } = {
-    _Button: mainScope.asyncComponent(() =>
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+  const {
+    _Button: { getScope }
+  } = {
+    _Button: await mainScope.asyncComponent(() =>
       mainScope.asyncStaticModule(
         () =>
           import(
@@ -15,40 +14,59 @@ const getComponent = async (mainScope: IMainScope) => {
     )
   };
 
+  const o = mainScope.useComponents({
+    ['button-component']: getScope
+  });
+
   const scopedCss = mainScope.asyncStaticFile(
     () => import('/remoteModules/frontend/modules/home/pages/page.About.scss')
   );
 
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.HTMLElement {
     constructor() {
       super();
     }
+
+    a = o['<div>'];
 
     async initElement() {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          {
-            /* language=HTML */
-            template: `
-              <h1>About Page</h1>
-              <button-component wcScope="xButtonScope">
-              </button-component>
-            `,
-            scopesGetter: async () => ({
-              xButtonScope: _Button.then(({ getScope }) =>
-                getScope({
-                  onClick() {
-                    mainScope.router.push('home');
-                  },
-                  label: 'Go Home'
-                })
+          o['<div>'](
+            () => ({ className: 'card gap-8 m-a-16 fit-content' }),
+            [
+              o['<h1>']({ innerText: 'About Page' }),
+              o['<div>'](
+                async () => ({
+                  className: 'row full-width justify-center'
+                }),
+                [
+                  o['<button-component>']({
+                    onClick() {
+                      mainScope.router.push('home');
+                    },
+                    elementAttributes: { class: 'bg-primary' },
+                    label: 'Home'
+                  }),
+                  o['<button-component>'](() => ({
+                    onClick() {
+                      mainScope.router.push('home');
+                    },
+                    elementAttributes: { class: 'bg-primary' },
+                    label: 'Home'
+                  })),
+                  o['<button-component>'](async () => ({
+                    onClick() {
+                      mainScope.router.push('home');
+                    },
+                    elementAttributes: { class: 'bg-primary' },
+                    label: 'Home'
+                  }))
+                ]
               )
-            })
-          },
+            ]
+          ),
           async () => {
             return instance.getScopedCss(await scopedCss);
           }
@@ -57,10 +75,13 @@ const getComponent = async (mainScope: IMainScope) => {
     }
   }
 
-  const instance = new mainScope.HTMLComponent('about-component', Component);
+  const instance = new mainScope.HTMLComponent(
+    tagName || 'about-component',
+    Element
+  );
   return instance;
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

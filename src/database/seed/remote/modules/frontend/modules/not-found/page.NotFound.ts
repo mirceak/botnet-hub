@@ -1,13 +1,7 @@
-import type {
-  IHTMLElementComponent,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope) => {
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+  class Element extends mainScope.HTMLElement {
     constructor() {
       super();
     }
@@ -24,9 +18,9 @@ const getComponent = async (mainScope: IMainScope) => {
     }
   }
 
-  return new mainScope.HTMLComponent('not-found-component', Component);
+  return new mainScope.HTMLComponent(tagName || 'not-found-component', Element);
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

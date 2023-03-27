@@ -1,6 +1,5 @@
 import type {
   IComponentScope,
-  IHTMLElementComponent,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 import type { Route } from '/remoteModules/frontend/engine/router.js';
@@ -9,13 +8,10 @@ interface ILocalScope extends IComponentScope {
   reloading?: boolean;
 }
 
-const getComponent = async (mainScope: IMainScope) => {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const routerViewRegister = new Set();
 
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.HTMLElement {
     private _index?: number;
 
     constructor() {
@@ -62,8 +58,8 @@ const getComponent = async (mainScope: IMainScope) => {
             async () => {
               const componentScope = await routeComponent();
               return {
-                template: `<${componentScope.componentName} wcScope="wcScope${this._index}">
-</${componentScope.componentName}>` /* wcScope${this._index} -> avoids nested template parsing errors because the first scope would be sent to all other instances caring the same scope names */,
+                template: `<${componentScope.componentTagName} wcScope="wcScope${this._index}">
+</${componentScope.componentTagName}>` /* wcScope${this._index} -> avoids nested template parsing errors because the first scope would be sent to all other instances caring the same scope names */,
                 scopesGetter: async () => {
                   return {
                     [`wcScope${this._index}`]: componentScope
@@ -84,11 +80,11 @@ const getComponent = async (mainScope: IMainScope) => {
   }
 
   return new mainScope.HTMLComponent<ILocalScope>(
-    'router-view-component',
-    Component
+    tagName || 'router-view-component',
+    Element
   );
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

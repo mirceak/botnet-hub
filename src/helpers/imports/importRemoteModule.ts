@@ -42,10 +42,7 @@ export const importRemoteModule = async (
       identifier: `Remote Module: "${moduleInstance.name}"`,
       context: createContext(Object.assign(context, globalContext)),
       async importModuleDynamically(specifier) {
-        if (
-          specifier.indexOf('./') !== -1 &&
-          specifier.indexOf('#node_modules/') === -1
-        ) {
+        if (specifier.indexOf('./') !== -1) {
           const importContext = context.exports?.nextImportContext ?? context;
           delete context.exports?.nextImportContext;
           return context.kernelGlobals?.loadAndImportRemoteModule(
@@ -55,7 +52,7 @@ export const importRemoteModule = async (
           );
         }
         // naked imports for backend
-        return import(specifier.replace('#node_modules/', ''));
+        return import(specifier);
       }
     });
     await compiled.link(defaultLinker);

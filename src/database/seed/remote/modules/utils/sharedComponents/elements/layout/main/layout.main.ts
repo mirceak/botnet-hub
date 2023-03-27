@@ -1,5 +1,4 @@
 import type {
-  IHTMLElementComponent,
   IComponentComposedScope,
   IComponentScope,
   IMainScope
@@ -13,7 +12,7 @@ interface ILocalScope extends IComponentScope {
   }>;
 }
 
-const getComponent = (mainScope: IMainScope) => {
+const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { _RouterView } = {
     _RouterView: mainScope.asyncComponentScope(() =>
       mainScope.asyncStaticModule(
@@ -29,10 +28,7 @@ const getComponent = (mainScope: IMainScope) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.HTMLElement {
     constructor() {
       super();
     }
@@ -53,12 +49,12 @@ const getComponent = (mainScope: IMainScope) => {
                 </header-main-component>
                 <div class="layout--content">
                   <div class="row full-height full-width">
-                    <${navComponentScope.componentName} wcScope="xNavScope"
-                                                   class="col">
-                    </${navComponentScope.componentName}>
-                    <${routerViewComponentScope.componentName} wcScope="xRouterViewScope"
-                                                          class="col">
-                    </${routerViewComponentScope.componentName}>
+                    <${navComponentScope.componentTagName} wcScope="xNavScope"
+                                                        class="col">
+                    </${navComponentScope.componentTagName}>
+                    <${routerViewComponentScope.componentTagName} wcScope="xRouterViewScope"
+                                                               class="col">
+                    </${routerViewComponentScope.componentTagName}>
                   </div>
                 </div>
                 <footer-main-component wcInit>
@@ -83,13 +79,13 @@ const getComponent = (mainScope: IMainScope) => {
   }
 
   const instance = new mainScope.HTMLComponent<ILocalScope>(
-    'layout-main-component',
-    Component
+    tagName || 'layout-main-component',
+    Element
   );
 
   return instance;
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

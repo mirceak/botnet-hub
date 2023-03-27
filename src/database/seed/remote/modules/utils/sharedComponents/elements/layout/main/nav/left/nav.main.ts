@@ -1,9 +1,6 @@
-import type {
-  IHTMLElementComponent,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope) => {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { _DynamicHtmlView } = {
     _DynamicHtmlView: mainScope.asyncComponent(() =>
       mainScope.asyncStaticModule(
@@ -22,10 +19,7 @@ const getComponent = async (mainScope: IMainScope) => {
       )
   );
 
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.HTMLElement {
     constructor() {
       super();
     }
@@ -40,8 +34,20 @@ const getComponent = async (mainScope: IMainScope) => {
                 /* language=HTML */
                 return `<h1>
                   ${mainScope.store.data.home.titleWithName || ''}
+                </h1><dynamic-html-view-component dhvScope="x"></dynamic-html-view-component>`;
+              },
+              scopesGetter: async () => ({
+                x: _DynamicHtmlView.then(async ({ getScope }) => {
+                  return getScope({
+                    templateGetter() {
+                      /* language=HTML */
+                      return `<h1>
+                  ${mainScope.store.data.home.titleWithName || ''}
                 </h1>`;
-              }
+                    }
+                  });
+                })
+              })
             });
           }),
           async () => {
@@ -53,12 +59,12 @@ const getComponent = async (mainScope: IMainScope) => {
   }
 
   const instance = new mainScope.HTMLComponent(
-    'nav-left-main-component',
-    Component
+    tagName || 'nav-left-main-component',
+    Element
   );
   return instance;
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

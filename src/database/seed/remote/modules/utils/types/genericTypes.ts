@@ -1,1 +1,1 @@
-export type GenericFalsy = undefined | null | false;
+export type GenericFalsy = never | undefined | null | false | void;

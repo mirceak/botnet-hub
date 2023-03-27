@@ -1,9 +1,6 @@
-import type {
-  IHTMLElementComponent,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = (mainScope: IMainScope) => {
+const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { _Input, _Button } = {
     _Button: mainScope.asyncComponent(() =>
       mainScope.asyncStaticModule(
@@ -27,10 +24,7 @@ const getComponent = (mainScope: IMainScope) => {
     () => import('/remoteModules/frontend/modules/home/pages/page.Home.scss')
   );
 
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.HTMLElement {
     constructor() {
       super();
     }
@@ -54,7 +48,7 @@ const getComponent = (mainScope: IMainScope) => {
               onClick() {
                 mainScope.router.push('about');
               },
-              label: 'Go To About'
+              label: 'About'
             })
           ),
           _Button.then(({ getScope }) =>
@@ -62,7 +56,7 @@ const getComponent = (mainScope: IMainScope) => {
               onClick() {
                 mainScope.router.push('components');
               },
-              label: 'Go To Components',
+              label: 'Dev Components',
               elementAttributes: {
                 class: 'bg-primary'
               }
@@ -111,13 +105,13 @@ const getComponent = (mainScope: IMainScope) => {
                     },
                     elementAttributes: {
                       class: 'p-x-16',
-                      placeholder: 'Test Nested Input'
+                      placeholder: 'Test Input'
                     }
                   })
                 ),
                 xSecButtonScope: _Button.then(({ getScope }) =>
                   getScope({
-                    label: 'Test Nested Button'
+                    label: 'Test Button'
                   })
                 )
               };
@@ -131,10 +125,13 @@ const getComponent = (mainScope: IMainScope) => {
     }
   }
 
-  const instance = new mainScope.HTMLComponent('home-component', Component);
+  const instance = new mainScope.HTMLComponent(
+    tagName || 'home-component',
+    Element
+  );
   return instance;
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

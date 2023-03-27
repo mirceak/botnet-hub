@@ -1,9 +1,6 @@
-import type {
-  IHTMLElementComponent,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope) => {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { _Input, _Button } = {
     _Button: mainScope.asyncComponent(() =>
       mainScope.asyncStaticModule(
@@ -30,10 +27,7 @@ const getComponent = async (mainScope: IMainScope) => {
       )
   );
 
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.HTMLElement {
     constructor() {
       super();
     }
@@ -120,7 +114,7 @@ const getComponent = async (mainScope: IMainScope) => {
                       onClick() {
                         mainScope.router.push('home');
                       },
-                      label: 'Go Back'
+                      label: 'Back'
                     });
                   }),
                   xButtonDefault: _Button.then(({ getScope }) => {
@@ -208,12 +202,12 @@ const getComponent = async (mainScope: IMainScope) => {
   }
 
   const instance = new mainScope.HTMLComponent(
-    'components-component',
-    Component
+    tagName || 'components-component',
+    Element
   );
   return instance;
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

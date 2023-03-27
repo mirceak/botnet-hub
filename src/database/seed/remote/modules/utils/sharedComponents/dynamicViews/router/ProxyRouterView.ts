@@ -1,9 +1,6 @@
-import type {
-  IHTMLElementComponent,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope) => {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { _RouterView } = {
     _RouterView: mainScope.asyncComponentScope(() =>
       mainScope.asyncStaticModule(
@@ -15,10 +12,7 @@ const getComponent = async (mainScope: IMainScope) => {
     )
   };
 
-  class Component
-    extends mainScope.HTMLElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.HTMLElement {
     constructor() {
       super();
     }
@@ -31,9 +25,12 @@ const getComponent = async (mainScope: IMainScope) => {
     }
   }
 
-  return new mainScope.HTMLComponent('proxy-router-view-component', Component);
+  return new mainScope.HTMLComponent(
+    tagName || 'proxy-router-view-component',
+    Element
+  );
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope) =>
-  singleton ? singleton : (singleton = getComponent(mainScope));
+export default async (mainScope: IMainScope, tagName?: string) =>
+  singleton ? singleton : (singleton = getComponent(mainScope, tagName));

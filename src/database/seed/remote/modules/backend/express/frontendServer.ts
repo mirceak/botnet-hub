@@ -112,7 +112,12 @@ app.get('/favicon.ico', (...[, res]) => {
   );
 });
 app.get(['/remoteModules/:path(.*)'], (...[req, res]) => {
-  res.type('text/javascript');
+  const fileExtension = req.url.split('.').pop();
+  if (fileExtension === 'scss') {
+    res.type('text/css');
+  } else {
+    res.type('text/javascript');
+  }
   return void kernelGlobals
     .loadRemoteModule(req.url.replace('/', '#'))
     .then((module) => {
@@ -141,6 +146,7 @@ app.get('/(.*)', (...[req, res]) => {
   const routeReducer = (result: { requests: string[] }, route: any) => {
     route.requests?.reduce(requestReducer, result);
     if (route.useRouter) {
+      result.requests.push('#remoteModules/utils/helpers/shared/utils.js');
       result.requests.push('#remoteModules/frontend/engine/router.js');
       result.requests.push('/node_modules/path-to-regexp/dist.es2015/index.js');
     }
@@ -200,8 +206,9 @@ app.get('/(.*)', (...[req, res]) => {
       </head>
       <body>
       <main-component style="display: none"/>
+      </body>
       <script
-          async
+          defer
           type="module"
       >
         ${mainModule.replace(
@@ -212,7 +219,6 @@ app.get('/(.*)', (...[req, res]) => {
           )}`
         )}
       </script>
-      </body>
       </html>
     `);
   });
