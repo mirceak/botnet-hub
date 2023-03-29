@@ -66,12 +66,13 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           ? _TagName
           : never,
         IsCustomComponent = TagName extends keyof Components ? true : false,
+        IsClosedTag = Tag extends `<${string}/>` ? true : false,
         ScopeGetter = Components[TagName & keyof Components]
       >(
         tag: Tag,
         scope: IsCustomComponent extends true
           ? RequiredNested<InferredScope> extends Scope
-            ? AsyncAndPromise<Scope>
+            ? AsyncAndPromise<ComposedScope>
             : NoExtraKeysError<ExcludeExtraKeys<InferredScope, Scope>, Tag>
           : AsyncAndPromise<
               Partial<
@@ -87,7 +88,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           scopeGetter: scopeGetter,
           scope: scope as AsyncAndPromise<InferredScope>,
           children,
-          tagName,
+          tagName: tag,
           nested: true
         };
       }
@@ -119,8 +120,11 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          b('<div>', { className: 'card gap-8 m-t-16 fit-content' }, [
+          /* implement option to host children in scope prop */
+          /* implement optional scope parameter if all fields are optional in type */
+          b('<div>', { className: 'card gap-8 m-t-32 fit-content' }, [
             b('<h1>', { innerText: 'About Page' }),
+            b('<h1/>', { innerText: 'About Page' }),
             b('<div>', { className: 'row full-width justify-center' }, [
               b('<button-component>', {
                 label: 'Home',

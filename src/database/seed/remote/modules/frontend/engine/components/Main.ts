@@ -153,10 +153,12 @@ class BaseComponent<ILocalScope = IComponentStaticScope>
   };
 
   public getScope = async (...attrs: UseComponentsParams<ILocalScope>) => {
-    return {
-      ...(attrs[0] || {}),
-      componentTagName: this.componentTagName
-    };
+    return Object.assign(
+      {
+        componentTagName: this.componentTagName
+      },
+      attrs[0]
+    );
   };
 
   private init(
