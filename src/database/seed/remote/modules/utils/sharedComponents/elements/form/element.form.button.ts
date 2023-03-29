@@ -1,17 +1,12 @@
 import type {
   IMainScope,
-  IComponentScope
+  IComponentExtendingElementScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IComponentScope {
+export interface ILocalScope
+  extends IComponentExtendingElementScope<HTMLButtonElement> {
   onClick?: () => void;
   label: string;
-  elementAttributes?: IButtonElementAttributes;
-}
-
-interface IButtonElementAttributes {
-  class?: string;
-  type?: string;
 }
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {

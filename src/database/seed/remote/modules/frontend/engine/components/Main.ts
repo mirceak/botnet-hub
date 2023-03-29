@@ -38,9 +38,16 @@ export type IMainScope = InstanceType<typeof HTMLElementsScope>;
 export type IComponentComposedScope = IComponentStaticScope & object;
 
 export interface IComponentScope {
-  attributes?: {
-    class?: string;
-  };
+  attributes?: IElementAttributes;
+}
+
+export interface IComponentExtendingElementScope<ElementType = HTMLElement>
+  extends IComponentScope {
+  elementAttributes?: Partial<ElementType> & IElementAttributes;
+}
+
+interface IElementAttributes {
+  class?: string;
 }
 
 export interface IComponentStaticScope {
@@ -151,7 +158,8 @@ type oElementsList<
 export interface NestedElement {
   tagName: string;
   scope: unknown;
-  nested: true;
+  scopeGetter: unknown;
+  nested: boolean;
   children?: NestedElement[];
 }
 
@@ -604,7 +612,13 @@ class HTMLElementsScope {
           if (this.helpers.isFunctionOrAsyncFunction(child.scope)) {
             child.scope = await (child.scope as CallableFunction)();
           }
-          child.scope = await child.scope;
+          if (this.helpers.isFunctionOrAsyncFunction(child.scopeGetter)) {
+            child.scope = await (child.scopeGetter as CallableFunction)(
+              await child.scope
+            );
+          } else {
+            throw new Error('Scope getter should be a method');
+          }
           if (_componentConstructor) {
             (temp as IHTMLElementComponent).initElement(child.scope);
           } else {

@@ -1,15 +1,11 @@
 import type {
   IMainScope,
-  IComponentScope
+  IComponentExtendingElementScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IComponentScope {
+interface ILocalScope
+  extends IComponentExtendingElementScope<HTMLInputElement> {
   onInput?: (value: string) => void;
-  elementAttributes?: IInputElementAttributes;
-}
-
-interface IInputElementAttributes {
-  placeholder?: string;
 }
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
