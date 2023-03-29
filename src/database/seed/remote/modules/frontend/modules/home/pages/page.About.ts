@@ -2,7 +2,8 @@ import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const {
-    _Button: { getScope }
+    _Button: { getScope: getScopeButton },
+    _Input: { getScope: getScopeInput }
   } = {
     _Button: await mainScope.asyncComponent(() =>
       mainScope.asyncStaticModule(
@@ -11,11 +12,20 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
             '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
           )
       )
+    ),
+    _Input: await mainScope.asyncComponent(() =>
+      mainScope.asyncStaticModule(
+        () =>
+          import(
+            '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+          )
+      )
     )
   };
 
   const components = {
-    ['button-component']: getScope
+    ['button-component']: getScopeButton,
+    ['input-component']: getScopeInput
   };
 
   type AsyncAndPromise<T> = T | Promise<T> | (() => Promise<T> | T);
@@ -40,7 +50,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const useComponents = <Components>(components: Components) => {
     return {
       builder: <
-        InferredScope extends Components[TagName] extends (
+        InferredScope extends Components[TagName & keyof Components] extends (
           ...args: [RequiredNested<infer _Scope>]
         ) => Promise<ComposedScope>
           ? _Scope
@@ -49,30 +59,32 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
         ComposedScope extends InferredScope,
         Tag extends
           | `<${keyof Components & string}>`
-          | `<${keyof Components & string}/>`,
-        TagName extends keyof Components = Tag extends
-          | `<${infer _TagName}>`
-          | `<${infer _TagName}/>`
-          ? _TagName & keyof Components
+          | `<${keyof Components & string}/>`
+          | `<${keyof HTMLElementTagNameMap & string}>`
+          | `<${keyof HTMLElementTagNameMap & string}/>`,
+        TagName = Tag extends `<${infer _TagName}>` | `<${infer _TagName}/>`
+          ? _TagName
           : never,
-        ScopeGetter = Components[TagName]
+        IsCustomComponent = TagName extends keyof Components ? true : false,
+        ScopeGetter = Components[TagName & keyof Components]
       >(
         tag: Tag,
-        scope: RequiredNested<InferredScope> extends Scope
-          ? AsyncAndPromise<Scope>
-          : NoExtraKeysError<
-              ExcludeExtraKeys<RequiredNested<InferredScope>, Scope>,
-              Tag
+        scope: IsCustomComponent extends true
+          ? RequiredNested<InferredScope> extends Scope
+            ? AsyncAndPromise<Scope>
+            : NoExtraKeysError<ExcludeExtraKeys<InferredScope, Scope>, Tag>
+          : AsyncAndPromise<
+              Partial<
+                HTMLElementTagNameMap[TagName & keyof HTMLElementTagNameMap]
+              >
             >,
         children?: oElementReturn<unknown>[]
       ) => {
-        const tagName = tag.replace(/^<|\/?>$/g, '') as TagName;
-        const scopeGetter = components[tagName] as (
-          scope: Scope
-        ) => Promise<ComposedScope>;
+        const tagName = tag.replace(/^<|\/?>$/g, '') as Tag & keyof Components;
+        const scopeGetter = components[tagName] as ScopeGetter;
 
         return {
-          scopeGetter: scopeGetter as ScopeGetter,
+          scopeGetter: scopeGetter,
           scope: scope as AsyncAndPromise<InferredScope>,
           children,
           tagName,
@@ -107,25 +119,18 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          b(
-            '<button-component>',
-            async () => ({
-              label: '1',
-              onClick() {
-                mainScope.router.push('home');
-              },
-              elementAttributes: { class: 'bg-primary' }
-            }),
-            [
-              b('<button-component>', async () => ({
-                label: '2',
+          b('<div>', { className: 'card gap-8 m-t-16 fit-content' }, [
+            b('<h1>', { innerText: 'About Page' }),
+            b('<div>', { className: 'row full-width justify-center' }, [
+              b('<button-component>', {
+                label: 'Home',
+                elementAttributes: { className: 'bg-primary p-x-16' },
                 onClick() {
                   mainScope.router.push('home');
-                },
-                elementAttributes: { class: 'bg-primary' }
-              }))
-            ]
-          ),
+                }
+              })
+            ])
+          ]),
           async () => {
             return instance.getScopedCss(await scopedCss);
           }

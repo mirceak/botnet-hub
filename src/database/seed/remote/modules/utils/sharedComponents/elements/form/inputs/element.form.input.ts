@@ -1,18 +1,11 @@
 import type {
   IMainScope,
-  IComponentScope
+  IComponentExtendingElementScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IComponentScope {
+interface ILocalScope
+  extends IComponentExtendingElementScope<HTMLInputElement> {
   onInput?: (value: string) => void;
-  elementAttributes?: IInputElementAttributes;
-}
-
-interface IInputElementAttributes {
-  placeholder?: string;
-  class?: string;
-  type?: string;
-  autocomplete?: string;
 }
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
@@ -37,9 +30,9 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
 
     render(scope: ILocalScope) {
-      this.innerHTML = `
-        <input ${mainScope.getAttributesString(scope)}/>
-      `;
+      const inputEl = document.createElement('input');
+      Object.assign(inputEl, scope.elementAttributes);
+      this.appendChild(inputEl);
     }
 
     disconnectedCallback() {

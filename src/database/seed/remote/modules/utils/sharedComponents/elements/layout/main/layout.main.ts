@@ -1,10 +1,10 @@
 import type {
   IComponentComposedScope,
-  IComponentScope,
+  IElementScope,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IComponentScope {
+interface ILocalScope extends IElementScope {
   scopesGetter: Promise<{
     _Header: Promise<IComponentComposedScope>;
     _Footer: Promise<IComponentComposedScope>;

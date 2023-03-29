@@ -1,10 +1,10 @@
 import type {
   IHTMLElementComponentTemplate,
   IMainScope,
-  IComponentScope
+  IElementScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IComponentScope {
+interface ILocalScope extends IElementScope {
   listGetter: () => IHTMLElementComponentTemplate['components'];
   noWatcher?: boolean;
 }

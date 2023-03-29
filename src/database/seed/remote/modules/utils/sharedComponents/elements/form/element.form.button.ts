@@ -34,11 +34,12 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
 
     render(scope?: ILocalScope) {
-      this.innerHTML = `
-        <button ${mainScope.getAttributesString(scope)}>${
-        scope?.label || ''
-      }</button>
-      `;
+      const buttonEl = document.createElement('button');
+      Object.assign(buttonEl, scope?.elementAttributes);
+      if (scope?.label) {
+        buttonEl.innerText = scope.label;
+      }
+      this.appendChild(buttonEl);
     }
 
     disconnectedCallback() {

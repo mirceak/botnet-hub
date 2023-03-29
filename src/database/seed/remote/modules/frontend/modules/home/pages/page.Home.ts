@@ -58,7 +58,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               },
               label: 'Dev Components',
               elementAttributes: {
-                class: 'bg-primary'
+                className: 'bg-primary'
               }
             })
           ),
@@ -104,7 +104,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                       mainScope.store.data.home.nameInput = value;
                     },
                     elementAttributes: {
-                      class: 'p-x-16',
+                      className: 'p-x-16',
                       placeholder: 'Test Input'
                     }
                   })

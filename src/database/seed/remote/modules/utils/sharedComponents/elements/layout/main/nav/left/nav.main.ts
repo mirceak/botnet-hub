@@ -34,20 +34,8 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                 /* language=HTML */
                 return `<h1>
                   ${mainScope.store.data.home.titleWithName || ''}
-                </h1><dynamic-html-view-component dhvScope="x"></dynamic-html-view-component>`;
-              },
-              scopesGetter: async () => ({
-                x: _DynamicHtmlView.then(async ({ getScope }) => {
-                  return getScope({
-                    templateGetter() {
-                      /* language=HTML */
-                      return `<h1>
-                  ${mainScope.store.data.home.titleWithName || ''}
                 </h1>`;
-                    }
-                  });
-                })
-              })
+              }
             });
           }),
           async () => {

@@ -2,10 +2,10 @@ import type {
   IHTMLElementComponent,
   IMainScope,
   IHTMLElementComponentStaticScope,
-  IComponentScope
+  IElementScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IComponentScope {
+interface ILocalScope extends IElementScope {
   templateGetter: () => string | undefined;
   scopesGetter?: IHTMLElementComponentStaticScope['scopesGetter'];
   simplifiedComputeProps?: CallableFunction | CallableFunction[];

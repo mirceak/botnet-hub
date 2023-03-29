@@ -37,17 +37,13 @@ export type IMainScope = InstanceType<typeof HTMLElementsScope>;
 
 export type IComponentComposedScope = IComponentStaticScope & object;
 
-export interface IComponentScope {
-  attributes?: IElementAttributes;
+export interface IElementScope {
+  attributes?: Partial<HTMLElement>;
 }
 
 export interface IComponentExtendingElementScope<ElementType = HTMLElement>
-  extends IComponentScope {
-  elementAttributes?: Partial<ElementType> & IElementAttributes;
-}
-
-interface IElementAttributes {
-  class?: string;
+  extends IElementScope {
+  elementAttributes?: Partial<ElementType>;
 }
 
 export interface IComponentStaticScope {
@@ -112,49 +108,6 @@ export interface IHTMLElementComponentTemplate {
   target: InstanceType<typeof Element | typeof DocumentFragment>;
 }
 
-type AsyncAndPromise<T> = T | (() => Promise<T>) | (() => T);
-
-type oElements = {
-  [x in keyof HTMLElementTagNameMap as `<${x}/>`]: never;
-} & {
-  [x in keyof HTMLElementTagNameMap as `<${x}>`]: oElementRaw<
-    Partial<HTMLElementTagNameMap[x]>
-  >;
-};
-
-type oElementComponents<
-  ScopeGetter extends (...attr: never[]) => Promise<unknown>,
-  Components extends Record<string, ScopeGetter>
-> = {
-  [x in keyof Components as x extends string ? `<${x}/>` : x]: never;
-} & {
-  [x in keyof Components as x extends string
-    ? `<${x}>`
-    : x]: oElementComponentRaw<
-    Awaited<Parameters<Components[x]>[0]> & Partial<HTMLElement>
-  >;
-};
-
-type oElementRaw<ScopeGetter> = (
-  scope?: never[] | AsyncAndPromise<ScopeGetter>,
-  children?: never[]
-) => never;
-
-type oElementComponentRaw<ScopeGetter> = HasRequired<ScopeGetter> extends false
-  ? (
-      scope?: never[] | AsyncAndPromise<ScopeGetter>,
-      children?: never[]
-    ) => never
-  : (
-      scope: never[] | AsyncAndPromise<ScopeGetter>,
-      children?: never[]
-    ) => never;
-
-type oElementsList<
-  ScopeGetter extends (...attr: never[]) => Promise<unknown>,
-  Components extends Record<string, ScopeGetter>
-> = oElementComponents<ScopeGetter, Components> & oElements;
-
 export interface NestedElement {
   tagName: string;
   scope: unknown;
@@ -169,6 +122,8 @@ abstract class BaseHtmlElement
 {
   protected constructor() {
     super();
+
+    // TODO: add attributes to component element
   }
 
   abstract initElement(_attr: unknown): Promise<void> | void;
@@ -259,21 +214,6 @@ class HTMLElementsScope {
       );
   };
 
-  getAttributesString(scope?: { elementAttributes?: object }) {
-    if (scope?.elementAttributes) {
-      return Object.keys(scope.elementAttributes).reduce((reduced, current) => {
-        reduced += `${current}${
-          '="' +
-          (scope.elementAttributes?.[
-            current as keyof typeof scope.elementAttributes
-          ] || '')
-        }" `;
-        return reduced;
-      }, '');
-    }
-    return '';
-  }
-
   asyncStaticModule<S>(importer: () => S, type = 'text/javascript') {
     const parsedPath = importer
       .toString()
@@ -352,58 +292,6 @@ class HTMLElementsScope {
         this.addCssHelpers();
       }
     }
-  };
-
-  useComponents = <
-    ScopeGetter extends (...attr: never[]) => Promise<unknown>,
-    Components extends Record<string, ScopeGetter>
-  >(
-    components: Components
-  ) => {
-    const helpers = this.helpers;
-    return new Proxy(
-      {},
-      {
-        get(origin: object, tagName: string, receiver: never) {
-          if (tagName.match(/^<(.*)\/>$/gis)) {
-            Reflect.set(
-              origin,
-              tagName,
-              {
-                tagName,
-                nested: true
-              },
-              receiver
-            );
-            return Reflect.get(origin, tagName, receiver);
-          }
-          return (
-            scope?: Promise<never | never[]> | never | never[],
-            children?: never[]
-          ) => {
-            Reflect.set(
-              origin,
-              tagName,
-              {
-                tagName,
-                nested: true,
-                children: children
-                  ? children
-                  : helpers.isArray(scope)
-                  ? scope
-                  : undefined,
-                scope:
-                  scope && (children || !helpers.isArray(scope))
-                    ? scope
-                    : undefined
-              },
-              receiver
-            );
-            return Reflect.get(origin, tagName, receiver);
-          };
-        }
-      }
-    ) as oElementsList<ScopeGetter, typeof components>;
   };
 
   /*lazy loads components*/
@@ -612,17 +500,20 @@ class HTMLElementsScope {
           if (this.helpers.isFunctionOrAsyncFunction(child.scope)) {
             child.scope = await (child.scope as CallableFunction)();
           }
-          if (this.helpers.isFunctionOrAsyncFunction(child.scopeGetter)) {
-            child.scope = await (child.scopeGetter as CallableFunction)(
-              await child.scope
-            );
-          } else {
-            throw new Error('Scope getter should be a method');
+          if (child.scopeGetter) {
+            if (this.helpers.isFunctionOrAsyncFunction(child.scopeGetter)) {
+              child.scope = await (child.scopeGetter as CallableFunction)(
+                await child.scope
+              );
+            } else {
+              throw new Error('Scope getter should be a method');
+            }
           }
           if (_componentConstructor) {
-            (temp as IHTMLElementComponent).initElement(child.scope);
+            void (temp as IHTMLElementComponent).initElement(child.scope);
+            Object.assign(temp, (child.scope as IElementScope).attributes);
           } else {
-            Object.assign(temp, child.scope);
+            Object.assign(temp, child.scope as IElementScope);
           }
         }
       }

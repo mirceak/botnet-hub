@@ -1,10 +1,10 @@
 import type {
-  IComponentScope,
+  IElementScope,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 import type { Route } from '/remoteModules/frontend/engine/router.js';
 
-interface ILocalScope extends IComponentScope {
+interface ILocalScope extends IElementScope {
   reloading?: boolean;
 }
 

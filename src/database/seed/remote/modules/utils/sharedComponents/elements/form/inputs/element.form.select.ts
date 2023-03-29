@@ -31,9 +31,9 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
 
     render(scope: ILocalScope) {
-      this.innerHTML = `
-        <input ${mainScope.getAttributesString(scope)}/>
-      `;
+      const selectEl = document.createElement('input');
+      Object.assign(selectEl, scope.elementAttributes);
+      this.appendChild(selectEl);
     }
 
     disconnectedCallback() {
