@@ -111,7 +111,7 @@ export interface IHTMLElementComponentTemplate {
 export interface NestedElement {
   tagName: string;
   scope: unknown;
-  scopeGetter: unknown;
+  scopeGetter?: unknown;
   nested: boolean;
   children?: NestedElement[];
 }
@@ -493,8 +493,14 @@ class HTMLElementsScope {
       }
 
       if (child) {
-        if (child?.children && temp) {
-          for (const [_index, _child] of child.children.entries()) {
+        if (
+          ((!child.children && this.helpers.isArray(child.scope)) ||
+            child?.children) &&
+          temp
+        ) {
+          for (const [_index, _child] of (
+            child.children || (child.scope as [])
+          ).entries()) {
             void this.oElementParser(temp, _child, _index);
           }
         }

@@ -1,4 +1,5 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
+import { HasRequired } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const {
@@ -69,26 +70,70 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
         IsClosedTag = Tag extends `<${string}/>` ? true : false,
         ScopeGetter = Components[TagName & keyof Components]
       >(
-        tag: Tag,
-        scope: IsCustomComponent extends true
-          ? RequiredNested<InferredScope> extends Scope
-            ? AsyncAndPromise<ComposedScope>
-            : NoExtraKeysError<ExcludeExtraKeys<InferredScope, Scope>, Tag>
-          : AsyncAndPromise<
-              Partial<
-                HTMLElementTagNameMap[TagName & keyof HTMLElementTagNameMap]
-              >
-            >,
-        children?: oElementReturn<unknown>[]
+        ...attrs: IsClosedTag extends true
+          ? [tag: Tag, children?: oElementReturn<unknown>[]]
+          : IsCustomComponent extends false
+          ? [
+              tag: Tag,
+              scope?:
+                | oElementReturn<unknown>[]
+                | AsyncAndPromise<
+                    Partial<
+                      HTMLElementTagNameMap[TagName &
+                        keyof HTMLElementTagNameMap]
+                    >
+                  >,
+              children?: oElementReturn<unknown>[]
+            ]
+          : HasRequired<InferredScope> extends true
+          ? [
+              tag: Tag,
+              scope: IsCustomComponent extends true
+                ? RequiredNested<InferredScope> extends Scope
+                  ? AsyncAndPromise<Scope>
+                  : NoExtraKeysError<
+                      ExcludeExtraKeys<InferredScope, Scope>,
+                      Tag
+                    >
+                : AsyncAndPromise<
+                    Partial<
+                      HTMLElementTagNameMap[TagName &
+                        keyof HTMLElementTagNameMap]
+                    >
+                  >,
+              children?: oElementReturn<unknown>[]
+            ]
+          : [
+              tag: Tag,
+              scope?: IsCustomComponent extends true
+                ? RequiredNested<InferredScope> extends Scope
+                  ? AsyncAndPromise<Scope>
+                  : NoExtraKeysError<
+                      ExcludeExtraKeys<InferredScope, Scope>,
+                      Tag
+                    >
+                : AsyncAndPromise<
+                    Partial<
+                      HTMLElementTagNameMap[TagName &
+                        keyof HTMLElementTagNameMap]
+                    >
+                  >,
+              children?: oElementReturn<unknown>[]
+            ]
       ) => {
-        const tagName = tag.replace(/^<|\/?>$/g, '') as Tag & keyof Components;
-        const scopeGetter = components[tagName] as ScopeGetter;
+        const [tagName, scope, children] = attrs as [
+          Tag,
+          AsyncAndPromise<Scope> | oElementReturn<unknown>[] | undefined,
+          oElementReturn<unknown>[] | undefined
+        ];
+        const tag = tagName.replace(/^<|\/?>$/g, '') as keyof Components;
+        const scopeGetter = components[tag] as ScopeGetter;
 
         return {
-          scopeGetter: scopeGetter,
-          scope: scope as AsyncAndPromise<InferredScope>,
+          scopeGetter,
+          scope,
           children,
-          tagName: tag,
+          tagName: tagName,
           nested: true
         };
       }
@@ -120,11 +165,8 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          /* implement option to host children in scope prop */
-          /* implement optional scope parameter if all fields are optional in type */
           b('<div>', { className: 'card gap-8 m-t-32 fit-content' }, [
             b('<h1>', { innerText: 'About Page' }),
-            b('<h1/>', { innerText: 'About Page' }),
             b('<div>', { className: 'row full-width justify-center' }, [
               b('<button-component>', {
                 label: 'Home',
