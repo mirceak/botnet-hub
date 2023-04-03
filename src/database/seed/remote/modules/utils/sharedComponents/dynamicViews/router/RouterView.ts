@@ -14,63 +14,62 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   class Element extends mainScope.HTMLElement {
     private _index?: number;
 
-    constructor() {
-      super();
-    }
+    initElement = this.useInitElement(
+      mainScope,
+      async (scope?: ILocalScope) => {
+        const matchedRoutesLength = mainScope.router?.matchedRoutes
+          ?.length as number;
+        if (Object.keys(routerViewRegister).length === matchedRoutesLength) {
+          throw new Error('router-view has no matching route');
+        }
 
-    async initElement(scope?: ILocalScope) {
-      const matchedRoutesLength = mainScope.router?.matchedRoutes
-        ?.length as number;
-      if (Object.keys(routerViewRegister).length === matchedRoutesLength) {
-        throw new Error('router-view has no matching route');
-      }
+        if (this._index == null) {
+          this._index = routerViewRegister.size;
+          this.setAttribute('id', `rv-id-${this._index}`);
+          routerViewRegister.add(this._index);
+        }
 
-      if (this._index == null) {
-        this._index = routerViewRegister.size;
-        this.setAttribute('id', `rv-id-${this._index}`);
-        routerViewRegister.add(this._index);
-      }
+        if (scope?.attributes) {
+          Object.keys(scope.attributes).forEach((key) => {
+            this.setAttribute(
+              key,
+              scope.attributes
+                ? `${scope.attributes[key as keyof typeof scope.attributes]}`
+                : ''
+            );
+          });
+        }
 
-      if (scope?.attributes) {
-        Object.keys(scope.attributes).forEach((key) => {
-          this.setAttribute(
-            key,
-            scope.attributes
-              ? `${scope.attributes[key as keyof typeof scope.attributes]}`
-              : ''
-          );
-        });
-      }
+        const route = mainScope.router?.matchedRoutes?.[
+          matchedRoutesLength - this._index - 1
+        ] as Route;
 
-      const route = mainScope.router?.matchedRoutes?.[
-        matchedRoutesLength - this._index - 1
-      ] as Route;
+        if (route) {
+          const routeComponent = route.component as NonNullable<
+            typeof route.component
+          >;
+          this.innerHTML = '';
 
-      if (route) {
-        const routeComponent = route.component as NonNullable<
-          typeof route.component
-        >;
-        this.innerHTML = '';
-
-        await mainScope.asyncLoadComponentTemplate({
-          target: this,
-          components: [
-            async () => {
-              const componentScope = await routeComponent();
-              return {
-                template: `<${componentScope.componentTagName} wcScope="wcScope${this._index}">
+          mainScope.asyncLoadComponentTemplate({
+            target: this,
+            components: [
+              async () => {
+                const componentScope = await routeComponent();
+                return {
+                  template: `<${componentScope.componentTagName} wcScope="wcScope${this._index}">
 </${componentScope.componentTagName}>` /* wcScope${this._index} -> avoids nested template parsing errors because the first scope would be sent to all other instances caring the same scope names */,
-                scopesGetter: async () => {
-                  return {
-                    [`wcScope${this._index}`]: componentScope
-                  };
-                }
-              };
-            }
-          ]
-        });
+                  scopesGetter: async () => {
+                    return {
+                      [`wcScope${this._index}`]: componentScope
+                    };
+                  }
+                };
+              }
+            ]
+          });
+        }
       }
-    }
+    );
 
     disconnectedCallback() {
       if (this._index != undefined) {

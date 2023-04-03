@@ -1,24 +1,16 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { _Input, _Button } = {
-    _Button: mainScope.asyncComponent(() =>
-      mainScope.asyncStaticModule(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-          )
+  const { builder: b } = mainScope.useComponents({
+    ['button-component']: () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+      ),
+    ['input-component']: () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
       )
-    ),
-    _Input: mainScope.asyncComponent(() =>
-      mainScope.asyncStaticModule(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
-          )
-      )
-    )
-  };
+  });
 
   const scopedCss = mainScope.asyncStaticFile(
     () => import('/remoteModules/frontend/modules/auth/pages/page.Auth.scss')
@@ -28,74 +20,39 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   );
 
   class Element extends mainScope.HTMLElement {
-    constructor() {
-      super();
-    }
-
-    async initElement() {
-      await mainScope.asyncLoadComponentTemplate({
+    initElement = this.useInitElement(mainScope, async () => {
+      mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          {
-            /* language=HTML */
-            template: `
-              <div class="card glow">
-                <div class="m-b-16">
-                  <h1>Welcome!</h1>
-                </div>
-                <input-component
-                    class="bg-default m-b-8"
-                    wcScope="xInputUserScope"
-                >
-                </input-component>
-                <input-component
-                    class="bg-default"
-                    wcScope="xInputPassScope"
-                >
-                </input-component>
-                <div class="actions">
-                  <button-component
-                      class="bg-primary"
-                      wcScope="xButtonScope"
-                  >
-                  </button-component>
-                </div>
-              </div>`,
-            scopesGetter() {
-              return {
-                xButtonScope: _Button.then(({ getScope }) => {
-                  return getScope({
-                    onClick() {
-                      mainScope.router.push('home');
-                    },
-                    label: 'Log In'
-                  });
-                }),
-                xInputUserScope: _Input.then(({ getScope }) => {
-                  return getScope({
-                    onInput(value: string) {
-                      console.log(value);
-                    },
-                    elementAttributes: {
-                      placeholder: 'Username'
-                    }
-                  });
-                }),
-                xInputPassScope: _Input.then(({ getScope }) => {
-                  return getScope({
-                    onInput(value: string) {
-                      console.log(value);
-                    },
-                    elementAttributes: {
-                      placeholder: 'Password',
-                      type: 'password',
-                      autocomplete: 'new-password'
-                    }
-                  });
-                })
-              };
-            }
-          },
+          b('<div>', { className: 'card glow' }, [
+            b('<div>', { className: 'm-b-16' }, [
+              b('<h1>', { innerText: 'Welcome!' })
+            ]),
+            b('<input-component>', {
+              elementAttributes: { placeholder: 'Username' },
+              attributes: { className: 'bg-default m-b-8' },
+              onInput(value: string) {
+                console.log(value);
+              }
+            }),
+            b('<input-component>', {
+              elementAttributes: { placeholder: 'Password', type: 'password' },
+              attributes: { className: 'bg-default' },
+              onInput(value: string) {
+                console.log(value);
+              }
+            }),
+            b('<div>', { className: 'actions' }, [
+              b('<button-component>', {
+                elementAttributes: { innerText: 'Log In' },
+                attributes: { className: 'bg-primary' },
+                onClick() {
+                  mainScope.router.push('home');
+                }
+              })
+            ])
+          ]),
+
           async () => {
             return (
               instance.getScopedCss(await scopedCss) +
@@ -106,7 +63,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           }
         ]
       });
-    }
+    });
   }
 
   const instance = new mainScope.HTMLComponent(

@@ -2,13 +2,11 @@ import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { _DynamicHtmlView } = {
-    _DynamicHtmlView: mainScope.asyncComponent(() =>
-      mainScope.asyncStaticModule(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-          )
-      )
+    _DynamicHtmlView: mainScope.asyncComponent(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
+        )
     )
   };
 
@@ -20,12 +18,8 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   );
 
   class Element extends mainScope.HTMLElement {
-    constructor() {
-      super();
-    }
-
-    async initElement() {
-      await mainScope.asyncLoadComponentTemplate({
+    initElement = this.useInitElement(mainScope, () => {
+      mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           _DynamicHtmlView.then(async ({ getScope }) => {
@@ -43,7 +37,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           }
         ]
       });
-    }
+    });
   }
 
   const instance = new mainScope.HTMLComponent(

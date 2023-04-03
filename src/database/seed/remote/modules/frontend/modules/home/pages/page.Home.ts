@@ -29,7 +29,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       super();
     }
 
-    async initElement() {
+    initElement = this.useInitElement(mainScope, async () => {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
@@ -48,7 +48,9 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               onClick() {
                 mainScope.router.push('about');
               },
-              label: 'About'
+              elementAttributes: {
+                innerText: 'About'
+              }
             })
           ),
           _Button.then(({ getScope }) =>
@@ -56,8 +58,8 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               onClick() {
                 mainScope.router.push('components');
               },
-              label: 'Dev Components',
               elementAttributes: {
+                innerText: 'Dev Components',
                 className: 'bg-primary'
               }
             })
@@ -95,7 +97,9 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                 ),
                 xButtonScope: _Button.then(({ getScope }) =>
                   getScope({
-                    label: 'Test Button'
+                    elementAttributes: {
+                      innerText: 'Test Button'
+                    }
                   })
                 ),
                 xSecInputScope: _Input.then(({ getScope }) =>
@@ -111,7 +115,9 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                 ),
                 xSecButtonScope: _Button.then(({ getScope }) =>
                   getScope({
-                    label: 'Test Button'
+                    elementAttributes: {
+                      innerText: 'Test Button'
+                    }
                   })
                 )
               };
@@ -122,7 +128,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
           }
         ]
       });
-    }
+    });
   }
 
   const instance = new mainScope.HTMLComponent(

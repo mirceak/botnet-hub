@@ -12,11 +12,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   class Element extends mainScope.HTMLElement {
     private removeInputListener?: CallableFunction;
 
-    constructor() {
-      super();
-    }
-
-    async initElement(scope: ILocalScope) {
+    initElement = this.useInitElement(mainScope, (scope: ILocalScope) => {
       this.render(scope);
 
       if (scope.onInput) {
@@ -28,7 +24,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           }
         );
       }
-    }
+    });
 
     render(scope: ILocalScope) {
       const selectEl = document.createElement('input');

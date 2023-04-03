@@ -16,11 +16,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       computed: CallableFunction;
     };
 
-    constructor() {
-      super();
-    }
-
-    async initElement(scope: ILocalScope) {
+    initElement = this.useInitElement(mainScope, (scope: ILocalScope) => {
       if (scope.attributes) {
         Object.keys(scope.attributes).forEach((key) => {
           this.setAttribute(
@@ -50,7 +46,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       } else {
         this.render(mainScope, scope.listGetter());
       }
-    }
+    });
 
     render(
       mainScope: IMainScope,

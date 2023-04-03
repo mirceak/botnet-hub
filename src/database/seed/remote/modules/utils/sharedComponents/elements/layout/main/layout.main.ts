@@ -14,13 +14,11 @@ interface ILocalScope extends IElementScope {
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { _RouterView } = {
-    _RouterView: mainScope.asyncComponentScope(() =>
-      mainScope.asyncStaticModule(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-          )
-      )
+    _RouterView: mainScope.asyncComponentScope(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+        )
     )
   };
 
@@ -29,13 +27,9 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
   );
 
   class Element extends mainScope.HTMLElement {
-    constructor() {
-      super();
-    }
-
     /* *Required here and not in the "LayoutScope" because we might want to have layouts without props */
-    async initElement(scope: Required<ILocalScope>) {
-      await mainScope.asyncLoadComponentTemplate({
+    initElement = this.useInitElement(mainScope, async (scope: ILocalScope) => {
+      mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           async () => {
@@ -75,7 +69,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
           }
         ]
       });
-    }
+    });
   }
 
   const instance = new mainScope.HTMLComponent<ILocalScope>(

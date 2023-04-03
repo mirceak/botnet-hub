@@ -204,7 +204,7 @@ export const init: IKernelModuleInit = async (context) => {
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/template/TemplateListView.js'
+        '/remoteModules/utils/sharedComponents/dynamicViews/template/DynamicListView.js'
       )
   );
   await loadSeederModule(

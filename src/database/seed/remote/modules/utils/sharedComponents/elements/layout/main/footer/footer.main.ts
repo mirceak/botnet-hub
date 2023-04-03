@@ -9,14 +9,10 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   );
 
   class Element extends mainScope.HTMLElement {
-    constructor() {
-      super();
-    }
-
-    async initElement() {
+    initElement = this.useInitElement(mainScope, () => {
       this.innerHTML =
         `<h1>Footer</h1>` + instance.getScopedCss(scopedCss.toString());
-    }
+    });
   }
 
   const instance = new mainScope.HTMLComponent(

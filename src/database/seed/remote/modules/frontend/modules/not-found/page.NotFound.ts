@@ -2,12 +2,8 @@ import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   class Element extends mainScope.HTMLElement {
-    constructor() {
-      super();
-    }
-
-    async initElement() {
-      await mainScope.asyncLoadComponentTemplate({
+    initElement = this.useInitElement(mainScope, async () => {
+      mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           {
@@ -15,7 +11,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           }
         ]
       });
-    }
+    });
   }
 
   return new mainScope.HTMLComponent(tagName || 'not-found-component', Element);

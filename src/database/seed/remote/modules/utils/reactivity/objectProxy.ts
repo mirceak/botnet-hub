@@ -203,7 +203,7 @@ const handler = <ObjectType>(
           /* we are replacing the existing values of the proxy tree we're currently on*/
           Object.assign(obj[prop], value);
         } else {
-          /* the object deleted and reassigned, and we're creating a new proxy tree but keeping the old one alive to keep the pre-existing references alive */
+          /* the object got deleted and reassigned, and we're creating a new proxy tree but keeping the old one alive to keep the pre-existing references alive */
           Reflect.set(obj, prop, value, receiver);
           this._proxySet.set(
             prop,

@@ -2,21 +2,17 @@ import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { _Input, _Button } = {
-    _Button: mainScope.asyncComponent(() =>
-      mainScope.asyncStaticModule(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-          )
-      )
+    _Button: mainScope.asyncComponent(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        )
     ),
-    _Input: mainScope.asyncComponent(() =>
-      mainScope.asyncStaticModule(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
-          )
-      )
+    _Input: mainScope.asyncComponent(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+        )
     )
   };
 
@@ -28,12 +24,8 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   );
 
   class Element extends mainScope.HTMLElement {
-    constructor() {
-      super();
-    }
-
-    async initElement() {
-      await mainScope.asyncLoadComponentTemplate({
+    initElement = this.useInitElement(mainScope, () => {
+      mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           async () => {
@@ -92,6 +84,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                           class="bg-secondary"
                           wcScope="xInputSecondary">
                       </input-component>
+                      <about-component></about-component>
                       <input-component
                           class="bg-info"
                           wcScope="xInputInfo">
@@ -114,37 +107,51 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                       onClick() {
                         mainScope.router.push('home');
                       },
-                      label: 'Back'
+                      elementAttributes: {
+                        innerText: 'Back'
+                      }
                     });
                   }),
                   xButtonDefault: _Button.then(({ getScope }) => {
                     return getScope({
-                      label: 'Default'
+                      elementAttributes: {
+                        innerText: 'Default'
+                      }
                     });
                   }),
                   xButtonPrimary: _Button.then(({ getScope }) => {
                     return getScope({
-                      label: 'Primary'
+                      elementAttributes: {
+                        innerText: 'Primary'
+                      }
                     });
                   }),
                   xButtonSecondary: _Button.then(({ getScope }) => {
                     return getScope({
-                      label: 'Secondary'
+                      elementAttributes: {
+                        innerText: 'Secondary'
+                      }
                     });
                   }),
                   xButtonInfo: _Button.then(({ getScope }) => {
                     return getScope({
-                      label: 'Info'
+                      elementAttributes: {
+                        innerText: 'Info'
+                      }
                     });
                   }),
                   xButtonWarning: _Button.then(({ getScope }) => {
                     return getScope({
-                      label: 'Warning'
+                      elementAttributes: {
+                        innerText: 'Warning'
+                      }
                     });
                   }),
                   xButtonDanger: _Button.then(({ getScope }) => {
                     return getScope({
-                      label: 'Danger'
+                      elementAttributes: {
+                        innerText: 'Danger'
+                      }
                     });
                   }),
                   xInputDefault: _Input.then(({ getScope }) => {
@@ -198,7 +205,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           }
         ]
       });
-    }
+    });
   }
 
   const instance = new mainScope.HTMLComponent(

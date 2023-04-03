@@ -1,26 +1,20 @@
 import type {
-  IMainScope,
-  IComponentExtendingElementScope
+  IComponentExtendingElementScope,
+  IHTMLBaseElementComponent,
+  IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-export interface ILocalScope
+interface ILocalButtonScope
   extends IComponentExtendingElementScope<HTMLButtonElement> {
   onClick?: () => void;
-  label: string;
 }
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   class Element extends mainScope.HTMLElement {
     private removeClickListener?: CallableFunction;
 
-    constructor() {
-      super();
-    }
-
-    async initElement(scope?: ILocalScope) {
-      if (scope?.label) {
-        this.render(scope);
-      }
+    initElement = this.useInitElement(mainScope, (scope: ILocalButtonScope) => {
+      this.render(scope);
 
       if (scope?.onClick) {
         this.removeClickListener = mainScope.registerEventListener(
@@ -31,14 +25,13 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           }
         );
       }
-    }
+    });
 
-    render(scope?: ILocalScope) {
-      const buttonEl = document.createElement('button');
-      Object.assign(buttonEl, scope?.elementAttributes);
-      if (scope?.label) {
-        buttonEl.innerText = scope.label;
-      }
+    render(scope?: ILocalButtonScope) {
+      const buttonEl = document.createElement('button') as HTMLButtonElement &
+        IHTMLBaseElementComponent;
+      buttonEl.component = new mainScope.BaseElement(buttonEl);
+      buttonEl.component.initElement(mainScope, scope?.elementAttributes);
       this.appendChild(buttonEl);
     }
 
@@ -47,7 +40,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
   }
 
-  return new mainScope.HTMLComponent<ILocalScope>(
+  return new mainScope.HTMLComponent<ILocalButtonScope>(
     tagName || 'button-component',
     Element
   );
