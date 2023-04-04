@@ -7,6 +7,7 @@ import type {
 export interface Route {
   path: string;
   name?: string;
+  params?: object;
   redirect?: string;
   component?: () => Promise<IComponentStaticScope>;
   children?: Route[];
@@ -18,8 +19,7 @@ export interface Route {
 export interface Router {
   ready?: true;
   routes: Route[];
-  push: (name: string, fromBrowser?: boolean) => Promise<void>;
-  redirect: (name: string) => Promise<void>;
+  push: (route: Partial<Route>, replace?: boolean) => Promise<void>;
   onPopState: (e: PopStateEvent) => void;
   onDestroy: () => void;
   removePopstateListener?: CallableFunction;
@@ -36,28 +36,48 @@ interface IBrowserHistoryState {
 }
 
 let pathToRegexp: typeof import('path-to-regexp/dist/index.js')['pathToRegexp'];
+let compile: typeof import('path-to-regexp/dist/index.js')['compile'];
+let match: typeof import('path-to-regexp/dist/index.js')['match'];
 
 const getRouter = (): Router => {
   return {
     routes: [] as Route[],
     onPopState(e: IPopStateEvent) {
-      return this.push(e.state.name, true);
+      return this.push(e.state, true);
     },
     onDestroy() {
       this.removePopstateListener?.();
     },
-    async push(name, replaceRoute = false) {
+    async push(route, replaceRoute = false) {
+      if (route.path && route.path !== '/') {
+        route.path = route.path.replace(/^\//g, '');
+      }
+
       const matched = this.routes.reduce(
         generalReducer.bind({
-          searchVal: name,
-          condition: matchedRouteNameCondition
+          searchVal: route.name || route.path,
+          condition: route.name
+            ? matchedRouteNameCondition
+            : matchedRoutePathCondition
         }),
         [] as Route[]
       );
 
+      if (!route.params && route.path) {
+        const matchedRoute = match(
+          (matched[0].computedPath as string).replace(/^\//g, ''),
+          {
+            decode: decodeURIComponent
+          }
+        )(route.path as string);
+        if (matchedRoute) {
+          route.params = matchedRoute.params;
+        }
+      }
+
       if (matched?.length) {
         if (matched[0].redirect) {
-          return this.redirect(matched[0].redirect);
+          return this.push({ name: matched[0].redirect });
         }
 
         const reversedMatchedRoutes =
@@ -73,17 +93,30 @@ const getRouter = (): Router => {
         this.currentRoute = matched[0];
         this.matchedRoutes?.splice(0, this.matchedRoutes.length, ...matched);
 
+        const realComputedPath = compile(
+          (matched[0].computedPath as string).replace(/^\//g, ''),
+          {
+            encode: encodeURIComponent
+          }
+        )(route.params);
+
         if (!replaceRoute) {
           window.history.pushState(
-            { name: matched[0].name, computedPath: matched[0].computedPath },
+            {
+              name: matched[0].name,
+              params: route.params
+            },
             '',
-            (matched[0].computedPath as string) + (window.location.search || '')
+            `/${realComputedPath || ''}${window.location.search || ''}`
           );
         } else {
           window.history.replaceState(
-            { name: matched[0].name, computedPath: matched[0].computedPath },
+            {
+              name: matched[0].name,
+              params: route.params
+            },
             '',
-            (matched[0].computedPath as string) + (window.location.search || '')
+            `/${realComputedPath || ''}${window.location.search || ''}`
           );
         }
 
@@ -98,11 +131,8 @@ const getRouter = (): Router => {
           }
         }
       } else {
-        throw new Error(`Route "${name}" not found`);
+        throw new Error(`Route "${route.name}" not found`);
       }
-    },
-    async redirect(name) {
-      return this.push(name, true);
     }
   };
 };
@@ -111,13 +141,17 @@ export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
   const router = getRouter();
   if (!pathToRegexp) {
     /*TODO: Replace with own implementation of path interpreter*/
-    pathToRegexp = await mainScope
+    await mainScope
       .asyncStaticModule(
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         () => import('/node_modules/path-to-regexp/dist.es2015/index.js')
       )
-      .then((module) => module.pathToRegexp);
+      .then((module) => {
+        pathToRegexp = module.pathToRegexp;
+        compile = module.compile;
+        match = module.match;
+      });
   }
 
   router.routes.push(...(useRoutes(mainScope) as Route[]).map(routeMapper));
@@ -137,17 +171,25 @@ export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
   }
 
   if (router.currentRoute && router.currentRoute.redirect) {
-    await router.redirect(router.currentRoute.redirect);
+    await router.push({ ...router.currentRoute }, true);
   }
+
+  const realComputedPath = match(
+    (router.currentRoute.computedPath as string).replace(/^\//g, ''),
+    {
+      decode: decodeURIComponent
+    }
+  )(window.location.pathname.replace(/^\//g, ''));
 
   window.history.replaceState(
     {
       name: router.currentRoute.name,
-      computedPath: router.currentRoute.computedPath
+      params: realComputedPath && realComputedPath.params
     },
     '',
-    (router.currentRoute.computedPath as string) +
-      (window.location.search || '')
+    `/${(realComputedPath && realComputedPath.path) || ''}${
+      window.location.search || ''
+    }`
   );
 
   router.removePopstateListener = mainScope.registerEventListener(
@@ -219,7 +261,9 @@ const matchedRoutePathCondition = (
   searchVal: string
 ): boolean => {
   return !!(
-    pathToRegexp(currentRoute.computedPath as string).exec(searchVal) ||
+    pathToRegexp(
+      (currentRoute.computedPath as string).replace(/^\//g, '')
+    ).exec(searchVal.replace(/^\//g, '')) ||
     (currentRoute.path === '' && currentRoute.parent
       ? pathToRegexp(currentRoute.parent.computedPath as string).exec(searchVal)
       : undefined)
@@ -254,6 +298,13 @@ export const useRoutes = (mainScope: IMainScope): Route[] => [
           {
             path: '',
             name: 'home',
+            component() {
+              return PageHomeComponent(mainScope);
+            }
+          },
+          {
+            path: ':userId(\\d+)',
+            name: 'homeUser',
             component() {
               return PageHomeComponent(mainScope);
             }

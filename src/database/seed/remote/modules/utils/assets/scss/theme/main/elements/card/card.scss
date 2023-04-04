@@ -21,4 +21,11 @@
     margin-top: var(--card-margin);
     width: 100%;
   }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
 }

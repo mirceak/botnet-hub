@@ -24,30 +24,37 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          b('<div>', { className: 'card glow' }, [
+          b('<div>', { className: 'card glow flex justify-center-xs-min' }, [
             b('<div>', { className: 'm-b-16' }, [
-              b('<h1>', { innerText: 'Welcome!' })
+              b('<h1>', {
+                innerText: () => mainScope.store.data.home.titleWithName
+              })
             ]),
-            b('<input-component>', {
-              elementAttributes: { placeholder: 'Username' },
-              attributes: { className: 'bg-default m-b-8' },
-              onInput(value: string) {
-                console.log(value);
-              }
-            }),
-            b('<input-component>', {
-              elementAttributes: { placeholder: 'Password', type: 'password' },
-              attributes: { className: 'bg-default' },
-              onInput(value: string) {
-                console.log(value);
-              }
-            }),
+            b('<div>', { className: 'content' }, [
+              b('<input-component>', {
+                elementAttributes: { placeholder: 'Username' },
+                attributes: { className: 'bg-default m-b-8' },
+                onInput(value: string) {
+                  mainScope.store.data.home.nameInput = value;
+                }
+              }),
+              b('<input-component>', {
+                elementAttributes: {
+                  placeholder: 'Password',
+                  type: 'password'
+                },
+                attributes: { className: 'bg-default' },
+                onInput(value: string) {
+                  console.log(value);
+                }
+              })
+            ]),
             b('<div>', { className: 'actions' }, [
               b('<button-component>', {
                 elementAttributes: { innerText: 'Log In' },
                 attributes: { className: 'bg-primary' },
                 onClick() {
-                  mainScope.router.push('home');
+                  mainScope.router.push({ name: 'home' });
                 }
               })
             ])

@@ -12,6 +12,17 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/frontend/modules/home/pages/page.About.scss')
   );
 
+  const someApiList = [
+    {
+      name: '1',
+      id: '1'
+    },
+    {
+      name: '2',
+      id: '2'
+    }
+  ];
+
   class Element extends mainScope.HTMLElement {
     initElement = this.useInitElement(mainScope, async () => {
       mainScope.asyncLoadComponentTemplate({
@@ -19,6 +30,14 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
         components: [
           b('<div>', { className: 'card m-t-64 fit-content' }, [
             b('<h1>', { innerText: 'About Page' }),
+            ...someApiList.map((apiListItem) => {
+              return b('<button-component>', {
+                elementAttributes: {
+                  className: 'bg-primary p-x-16',
+                  innerText: apiListItem.name
+                }
+              });
+            }),
             b('<div>', { className: 'row full-width justify-center' }, [
               b('<button-component>', {
                 elementAttributes: {
@@ -26,7 +45,9 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                   innerText: 'Home'
                 },
                 onClick() {
-                  mainScope.router.push('home');
+                  mainScope.router.push({
+                    path: 'home'
+                  });
                 }
               })
             ])

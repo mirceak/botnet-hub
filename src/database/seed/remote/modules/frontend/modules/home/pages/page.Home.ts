@@ -1,24 +1,16 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
-  const { _Input, _Button } = {
-    _Button: mainScope.asyncComponent(() =>
-      mainScope.asyncStaticModule(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-          )
+  const { builder: b } = mainScope.useComponents({
+    ['button-component']: () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+      ),
+    ['input-component']: () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
       )
-    ),
-    _Input: mainScope.asyncComponent(() =>
-      mainScope.asyncStaticModule(
-        () =>
-          import(
-            '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
-          )
-      )
-    )
-  };
+  });
 
   const scopedCss = mainScope.asyncStaticFile(
     () => import('/remoteModules/frontend/modules/home/pages/page.Home.scss')
@@ -33,96 +25,31 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          _Input.then(({ getScope }) =>
-            getScope({
-              onInput(value: string) {
-                mainScope.store.data.home.nameInput = value;
-              },
-              elementAttributes: {
-                placeholder: 'Enter Your Name...'
-              }
-            })
-          ),
-          _Button.then(({ getScope }) =>
-            getScope({
-              onClick() {
-                mainScope.router.push('about');
-              },
-              elementAttributes: {
-                innerText: 'About'
-              }
-            })
-          ),
-          _Button.then(({ getScope }) =>
-            getScope({
-              onClick() {
-                mainScope.router.push('components');
-              },
-              elementAttributes: {
-                innerText: 'Dev Components',
-                className: 'bg-primary'
-              }
-            })
-          ),
-          {
-            /* language=HTML */
-            template: `
-                <div class="row column">
-                    <small>Consider this scoped</small>
-                    <input-component wcScope="xInputScope">
-                    </input-component>
-
-                    <button-component wcScope="xButtonScope">
-                    </button-component>
-                </div>
-                <div class="row column">
-                    <small>Consider this nested and scoped</small>
-                    <input-component wcScope="xSecInputScope">
-                    </input-component>
-                    <button-component wcScope="xSecButtonScope">
-                    </button-component>
-                </div>
-            `,
-            scopesGetter() {
-              return {
-                xInputScope: _Input.then(({ getScope }) =>
-                  getScope({
-                    onInput(value: string) {
-                      mainScope.store.data.home.nameInput = value;
-                    },
-                    elementAttributes: {
-                      placeholder: 'Test Input'
-                    }
-                  })
-                ),
-                xButtonScope: _Button.then(({ getScope }) =>
-                  getScope({
-                    elementAttributes: {
-                      innerText: 'Test Button'
-                    }
-                  })
-                ),
-                xSecInputScope: _Input.then(({ getScope }) =>
-                  getScope({
-                    onInput(value: string) {
-                      mainScope.store.data.home.nameInput = value;
-                    },
-                    elementAttributes: {
-                      className: 'p-x-16',
-                      placeholder: 'Test Input'
-                    }
-                  })
-                ),
-                xSecButtonScope: _Button.then(({ getScope }) =>
-                  getScope({
-                    elementAttributes: {
-                      innerText: 'Test Button'
-                    }
-                  })
-                )
-              };
+          b('<input-component>', {
+            onInput(value: string) {
+              mainScope.store.data.home.nameInput = value;
+            },
+            elementAttributes: {
+              placeholder: 'Enter some text...'
             }
-          },
+          }),
+          b('<button-component>', {
+            onClick() {
+              mainScope.router.push({ name: 'about' });
+            },
+            elementAttributes: {
+              innerText: 'About'
+            }
+          }),
+          b('<button-component>', {
+            onClick() {
+              mainScope.router.push({ name: 'components' });
+            },
+            elementAttributes: {
+              innerText: 'Dev Components',
+              className: 'bg-primary'
+            }
+          }),
           async () => {
             return instance.getScopedCss(await scopedCss);
           }

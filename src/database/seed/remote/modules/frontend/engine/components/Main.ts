@@ -223,7 +223,7 @@ abstract class BaseHtmlElement
     };
   }
 
-  abstract initElement: CallableFunction;
+  abstract initElement: ReturnType<typeof this.useInitElement>;
 }
 
 class BaseElement {
@@ -256,7 +256,7 @@ class BaseElement {
           reactiveObject: Record<keyof typeof scope, CallableFunction>;
         }
       )) || { undefined };
-    if (reactiveObject) {
+    if (reactiveObject && Object.values(reactiveObject).length) {
       const render = () => {
         const reactiveResultsObject = Object.keys(reactiveObject).reduce(
           (reduced, key) => {
@@ -580,6 +580,8 @@ class HTMLElementsScope {
         ];
         const tag = tagName.replace(/^<|\/?>$/g, '') as keyof Components;
         const scopeGetter = components[tag] as ScopeGetter;
+
+        // TODO: build element and return it here, do not wait until template parsing. this way the reference to the object can be stored in the parent component
 
         return {
           scopeGetter,
