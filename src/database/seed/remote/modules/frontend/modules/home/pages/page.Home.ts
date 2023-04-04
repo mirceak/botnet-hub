@@ -1,7 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
-  const { builder: b } = mainScope.useComponents({
+  const { builder: o } = mainScope.useComponents({
     ['button-component']: () =>
       import(
         '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
@@ -25,7 +25,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          b('<input-component>', {
+          o('<input-component>', {
             onInput(value: string) {
               mainScope.store.data.home.nameInput = value;
             },
@@ -33,7 +33,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               placeholder: 'Enter some text...'
             }
           }),
-          b('<button-component>', {
+          o('<button-component>', {
             onClick() {
               mainScope.router.push({ name: 'about' });
             },
@@ -41,7 +41,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               innerText: 'About'
             }
           }),
-          b('<button-component>', {
+          o('<button-component>', {
             onClick() {
               mainScope.router.push({ name: 'components' });
             },

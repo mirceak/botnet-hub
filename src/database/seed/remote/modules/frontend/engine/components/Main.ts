@@ -38,16 +38,12 @@ export type IMainScope = InstanceType<typeof HTMLElementsScope>;
 export type IComponentComposedScope = IComponentStaticScope & object;
 
 export interface IElementScope {
-  attributes?: Partial<
-    OnlyWritableAttributes<OnlyEditableAttributes<HTMLElement>>
-  >;
+  attributes?: FilteredElementTypeProperties<HTMLElement>;
 }
 
 export interface IComponentExtendingElementScope<ElementType = HTMLElement>
   extends IElementScope {
-  elementAttributes?: Partial<
-    OnlyWritableAttributes<OnlyEditableAttributes<ElementType>>
-  >;
+  elementAttributes?: FilteredElementTypeProperties<ElementType>;
 }
 
 export interface IComponentStaticScope {
@@ -163,11 +159,15 @@ type OnlyWritableAttributes<K> = {
   [attr in keyof K as IsReadonly<K, attr> extends true ? never : attr]: K[attr];
 };
 
+type FilteredElementTypeProperties<ElementType> = Partial<
+  OnlyWritableAttributes<OnlyEditableAttributes<ElementType>>
+>;
+
 type ValueOrFunction<K> = {
   [attr in keyof K]: K[attr] | (() => K[attr] | undefined);
 };
 
-type TransformScope<K> =
+type MakeScopeReactive<K> =
   | K
   | ({
       [attr in keyof K as attr extends 'attributes' | 'elementAttributes'
@@ -179,22 +179,13 @@ type TransformScope<K> =
         : attr]: K[attr];
     });
 
-interface oElementReturn<ScopeGetter> {
-  scopeGetter: Promise<ScopeGetter> | ScopeGetter;
-  scope: ScopeGetter extends (...args: infer _Scope) => unknown
-    ? AsyncAndPromise<_Scope>
-    : unknown;
-  children?: oElementReturn<unknown>[];
-  tagName: string;
-  nested: boolean;
-}
-
 export interface NestedElement {
-  tagName: string;
-  scope: unknown;
   scopeGetter?: Promise<unknown> | unknown;
-  nested: boolean;
+  scope: unknown;
   children?: NestedElement[];
+  element: Promise<HTMLElement>;
+  tagName: string;
+  isCustomElement: boolean;
 }
 
 abstract class BaseHtmlElement
@@ -433,9 +424,13 @@ class HTMLElementsScope {
   };
 
   /* we add blocking logic after everything finished loading and rendering */
-  asyncHydrationCallback = async <T>(callback: () => Promise<T>) => {
+  asyncHydrationCallback = async <T>(
+    callback: () => Promise<T>
+  ): Promise<void> => {
     if (this.asyncHydrationCallbackIndex !== -1) {
       this.asyncHydrationCallbackIndex++;
+    } else {
+      return void callback();
     }
 
     await callback();
@@ -494,9 +489,9 @@ class HTMLElementsScope {
         ...e: IsClosedTag extends true
           ? [tag: Tag, children?: Children[]] extends [
               tag: Tag,
-              children?: oElementReturn<unknown>[]
+              children?: NestedElement[]
             ]
-            ? [tag: Tag, children?: oElementReturn<unknown>[]]
+            ? [tag: Tag, children?: NestedElement[]]
             : [
                 tag: Tag,
                 error?: "Error: Closing tag '/>' detected. This component will not initialize, so it can only receive a children's array!"
@@ -518,15 +513,15 @@ class HTMLElementsScope {
                         >
                       : never
                   >
-                | oElementReturn<unknown>[],
-              children?: oElementReturn<unknown>[]
+                | NestedElement[],
+              children?: NestedElement[]
             ]
           : HasRequired<InferredScope> extends true
           ? [
               tag: Tag,
               scope: IsCustomComponent extends true
                 ? RequiredNested<InferredScope> extends Scope
-                  ? AsyncAndPromise<TransformScope<Scope>>
+                  ? AsyncAndPromise<MakeScopeReactive<Scope>>
                   : NoExtraKeysError<
                       ExcludeExtraKeys<InferredScope, Scope>,
                       Tag
@@ -544,14 +539,14 @@ class HTMLElementsScope {
                         >
                       : never
                   >,
-              children?: oElementReturn<unknown>[]
+              children?: NestedElement[]
             ]
           : [
               tag: Tag,
               scope?:
                 | (IsCustomComponent extends true
                     ? RequiredNested<InferredScope> extends Scope
-                      ? AsyncAndPromise<TransformScope<Scope>>
+                      ? AsyncAndPromise<MakeScopeReactive<Scope>>
                       : NoExtraKeysError<
                           ExcludeExtraKeys<InferredScope, Scope>,
                           Tag
@@ -569,26 +564,43 @@ class HTMLElementsScope {
                             >
                           : never
                       >)
-                | oElementReturn<unknown>[],
-              children?: oElementReturn<unknown>[]
+                | NestedElement[],
+              children?: NestedElement[]
             ]
       ) => {
         const [tagName, scope, children] = e as [
           Tag,
-          AsyncAndPromise<Scope> | oElementReturn<unknown>[] | undefined,
-          oElementReturn<unknown>[] | undefined
+          AsyncAndPromise<Scope> | NestedElement[] | undefined,
+          NestedElement[] | undefined
         ];
-        const tag = tagName.replace(/^<|\/?>$/g, '') as keyof Components;
+        const tag = tagName.replace(/^<|\/?>$/g, '') as keyof Components &
+          string;
+        const isCustomElement =
+          Object.keys(components || {}).indexOf(tag) !== -1;
+        let element: Promise<HTMLElement>;
+        if (!isCustomElement) {
+          const temp = document.createElement(tag);
+          (temp as IHTMLBaseElementComponent).component = new BaseElement(temp);
+          element = new Promise((resolve) => resolve(temp));
+        } else {
+          const constructor = window.customElements.get(tag);
+          if (constructor) {
+            element = new Promise((resolve) => resolve(new constructor()));
+          } else {
+            element = window.customElements
+              .whenDefined(tag)
+              .then((_constructor) => new _constructor());
+          }
+        }
         const scopeGetter = components[tag] as ScopeGetter;
-
-        // TODO: build element and return it here, do not wait until template parsing. this way the reference to the object can be stored in the parent component
 
         return {
           scopeGetter,
           scope,
+          element,
           children,
-          tagName: tagName,
-          nested: true
+          isCustomElement,
+          tagName
         };
       }
     };
@@ -611,7 +623,7 @@ class HTMLElementsScope {
             if (typeof component !== 'string') {
               const componentScope = await component;
               if (componentScope) {
-                if ((componentScope as unknown as NestedElement).nested) {
+                if ((componentScope as unknown as NestedElement).tagName) {
                   const nestedElement =
                     componentScope as unknown as NestedElement;
                   return (await this.appendComponent(
@@ -753,49 +765,31 @@ class HTMLElementsScope {
     index: number
   ) => {
     const shouldInstantiate = !child.tagName.match(/^<(.*)\/>$/gis);
-    const tagName = child.tagName
-      .replaceAll(/^</gis, '')
-      .replaceAll(/\/>$/gis, '')
-      .replaceAll(/>$/gis, '');
-    let _componentConstructor = window.customElements.get(tagName);
-    let temp: IHTMLElementComponent | IHTMLBaseElementComponent | undefined;
-    if (_componentConstructor) {
-      temp = new _componentConstructor() as IHTMLElementComponent;
-    } else if (!_componentConstructor && !child.scopeGetter) {
-      temp = document.createElement(tagName) as IHTMLBaseElementComponent;
-      temp.component = new BaseElement(temp);
-    } else if (!temp) {
-      if (child.scopeGetter) {
-        child.scopeGetter = await child.scopeGetter;
-      }
-      await window.customElements.whenDefined(tagName);
-      _componentConstructor = window.customElements.get(tagName);
-      if (_componentConstructor) {
-        temp = new _componentConstructor() as IHTMLElementComponent;
-      }
-    }
-    if (temp) {
-      temp.setAttribute('wcY', index.toString());
+    const element = (await child.element) as
+      | IHTMLElementComponent
+      | IHTMLBaseElementComponent;
+
+    if (element) {
+      element.setAttribute('wcY', index.toString());
       const indexPosition = this.getIndexPositionInParent(
         index,
         target.children as unknown as HTMLElement[]
       );
       if (indexPosition < 0) {
-        target.appendChild(temp);
+        target.appendChild(element);
       } else {
-        target.insertBefore(temp, target.children[indexPosition]);
+        target.insertBefore(element, target.children[indexPosition]);
       }
 
       if (child) {
         if (
-          ((!child.children && this.helpers.isArray(child.scope)) ||
-            child?.children) &&
-          temp
+          (!child.children && this.helpers.isArray(child.scope)) ||
+          child?.children
         ) {
           for (const [_index, _child] of (
             child.children || (child.scope as unknown as [])
           ).entries()) {
-            void this.oElementParser(temp, _child, _index);
+            void this.oElementParser(element, _child, _index);
           }
         }
         if (shouldInstantiate) {
@@ -814,10 +808,10 @@ class HTMLElementsScope {
               throw new Error('Scope getter should be a method');
             }
           }
-          if (_componentConstructor) {
-            void (temp as IHTMLElementComponent).initElement(child.scope);
+          if (child.isCustomElement) {
+            void (element as IHTMLElementComponent).initElement(child.scope);
           } else {
-            void (temp as IHTMLBaseElementComponent).component?.initElement(
+            void (element as IHTMLBaseElementComponent).component?.initElement(
               this,
               child.scope as Record<string, unknown>
             );
@@ -826,7 +820,7 @@ class HTMLElementsScope {
       }
     }
 
-    return temp as HTMLElement;
+    return element as HTMLElement;
   };
 
   initiateComponentElement = async (

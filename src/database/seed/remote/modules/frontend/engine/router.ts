@@ -53,6 +53,8 @@ const getRouter = (): Router => {
         route.path = route.path.replace(/^\//g, '');
       }
 
+      // TODO: implement middleware
+
       const matched = this.routes.reduce(
         generalReducer.bind({
           searchVal: route.name || route.path,

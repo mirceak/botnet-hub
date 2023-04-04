@@ -10,6 +10,10 @@ export const isObject = (val: unknown) => {
   return ['[object Object]'].indexOf(Object.prototype.toString.call(val)) > -1;
 };
 
+export const isPromise = (val: unknown) => {
+  return ['[object Promise]'].indexOf(Object.prototype.toString.call(val)) > -1;
+};
+
 export const isArray = (val: unknown) => {
   return ['[object Array]'].indexOf(Object.prototype.toString.call(val)) > -1;
 };

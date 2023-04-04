@@ -1,7 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { builder: b } = mainScope.useComponents({
+  const { builder: o } = mainScope.useComponents({
     ['button-component']: () =>
       import(
         '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
@@ -24,21 +24,23 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          b('<div>', { className: 'card glow flex justify-center-xs-min' }, [
-            b('<div>', { className: 'm-b-16' }, [
-              b('<h1>', {
+          o('<div>', { className: 'card glow flex justify-center-xs-min' }, [
+            o('<div>', { className: 'm-b-16' }, [
+              o('<h1>', {
                 innerText: () => mainScope.store.data.home.titleWithName
               })
             ]),
-            b('<div>', { className: 'content' }, [
-              b('<input-component>', {
+            o('<div>', { className: 'content' }, [
+              o('<input-component>', {
                 elementAttributes: { placeholder: 'Username' },
-                attributes: { className: 'bg-default m-b-8' },
+                attributes: {
+                  className: 'bg-default m-b-8'
+                },
                 onInput(value: string) {
                   mainScope.store.data.home.nameInput = value;
                 }
               }),
-              b('<input-component>', {
+              o('<input-component>', {
                 elementAttributes: {
                   placeholder: 'Password',
                   type: 'password'
@@ -49,8 +51,8 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                 }
               })
             ]),
-            b('<div>', { className: 'actions' }, [
-              b('<button-component>', {
+            o('<div>', { className: 'actions' }, [
+              o('<button-component>', {
                 elementAttributes: { innerText: 'Log In' },
                 attributes: { className: 'bg-primary' },
                 onClick() {

@@ -1,20 +1,18 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { _RouterView } = {
-    _RouterView: mainScope.asyncComponentScope(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-        )
-    )
-  };
+  const { builder: o } = mainScope.useComponents({
+    ['router-view-component']: () =>
+      import(
+        '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+      )
+  });
 
   class Element extends mainScope.HTMLElement {
     initElement = this.useInitElement(mainScope, () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
-        components: [_RouterView]
+        components: [o('<router-view-component>')]
       });
     });
   }

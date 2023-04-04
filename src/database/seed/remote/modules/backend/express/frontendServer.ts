@@ -48,9 +48,6 @@ const routes = Object.freeze([
             requests: [
               {
                 path: '#remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.scss'
-              },
-              {
-                path: '#remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
               }
             ]
           }
@@ -79,9 +76,6 @@ const routes = Object.freeze([
               {
                 path: '#remoteModules/frontend/modules/home/pages/page.Home.js',
                 requests: [
-                  {
-                    path: '#remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-                  },
                   {
                     path: '#remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
                   },

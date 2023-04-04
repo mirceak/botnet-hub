@@ -1,7 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { builder: b } = mainScope.useComponents({
+  const { builder: o } = mainScope.useComponents({
     ['button-component']: () =>
       import(
         '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
@@ -24,9 +24,9 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          b('<div>', { className: 'card gap-8 m-a-16 fit-content' }, [
-            b('<div>', { className: 'header row items-center' }, [
-              b('<button-component>', {
+          o('<div>', { className: 'card gap-8 m-a-16 fit-content' }, [
+            o('<div>', { className: 'header row items-center' }, [
+              o('<button-component>', {
                 elementAttributes: {
                   innerText: 'Back'
                 },
@@ -37,19 +37,19 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                   mainScope.router.push({ name: 'home' });
                 }
               }),
-              b('<h1>', { innerText: 'Components' })
+              o('<h1>', { innerText: 'Components' })
             ]),
-            b('<div>', { className: 'card' }, [
-              b('<div>', { className: 'm-b-16' }, [
-                b('<h1>', { innerText: 'Buttons' })
+            o('<div>', { className: 'card' }, [
+              o('<div>', { className: 'm-b-16' }, [
+                o('<h1>', { innerText: 'Buttons' })
               ]),
-              b('<div>', { className: 'row gap-8' }, [
-                b('<button-component>', {
+              o('<div>', { className: 'row gap-8' }, [
+                o('<button-component>', {
                   elementAttributes: {
                     innerText: 'Default'
                   }
                 }),
-                b('<button-component>', {
+                o('<button-component>', {
                   elementAttributes: {
                     innerText: 'Primary'
                   },
@@ -57,7 +57,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                     className: 'bg-primary'
                   }
                 }),
-                b('<button-component>', {
+                o('<button-component>', {
                   elementAttributes: {
                     innerText: 'Secondary'
                   },
@@ -65,7 +65,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                     className: 'bg-secondary'
                   }
                 }),
-                b('<button-component>', {
+                o('<button-component>', {
                   elementAttributes: {
                     innerText: 'Info'
                   },
@@ -73,7 +73,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                     className: 'bg-info'
                   }
                 }),
-                b('<button-component>', {
+                o('<button-component>', {
                   elementAttributes: {
                     innerText: 'Warning'
                   },
@@ -81,7 +81,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                     className: 'bg-warning'
                   }
                 }),
-                b('<button-component>', {
+                o('<button-component>', {
                   elementAttributes: {
                     innerText: 'Danger'
                   },
@@ -91,18 +91,18 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                 })
               ])
             ]),
-            b('<div>', { className: 'card' }, [
-              b('<div>', { className: 'm-b-16' }, [
-                b('<h1>', { innerText: 'Inputs' })
+            o('<div>', { className: 'card' }, [
+              o('<div>', { className: 'm-b-16' }, [
+                o('<h1>', { innerText: 'Inputs' })
               ]),
-              b('<div>', { className: 'row gap-8' }, [
-                b('<div>', { className: 'row gap-8' }, [
-                  b('<input-component>', {
+              o('<div>', { className: 'row gap-8' }, [
+                o('<div>', { className: 'row gap-8' }, [
+                  o('<input-component>', {
                     elementAttributes: {
                       placeholder: 'Default'
                     }
                   }),
-                  b('<input-component>', {
+                  o('<input-component>', {
                     elementAttributes: {
                       placeholder: 'Primary'
                     },
@@ -110,7 +110,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                       className: 'bg-primary'
                     }
                   }),
-                  b('<input-component>', {
+                  o('<input-component>', {
                     elementAttributes: {
                       placeholder: 'Secondary'
                     },
@@ -118,7 +118,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                       className: 'bg-secondary'
                     }
                   }),
-                  b('<input-component>', {
+                  o('<input-component>', {
                     elementAttributes: {
                       placeholder: 'Info'
                     },
@@ -126,7 +126,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                       className: 'bg-info'
                     }
                   }),
-                  b('<input-component>', {
+                  o('<input-component>', {
                     elementAttributes: {
                       placeholder: 'Warning'
                     },
@@ -134,7 +134,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                       className: 'bg-warning'
                     }
                   }),
-                  b('<input-component>', {
+                  o('<input-component>', {
                     elementAttributes: {
                       placeholder: 'Danger'
                     },

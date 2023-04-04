@@ -1,14 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { _DynamicHtmlView } = {
-    _DynamicHtmlView: mainScope.asyncComponent(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-        )
-    )
-  };
+  const { builder: o } = mainScope.useComponents({});
 
   const scopedCss = mainScope.asyncStaticFile(
     () =>
@@ -22,15 +15,8 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          _DynamicHtmlView.then(async ({ getScope }) => {
-            return getScope({
-              templateGetter() {
-                /* language=HTML */
-                return `<h1>
-                  ${mainScope.store.data.home.titleWithName || ''}
-                </h1>`;
-              }
-            });
+          o('<h1>', {
+            innerText: () => mainScope.store.data.home.titleWithName
           }),
           async () => {
             return instance.getScopedCss(await scopedCss);

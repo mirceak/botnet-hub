@@ -1,7 +1,9 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const scopedCss = await mainScope.asyncStaticFile(
+  const { builder: o } = mainScope.useComponents({});
+
+  const scopedCss = mainScope.asyncStaticFile(
     () =>
       import(
         '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.scss'
@@ -10,8 +12,18 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
 
   class Element extends mainScope.HTMLElement {
     initElement = this.useInitElement(mainScope, async () => {
-      this.innerHTML =
-        `<h1>FullStack.js</h1>` + instance.getScopedCss(scopedCss.toString());
+      const footerElement = o('<h1>', {
+        innerText: 'FullStack.js'
+      });
+      mainScope.asyncLoadComponentTemplate({
+        target: this,
+        components: [
+          footerElement,
+          async () => {
+            return instance.getScopedCss(await scopedCss);
+          }
+        ]
+      });
     });
   }
 

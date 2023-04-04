@@ -222,12 +222,6 @@ export const init: IKernelModuleInit = async (context) => {
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/html/DynamicHtmlView.js'
-      )
-  );
-  await loadSeederModule(
-    () =>
-      import(
         '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
       )
   );
