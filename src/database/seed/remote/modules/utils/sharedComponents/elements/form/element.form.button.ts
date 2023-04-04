@@ -7,6 +7,7 @@ import type {
 interface ILocalButtonScope
   extends IComponentExtendingElementScope<HTMLButtonElement> {
   onClick?: () => void;
+  ss?: string;
 }
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {

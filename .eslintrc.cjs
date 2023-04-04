@@ -32,6 +32,7 @@ module.exports = {
       ],
       rules: {
         curly: 'off',
+        'no-async-promise-executor': 'off',
         'brace-style': 'off',
         indent: 'off',
         'import/prefer-default-export': 'off',

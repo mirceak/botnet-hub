@@ -57,7 +57,7 @@ export interface IHTMLElementComponentStaticScope {
     | Record<string, HTMLElementComponentStaticScope>;
 }
 
-export interface HTMLComponentModule<S> {
+export interface HTMLComponentModule<S = object> {
   default: (
     mainScope: HTMLElementsScope
   ) => Promise<BaseComponent<S>> | BaseComponent<S>;
@@ -119,7 +119,10 @@ export interface IHTMLElementComponentTemplate {
   target: InstanceType<typeof Element | typeof DocumentFragment>;
 }
 
-type AsyncAndPromise<T> = T | Promise<T> | (() => Promise<T> | T);
+type AsyncAndPromise<T> =
+  | T
+  | Promise<T>
+  | ((...attrs: never[]) => Promise<T> | T);
 
 type NoExtraKeysError<
   Target,
@@ -172,7 +175,7 @@ type MakeScopeReactive<K> =
   | ({
       [attr in keyof K as attr extends 'attributes' | 'elementAttributes'
         ? attr
-        : never]: ValueOrFunction<K[attr]> | undefined;
+        : never]: AsyncAndPromise<ValueOrFunction<K[attr]>> | undefined;
     } & {
       [attr in keyof K as attr extends 'attributes' | 'elementAttributes'
         ? never
@@ -182,7 +185,7 @@ type MakeScopeReactive<K> =
 export interface NestedElement {
   scopeGetter?: Promise<unknown> | unknown;
   scope: unknown;
-  children?: NestedElement[];
+  children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>;
   element: Promise<HTMLElement>;
   tagName: string;
   isCustomElement: boolean;
@@ -206,7 +209,7 @@ abstract class BaseHtmlElement
   ): CallableFunction {
     this.mainScope = mainScope;
     return (scope?: unknown): void => {
-      this.component.initElement(
+      void this.component.initElement(
         mainScope,
         (scope as Record<'attributes', never>)?.attributes
       );
@@ -224,21 +227,24 @@ class BaseElement {
     this.target = element;
   }
 
-  initElement(
+  async initElement(
     mainScope: IMainScope,
     scope?: Record<string, unknown>
-  ): Promise<void> | void {
-    // enlist watchers
+  ): Promise<void> {
+    if (mainScope.helpers.isFunctionOrAsyncFunction(scope)) {
+      scope = await (scope as unknown as CallableFunction)();
+    }
+
     const { staticObject, reactiveObject } = (scope &&
       Object.keys(scope).reduce(
         (reduced, key) => {
-          if (mainScope.helpers.isFunction(scope[key])) {
-            reduced.reactiveObject[key as keyof typeof scope] = scope[
+          if (mainScope.helpers.isFunction(scope?.[key])) {
+            reduced.reactiveObject[key as keyof typeof scope] = scope?.[
               key as keyof typeof scope
             ] as CallableFunction;
           } else {
             reduced.staticObject[key as keyof typeof scope] =
-              scope[key as keyof typeof scope];
+              scope?.[key as keyof typeof scope];
           }
           return reduced;
         },
@@ -383,7 +389,7 @@ class HTMLElementsScope {
     return import(parsedPath) as S;
   }
 
-  asyncStaticFile(importer: () => unknown): Promise<string> | string {
+  async asyncStaticFile<Import>(importer: () => Import): Promise<string> {
     const parsedPath = importer
       .toString()
       .match(/import\('.*'\)/g)?.[0]
@@ -401,26 +407,26 @@ class HTMLElementsScope {
     return fetch(parsedPath).then((res) => res.text());
   }
 
-  asyncComponent = async <S>(
+  asyncComponent = async <S = object>(
     importer: () => Promise<HTMLComponentModule<S>>
   ) => {
     const module = await this.asyncStaticModule(importer);
     return module.default(this);
   };
 
-  asyncComponentScope = async <S>(
-    importer: () => Promise<HTMLComponentModule<S>>,
-    ...attrs: UseComponentsParams<Omit<S, 'componentTagName'>>
-  ): Promise<AsyncComponentScopeReturnType<S>> => {
-    const module = await this.asyncComponent(importer);
-    return ((await module.getScope) as CallableFunction)(attrs[0]);
-  };
-
-  asyncComponentScopeGetter = async <S>(
+  asyncComponentScopeGetter = async <S = object>(
     importer: () => Promise<HTMLComponentModule<S>>
   ) => {
     const module = await this.asyncComponent(importer);
     return module.getScope;
+  };
+
+  asyncComponentScope = async <S = object>(
+    importer: () => Promise<HTMLComponentModule<S>>,
+    ...attrs: UseComponentsParams<Omit<S, 'componentTagName'>>
+  ): Promise<AsyncComponentScopeReturnType<S>> => {
+    const getScope = await this.asyncComponentScopeGetter(importer);
+    return (getScope as CallableFunction)(attrs[0]);
   };
 
   /* we add blocking logic after everything finished loading and rendering */
@@ -444,26 +450,37 @@ class HTMLElementsScope {
     }
   };
 
-  useComponents = <
-    _Components extends Record<string, () => Promise<HTMLComponentModule<S>>>,
-    S = object,
-    Components = {
-      [K in keyof _Components]: Awaited<
-        ReturnType<Awaited<ReturnType<_Components[K]>>['default']>
-      >['getScope'];
-    }
+  useComponentsObject = async <
+    Components = Record<string, () => Promise<HTMLComponentModule<never>>>
   >(
-    _components: _Components
+    components: Components
   ) => {
-    const components: Record<keyof Components, unknown> = {} as Components;
+    const a = {} as {
+      [key in keyof Components]: Awaited<
+        ReturnType<
+          Awaited<
+            ReturnType<
+              Components[key] extends () => Promise<
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                HTMLComponentModule<infer _Scope>
+              >
+                ? Components[key]
+                : never
+            >
+          >['default']
+        >
+      >['getScope'];
+    };
 
-    for (const key in _components) {
-      (components as Record<string, unknown>)[key] =
-        this.asyncComponentScopeGetter(
-          _components[key as keyof typeof _components]
-        );
+    for (const key in components) {
+      a[key] = await this.asyncComponentScopeGetter(
+        components[key] as () => Promise<HTMLComponentModule<unknown>>
+      );
     }
+    return this.useComponents(a);
+  };
 
+  useComponents = <Components>(components: Awaited<Components>) => {
     return {
       builder: <
         InferredScope extends Components[TagName & keyof Components] extends (
@@ -489,9 +506,12 @@ class HTMLElementsScope {
         ...e: IsClosedTag extends true
           ? [tag: Tag, children?: Children[]] extends [
               tag: Tag,
-              children?: NestedElement[]
+              children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
             ]
-            ? [tag: Tag, children?: NestedElement[]]
+            ? [
+                tag: Tag,
+                children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
+              ]
             : [
                 tag: Tag,
                 error?: "Error: Closing tag '/>' detected. This component will not initialize, so it can only receive a children's array!"
@@ -513,8 +533,8 @@ class HTMLElementsScope {
                         >
                       : never
                   >
-                | NestedElement[],
-              children?: NestedElement[]
+                | AsyncAndPromise<AsyncAndPromise<NestedElement>[]>,
+              children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
             ]
           : HasRequired<InferredScope> extends true
           ? [
@@ -539,7 +559,7 @@ class HTMLElementsScope {
                         >
                       : never
                   >,
-              children?: NestedElement[]
+              children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
             ]
           : [
               tag: Tag,
@@ -564,8 +584,8 @@ class HTMLElementsScope {
                             >
                           : never
                       >)
-                | NestedElement[],
-              children?: NestedElement[]
+                | AsyncAndPromise<AsyncAndPromise<NestedElement>[]>,
+              children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
             ]
       ) => {
         const [tagName, scope, children] = e as [
@@ -764,6 +784,10 @@ class HTMLElementsScope {
     child: NestedElement,
     index: number
   ) => {
+    if (this.helpers.isFunctionOrAsyncFunction(child)) {
+      child = await (child as unknown as CallableFunction)();
+    }
+
     const shouldInstantiate = !child.tagName.match(/^<(.*)\/>$/gis);
     const element = (await child.element) as
       | IHTMLElementComponent
@@ -786,10 +810,13 @@ class HTMLElementsScope {
           (!child.children && this.helpers.isArray(child.scope)) ||
           child?.children
         ) {
+          if (this.helpers.isFunctionOrAsyncFunction(child.children)) {
+            child.children = await (child.children as CallableFunction)();
+          }
           for (const [_index, _child] of (
-            child.children || (child.scope as unknown as [])
+            (child.children as []) || (child.scope as unknown as [])
           ).entries()) {
-            void this.oElementParser(element, _child, _index);
+            void this.oElementParser(element, _child as NestedElement, _index);
           }
         }
         if (shouldInstantiate) {
@@ -1029,31 +1056,34 @@ class HTMLElementsScope {
       if (index === 0) {
         /* language=css */
         css += `
-          @media (max-width: ${screenSizes[index]}) {
-            ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
-          }
-        `;
+                    @media (max-width: ${screenSizes[index]}) {
+                        ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
+                    }
+                `;
       } else if (index < screens.length - 1) {
         /* language=css */
         css += `
-          @media (max-width: ${screenSizes[index]}) {
-            ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
-          }
-        `;
+                    @media (max-width: ${screenSizes[index]}) {
+                        ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
+                    }
+                `;
 
         /* language=css */
         css += `
-          @media (min-width: ${screenSizes[index - 1]}) {
-            ${cssString.replaceAll(/--bp--/gs, `-${screenSize}-min`)}
-          }
-        `;
+                    @media (min-width: ${screenSizes[index - 1]}) {
+                        ${cssString.replaceAll(
+                          /--bp--/gs,
+                          `-${screenSize}-min`
+                        )}
+                    }
+                `;
       } else {
         /* language=css */
         css += `
-          @media (min-width: ${screenSizes[index - 1]}) {
-            ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
-          }
-        `;
+                    @media (min-width: ${screenSizes[index - 1]}) {
+                        ${cssString.replaceAll(/--bp--/gs, `-${screenSize}`)}
+                    }
+                `;
       }
     });
 

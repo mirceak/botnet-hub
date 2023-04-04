@@ -12,13 +12,12 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
 
   class Element extends mainScope.HTMLElement {
     initElement = this.useInitElement(mainScope, async () => {
-      const footerElement = o('<h1>', {
-        innerText: 'Footer'
-      });
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          footerElement,
+          o('<h1>', {
+            innerText: 'Footer'
+          }),
           async () => {
             return instance.getScopedCss(await scopedCss);
           }

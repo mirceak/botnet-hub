@@ -2,10 +2,12 @@ import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponents({
-    ['router-view-component']: () =>
-      import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
-      )
+    ['router-view-component']: await mainScope.asyncComponentScopeGetter(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+        )
+    )
   });
 
   class Element extends mainScope.HTMLElement {

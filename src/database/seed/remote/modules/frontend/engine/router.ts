@@ -79,7 +79,7 @@ const getRouter = (): Router => {
 
       if (matched?.length) {
         if (matched[0].redirect) {
-          return this.push({ name: matched[0].redirect });
+          return this.push({ name: matched[0].redirect }, true);
         }
 
         const reversedMatchedRoutes =

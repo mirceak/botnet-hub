@@ -1,7 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { builder: o } = mainScope.useComponents({
+  const { builder: o } = await mainScope.useComponentsObject({
     ['button-component']: () =>
       import(
         '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
@@ -30,7 +30,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                 innerText: () => mainScope.store.data.home.titleWithName
               })
             ]),
-            o('<div>', { className: 'content' }, [
+            o('<div>', { className: 'content' }, async () => [
               o('<input-component>', {
                 elementAttributes: { placeholder: 'Username' },
                 attributes: {
@@ -40,26 +40,29 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
                   mainScope.store.data.home.nameInput = value;
                 }
               }),
-              o('<input-component>', {
-                elementAttributes: {
-                  placeholder: 'Password',
-                  type: 'password'
-                },
-                attributes: { className: 'bg-default' },
-                onInput(value: string) {
-                  console.log(value);
-                }
-              })
+              async () =>
+                o('<input-component>', async () => ({
+                  elementAttributes: {
+                    placeholder: 'Password',
+                    type: 'password'
+                  },
+                  attributes: { className: 'bg-default' },
+                  onInput(value: string) {
+                    console.log(value);
+                  }
+                }))
             ]),
-            o('<div>', { className: 'actions' }, [
-              o('<button-component>', {
-                elementAttributes: { innerText: 'Log In' },
-                attributes: { className: 'bg-primary' },
-                onClick() {
-                  mainScope.router.push({ name: 'home' });
-                }
-              })
-            ])
+            () =>
+              o('<div>', { className: 'actions' }, [
+                o('<button-component>', {
+                  elementAttributes: { innerText: 'Log In' },
+                  attributes: { className: 'bg-primary' },
+                  ss: 'asd',
+                  onClick() {
+                    mainScope.router.push({ name: 'home' });
+                  }
+                })
+              ])
           ]),
 
           async () => {

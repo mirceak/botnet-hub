@@ -1,15 +1,19 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = (mainScope: IMainScope, tagName?: string) => {
+const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponents({
-    ['button-component']: () =>
-      import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-      ),
-    ['input-component']: () =>
-      import(
-        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
-      )
+    ['button-component']: await mainScope.asyncComponentScopeGetter(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        )
+    ),
+    ['input-component']: await mainScope.asyncComponentScopeGetter(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+        )
+    )
   });
 
   const scopedCss = mainScope.asyncStaticFile(
