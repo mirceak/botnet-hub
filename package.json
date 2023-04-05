@@ -11,8 +11,8 @@
     "test": "set NODE_OPTIONS=es-module-specifier-resolution=node && set NODE_OPTIONS=--experimental-vm-modules && jest --coverage",
     "test:watch": "set NODE_OPTIONS=--experimental-vm-modules && jest --watchAll --coverage",
     "prettier": "prettier --config .prettierrc.json --write .",
-    "lint": "eslint --fix",
-    "lint-scss": "stylelint --fix",
+    "lint": "eslint",
+    "lint-scss": "stylelint",
     "prepare": "node .husky/remove-old.js && git config --unset core.hooksPath && husky install && npx husky add .husky/pre-commit \"npx lint-staged\" && git add .husky/pre-commit"
   },
   "lint-staged": {
