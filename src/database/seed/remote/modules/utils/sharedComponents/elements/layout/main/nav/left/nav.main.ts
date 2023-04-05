@@ -1,7 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { builder: o } = mainScope.useComponents({});
+const getComponent = (mainScope: IMainScope, tagName?: string) => {
+  const { builder: o } = mainScope.useComponentsObject();
 
   const scopedCss = mainScope.asyncStaticFile(
     () =>

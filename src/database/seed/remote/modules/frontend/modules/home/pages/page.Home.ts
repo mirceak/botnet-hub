@@ -1,19 +1,15 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { builder: o } = mainScope.useComponents({
-    ['button-component']: await mainScope.asyncComponentScopeGetter(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
-        )
-    ),
-    ['input-component']: await mainScope.asyncComponentScopeGetter(
-      () =>
-        import(
-          '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
-        )
-    )
+const getComponent = (mainScope: IMainScope, tagName?: string) => {
+  const { builder: o } = mainScope.useComponentsObject({
+    ['button-component']: () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+      ),
+    ['input-component']: () =>
+      import(
+        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+      )
   });
 
   const scopedCss = mainScope.asyncStaticFile(
@@ -32,6 +28,9 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
           o('<input-component>', {
             onInput(value: string) {
               mainScope.store.data.home.nameInput = value;
+            },
+            attributes: {
+              className: 'm-t-64'
             },
             elementAttributes: {
               placeholder: 'Enter some text...'

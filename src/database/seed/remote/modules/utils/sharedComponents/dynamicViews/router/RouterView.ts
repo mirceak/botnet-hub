@@ -9,6 +9,7 @@ interface ILocalScope extends IElementScope {
 }
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+  const { builder: o } = mainScope.useComponentsObject();
   const routerViewRegister = new Set();
 
   class Element extends mainScope.HTMLElement {
@@ -55,15 +56,11 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
             components: [
               async () => {
                 const componentScope = await routeComponent();
-                return {
-                  template: `<${componentScope.componentTagName} wcScope="wcScope${this._index}">
-</${componentScope.componentTagName}>` /* wcScope${this._index} -> avoids nested template parsing errors because the first scope would be sent to all other instances caring the same scope names */,
-                  scopesGetter: async () => {
-                    return {
-                      [`wcScope${this._index}`]: componentScope
-                    };
-                  }
-                };
+
+                return o(
+                  `<${componentScope.tagName}>` as never,
+                  componentScope as never
+                );
               }
             ]
           });

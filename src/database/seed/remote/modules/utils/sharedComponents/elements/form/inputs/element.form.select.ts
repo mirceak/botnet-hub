@@ -9,28 +9,31 @@ interface ILocalScope
 }
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+  const { builder: o } = mainScope.useComponentsObject();
+
   class Element extends mainScope.HTMLElement {
     private removeInputListener?: CallableFunction;
 
     initElement = this.useInitElement(mainScope, (scope: ILocalScope) => {
-      this.render(scope);
+      const selectTemplate = o('<input>', scope?.elementAttributes);
 
-      if (scope.onInput) {
-        this.removeInputListener = mainScope.registerEventListener(
-          this.children[0],
-          'input',
-          (e) => {
-            scope.onInput?.((e.target as HTMLInputElement).value);
-          }
-        );
+      mainScope.asyncLoadComponentTemplate({
+        target: this,
+        components: [selectTemplate]
+      });
+
+      if (scope?.onInput) {
+        selectTemplate.element.then((el) => {
+          this.removeInputListener = mainScope.registerEventListener(
+            el,
+            'input',
+            (e) => {
+              scope.onInput?.((e.target as HTMLInputElement).value);
+            }
+          );
+        });
       }
     });
-
-    render(scope: ILocalScope) {
-      const selectEl = document.createElement('input');
-      Object.assign(selectEl, scope.elementAttributes);
-      this.appendChild(selectEl);
-    }
 
     disconnectedCallback() {
       this.removeInputListener?.();

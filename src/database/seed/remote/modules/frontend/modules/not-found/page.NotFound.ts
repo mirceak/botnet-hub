@@ -1,14 +1,16 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+const getComponent = (mainScope: IMainScope, tagName?: string) => {
   class Element extends mainScope.HTMLElement {
-    initElement = this.useInitElement(mainScope, async () => {
+    initElement = this.useInitElement(mainScope, () => {
+      const { builder: o } = mainScope.useComponentsObject();
+
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          {
-            template: `<h1>Page not found!</h1>`
-          }
+          o('<h1>', {
+            innerText: 'Page not found!'
+          })
         ]
       });
     });

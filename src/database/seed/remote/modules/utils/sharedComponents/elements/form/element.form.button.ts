@@ -1,6 +1,5 @@
 import type {
   IComponentExtendingElementScope,
-  IHTMLBaseElementComponent,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
@@ -11,30 +10,34 @@ interface ILocalButtonScope
 }
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
+  const { builder: o } = mainScope.useComponentsObject();
+
   class Element extends mainScope.HTMLElement {
     private removeClickListener?: CallableFunction;
 
-    initElement = this.useInitElement(mainScope, (scope: ILocalButtonScope) => {
-      this.render(scope);
+    initElement = this.useInitElement(
+      mainScope,
+      (scope?: ILocalButtonScope) => {
+        const buttonTemplate = o('<button>', scope?.elementAttributes);
 
-      if (scope?.onClick) {
-        this.removeClickListener = mainScope.registerEventListener(
-          this.children[0],
-          'click',
-          () => {
-            scope?.onClick?.();
-          }
-        );
+        mainScope.asyncLoadComponentTemplate({
+          target: this,
+          components: [buttonTemplate]
+        });
+
+        if (scope?.onClick) {
+          buttonTemplate.element.then((el) => {
+            this.removeClickListener = mainScope.registerEventListener(
+              el,
+              'click',
+              () => {
+                scope?.onClick?.();
+              }
+            );
+          });
+        }
       }
-    });
-
-    render(scope?: ILocalButtonScope) {
-      const buttonEl = document.createElement('button') as HTMLButtonElement &
-        IHTMLBaseElementComponent;
-      buttonEl.component = new mainScope.BaseElement(buttonEl);
-      buttonEl.component.initElement(mainScope, scope?.elementAttributes);
-      this.appendChild(buttonEl);
-    }
+    );
 
     disconnectedCallback() {
       this.removeClickListener?.();

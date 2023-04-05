@@ -422,10 +422,19 @@ const mainLayoutComponents = async (mainScope: IMainScope) => ({
         '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
       )
   ),
-  _Nav: mainScope.asyncComponentScope(
-    () =>
-      import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
-      )
-  )
+  _Nav: mainScope
+    .asyncComponentScope(
+      () =>
+        import(
+          '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+        )
+    )
+    .then((scope) => {
+      return {
+        ...scope,
+        attributes: {
+          className: 'col'
+        }
+      };
+    })
 });
