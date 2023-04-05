@@ -11,7 +11,7 @@ interface ILocalInputScope
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject();
 
-  class Element extends mainScope.HTMLElement {
+  class Element extends mainScope.BaseHtmlElement {
     private removeInputListener?: CallableFunction;
 
     initElement = this.useInitElement(mainScope, (scope?: ILocalInputScope) => {
@@ -40,7 +40,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
   }
 
-  return new mainScope.HTMLComponent<ILocalInputScope>(
+  return new mainScope.BaseComponent<ILocalInputScope>(
     tagName || 'input-component',
     Element
   );

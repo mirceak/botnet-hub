@@ -19,7 +19,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       )
   );
 
-  class Element extends mainScope.HTMLElement {
+  class Element extends mainScope.BaseHtmlElement {
     initElement = this.useInitElement(mainScope, () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
@@ -154,7 +154,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  const instance = new mainScope.HTMLComponent(
+  const instance = new mainScope.BaseComponent(
     tagName || 'components-component',
     Element
   );

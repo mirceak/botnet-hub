@@ -12,7 +12,7 @@ interface ILocalButtonScope
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject();
 
-  class Element extends mainScope.HTMLElement {
+  class Element extends mainScope.BaseHtmlElement {
     private removeClickListener?: CallableFunction;
 
     initElement = this.useInitElement(
@@ -44,7 +44,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
   }
 
-  return new mainScope.HTMLComponent<ILocalButtonScope>(
+  return new mainScope.BaseComponent<ILocalButtonScope>(
     tagName || 'button-component',
     Element
   );

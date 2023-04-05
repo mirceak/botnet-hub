@@ -83,9 +83,6 @@ const routes = Object.freeze([
                     path: '#remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
                   },
                   {
-                    path: '#remoteModules/utils/sharedComponents/dynamicViews/template/DynamicListView.js'
-                  },
-                  {
                     path: '#remoteModules/frontend/modules/home/pages/page.Home.scss'
                   }
                 ]

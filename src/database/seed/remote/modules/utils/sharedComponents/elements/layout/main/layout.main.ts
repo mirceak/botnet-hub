@@ -1,14 +1,14 @@
 import type {
-  IComponentComposedScope,
+  IComponentStaticScope,
   IElementScope,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope extends IElementScope {
   scopesGetter: Promise<{
-    _Header: Promise<IComponentComposedScope>;
-    _Footer: Promise<IComponentComposedScope>;
-    _Nav: Promise<IComponentComposedScope>;
+    _Header: Promise<IComponentStaticScope>;
+    _Footer: Promise<IComponentStaticScope>;
+    _Nav: Promise<IComponentStaticScope>;
   }>;
 }
 
@@ -24,16 +24,18 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Element extends mainScope.HTMLElement {
+  class Element extends mainScope.BaseHtmlElement {
     /* *Required here and not in the "LayoutScope" because we might want to have layouts without props */
     initElement = this.useInitElement(mainScope, async (scope: ILocalScope) => {
-      const { _Nav } = await scope.scopesGetter;
-      const navComponentScope = await _Nav;
+      const { _Nav, _Footer, _Header } = await scope.scopesGetter;
 
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          o('<header-main-component>' as never),
+          async () => {
+            await _Header;
+            return o('<header-main-component>' as never);
+          },
           o(
             '<div>',
             {
@@ -46,10 +48,10 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                   className: 'row full-height full-width'
                 },
                 [
-                  o(
-                    navComponentScope.tagName as never,
-                    navComponentScope as never
-                  ),
+                  async () => {
+                    await _Nav;
+                    return o('<nav-left-main-component>' as never);
+                  },
                   o('<router-view-component>', {
                     attributes: {
                       className: 'col'
@@ -59,7 +61,10 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               )
             ]
           ),
-          o('<footer-main-component>' as never),
+          async () => {
+            await _Footer;
+            return o('<footer-main-component>' as never);
+          },
           async () => {
             return instance.getScopedCss(
               mainScope.applyBreakpoints(await scopedCss)
@@ -70,7 +75,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  const instance = new mainScope.HTMLComponent<ILocalScope>(
+  const instance = new mainScope.BaseComponent<ILocalScope>(
     tagName || 'layout-main-component',
     Element
   );

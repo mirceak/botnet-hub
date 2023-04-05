@@ -1,4 +1,5 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
+import { IHTMLElementComponent } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject({
@@ -16,11 +17,10 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/frontend/modules/home/pages/page.Home.scss')
   );
 
-  class Element extends mainScope.HTMLElement {
-    constructor() {
-      super();
-    }
-
+  class Element
+    extends mainScope.BaseHtmlElement
+    implements IHTMLElementComponent
+  {
     initElement = this.useInitElement(mainScope, async () => {
       await mainScope.asyncLoadComponentTemplate({
         target: this,
@@ -48,10 +48,11 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
             onClick() {
               mainScope.router.push({ name: 'components' });
             },
-            elementAttributes: {
+            ss: 'asd',
+            elementAttributes: () => ({
               innerText: 'Dev Components',
-              className: 'bg-primary'
-            }
+              sclassName: 'bg-primary'
+            })
           }),
           async () => {
             return instance.getScopedCss(await scopedCss);
@@ -61,7 +62,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  const instance = new mainScope.HTMLComponent(
+  const instance = new mainScope.BaseComponent(
     tagName || 'home-component',
     Element
   );

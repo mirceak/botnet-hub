@@ -19,7 +19,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Element extends mainScope.HTMLElement {
+  class Element extends mainScope.BaseHtmlElement {
     initElement = this.useInitElement(mainScope, async () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
@@ -77,7 +77,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  const instance = new mainScope.HTMLComponent(
+  const instance = new mainScope.BaseComponent(
     tagName || 'auth-component',
     Element
   );

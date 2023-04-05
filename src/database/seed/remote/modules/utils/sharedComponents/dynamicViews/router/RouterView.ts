@@ -12,7 +12,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject();
   const routerViewRegister = new Set();
 
-  class Element extends mainScope.HTMLElement {
+  class Element extends mainScope.BaseHtmlElement {
     private _index?: number;
 
     initElement = this.useInitElement(
@@ -75,7 +75,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
   }
 
-  return new mainScope.HTMLComponent<ILocalScope>(
+  return new mainScope.BaseComponent<ILocalScope>(
     tagName || 'router-view-component',
     Element
   );

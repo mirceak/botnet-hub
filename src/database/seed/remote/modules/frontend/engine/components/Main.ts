@@ -1,35 +1,6 @@
 import type { IStore } from '/remoteModules/frontend/engine/store.js';
 import type { Router } from '/remoteModules/frontend/engine/router.js';
 
-type EventListenerCallbackEvent<E> = E extends keyof GlobalEventHandlersEventMap
-  ? GlobalEventHandlersEventMap[E]
-  : E extends keyof WindowEventHandlersEventMap
-  ? WindowEventHandlersEventMap[E]
-  : undefined;
-
-type RequiredFieldsOnly<T> = {
-  [K in keyof T as T[K] extends Required<T>[K] ? K : never]: T[K];
-};
-
-export type HasRequired<Type> = RequiredFieldsOnly<Type> extends Record<
-  string,
-  never
->
-  ? false
-  : true;
-
-type AsyncComponentScopeReturnType<ILocalScope> = ILocalScope extends undefined
-  ? IComponentStaticScope
-  : ILocalScope & IComponentStaticScope;
-
-export type HTMLElementComponentStaticScope =
-  | Promise<IComponentStaticScope>
-  | IComponentStaticScope;
-
-export type IMainScope = InstanceType<typeof HTMLElementsScope>;
-
-export type IComponentComposedScope = IComponentStaticScope & object;
-
 export interface IElementScope {
   attributes?: FilteredElementTypeProperties<HTMLElement>;
 }
@@ -43,93 +14,53 @@ export interface IComponentStaticScope extends IElementScope {
   tagName: string;
 }
 
-export interface IHTMLElementComponentStaticScope {
-  template: string;
-  scopesGetter?: () =>
-    | Promise<Record<string, HTMLElementComponentStaticScope>>
-    | Record<string, HTMLElementComponentStaticScope>;
-}
-
-export interface HTMLComponentModule<S = object> {
-  default: (
-    mainScope: HTMLElementsScope
-  ) => Promise<BaseComponent<S>> | BaseComponent<S>;
-}
-
-export type HTMLComponent = InstanceType<
-  typeof BaseComponent<IComponentStaticScope>
->;
-
-export interface IHTMLComponent {
-  getScope: (scope?: never) => Promise<{ tagName: string }>;
-}
-
 export interface IHTMLElementComponent
   extends InstanceType<typeof window.HTMLElement> {
   initElement: (scope?: unknown | Promise<unknown>) => Promise<void> | void;
-  component: BaseElement;
-}
-
-export interface IElementComponent
-  extends InstanceType<typeof window.HTMLElement> {
-  component: BaseElement;
-}
-
-export interface IHTMLBaseElementComponent
-  extends InstanceType<typeof window.HTMLElement> {
-  component: BaseElement;
 }
 
 export interface IHTMLElementComponentTemplate {
   components: (
-    | (() =>
-        | (
-            | IHTMLElementComponentStaticScope
-            | NestedElement
-            | HTMLElementComponentStaticScope
-            | string
-          )
-        | Promise<
-            | IHTMLElementComponentStaticScope
-            | NestedElement
-            | HTMLElementComponentStaticScope
-            | string
-          >)
-    | Promise<
-        | IHTMLElementComponentStaticScope
-        | NestedElement
-        | HTMLElementComponentStaticScope
-        | string
-      >
-    | IHTMLElementComponentStaticScope
+    | (() => (NestedElement | string) | Promise<NestedElement | string>)
+    | Promise<NestedElement | string>
     | NestedElement
-    | HTMLElementComponentStaticScope
     | string
   )[];
 
   target: InstanceType<typeof Element | typeof DocumentFragment>;
 }
 
-type AsyncAndPromise<T> =
-  | T
-  | Promise<T>
-  | ((...attrs: never[]) => Promise<T> | T);
+interface HTMLComponentModule<S> {
+  default: (
+    mainScope: HTMLElementsScope
+  ) => Promise<BaseComponent<S>> | BaseComponent<S>;
+}
+
+interface IHTMLComponent {
+  getScope: (scope?: never) => Promise<{ tagName: string }>;
+}
+
+interface IHTMLBaseElementComponent
+  extends InstanceType<typeof window.HTMLElement> {
+  component: BaseElement;
+}
+
+interface NestedElement {
+  scopeGetter?: Promise<unknown>;
+  scope: unknown;
+  children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>;
+  element: Promise<HTMLElement>;
+  tagName: string;
+  isCustomElement: boolean;
+}
+
+export type IMainScope = InstanceType<typeof HTMLElementsScope>;
 
 type NoExtraKeysError<
   Target,
   ComponentTag,
   ExtraKeys extends string & keyof Target = string & keyof Target
 > = `Property '${ExtraKeys}' not in original scope of ${ComponentTag & string}`;
-
-type ExcludeExtraKeys<Target, Scope> = {
-  [K in Exclude<keyof Scope, keyof RequiredNested<Target>>]?: never;
-};
-
-type RequiredNested<K> = Required<K> & {
-  [attr in keyof K]: K[attr] extends unknown
-    ? RequiredNested<K[attr]>
-    : K[attr];
-};
 
 type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y
   ? 1
@@ -139,9 +70,42 @@ type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y
 
 type Not<T extends boolean> = T extends true ? false : true;
 
+type EventListenerCallbackEvent<E> = E extends keyof GlobalEventHandlersEventMap
+  ? GlobalEventHandlersEventMap[E]
+  : E extends keyof WindowEventHandlersEventMap
+  ? WindowEventHandlersEventMap[E]
+  : undefined;
+
+type RequiredFieldsOnly<T> = {
+  [K in keyof T as T[K] extends Required<T>[K] ? K : never]: T[K];
+};
+
+type HasRequired<Type> = RequiredFieldsOnly<Type> extends Record<string, never>
+  ? false
+  : true;
+
+type RequiredNested<K> = Required<K> & {
+  [attr in keyof K]: K[attr] extends unknown
+    ? RequiredNested<K[attr]>
+    : K[attr];
+};
+
 type IsReadonly<O, P extends keyof O> = Not<
   Equals<{ [_ in P]: O[P] }, { -readonly [_ in P]: O[P] }>
 >;
+
+type AsyncAndPromise<T> =
+  | T
+  | Promise<T>
+  | ((...attrs: never[]) => Promise<T> | T);
+
+type ValueOrFunction<K> = {
+  [attr in keyof K]: K[attr] | (() => K[attr] | undefined);
+};
+
+type ExcludeExtraKeys<Target, Scope> = {
+  [K in Exclude<keyof Scope, keyof RequiredNested<Target>>]?: never;
+};
 
 type OnlyEditableAttributes<K> = {
   [attr in keyof K as K[attr] extends string | number | boolean
@@ -157,35 +121,19 @@ type FilteredElementTypeProperties<ElementType> = Partial<
   OnlyWritableAttributes<OnlyEditableAttributes<ElementType>>
 >;
 
-type ValueOrFunction<K> = {
-  [attr in keyof K]: K[attr] | (() => K[attr] | undefined);
-};
-
 type MakeScopeReactive<K> =
   | K
   | ({
       [attr in keyof K as attr extends 'attributes' | 'elementAttributes'
         ? attr
-        : never]: AsyncAndPromise<ValueOrFunction<K[attr]>> | undefined;
+        : never]: AsyncAndPromise<ValueOrFunction<K[attr]>>;
     } & {
       [attr in keyof K as attr extends 'attributes' | 'elementAttributes'
         ? never
         : attr]: K[attr];
     });
 
-export interface NestedElement {
-  scopeGetter?: Promise<unknown>;
-  scope: unknown;
-  children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>;
-  element: Promise<HTMLElement>;
-  tagName: string;
-  isCustomElement: boolean;
-}
-
-abstract class BaseHtmlElement
-  extends HTMLElement
-  implements IElementComponent
-{
+class BaseHtmlElement extends HTMLElement implements IHTMLBaseElementComponent {
   component: BaseElement;
   mainScope?: IMainScope;
 
@@ -194,10 +142,7 @@ abstract class BaseHtmlElement
     this.component = new BaseElement(this);
   }
 
-  useInitElement(
-    mainScope: IMainScope,
-    callback: CallableFunction
-  ): CallableFunction {
+  useInitElement(mainScope: IMainScope, callback: CallableFunction) {
     this.mainScope = mainScope;
     return (scope?: unknown): void => {
       void this.component.initElement(
@@ -207,8 +152,6 @@ abstract class BaseHtmlElement
       return callback(scope);
     };
   }
-
-  abstract initElement: ReturnType<typeof this.useInitElement>;
 }
 
 class BaseElement {
@@ -311,9 +254,8 @@ class HTMLElementsScope {
   store!: IStore;
   router!: Router;
 
-  HTMLComponent = BaseComponent;
-  HTMLElement = BaseHtmlElement;
-  BaseElement = BaseElement;
+  BaseComponent = BaseComponent;
+  BaseHtmlElement = BaseHtmlElement;
 
   preloadedRequests: Record<'code' | 'path', string | unknown>[] = [];
 
@@ -411,7 +353,7 @@ class HTMLElementsScope {
   asyncComponentScope = async <S = object>(
     importer: () => Promise<HTMLComponentModule<S>>,
     scope?: S
-  ): Promise<AsyncComponentScopeReturnType<S>> => {
+  ) => {
     const getScope = await this.asyncComponentScopeGetter(importer);
     return (getScope as CallableFunction)(scope);
   };
@@ -438,7 +380,9 @@ class HTMLElementsScope {
   };
 
   useComponentsObject = <
-    Components = Record<string, () => Promise<HTMLComponentModule>> | undefined,
+    Components =
+      | Record<string, () => Promise<HTMLComponentModule<object>>>
+      | undefined,
     Scope = Components extends
       | Record<string, () => Promise<HTMLComponentModule<infer _Scope>>>
       | undefined
@@ -628,27 +572,24 @@ class HTMLElementsScope {
         if (component) {
           void this.asyncHydrationCallback(async () => {
             component = await component;
-            if ((await this.helpers).isAsyncFunction(component)) {
-              component = await (
-                component as () => Promise<IHTMLElementComponentStaticScope>
-              )();
+            if (this.helpers.isFunctionOrAsyncFunction(component)) {
+              component = await (component as CallableFunction)();
             }
 
             if (typeof component !== 'string') {
               const componentScope = await component;
               if (componentScope) {
-                void this.oElementParser(
+                await this.oElementParser(
                   template.target,
                   componentScope as NestedElement,
                   i
                 );
               }
             } else {
-              void this.appendComponent(
+              await this.appendComponent(
                 template.target,
                 component as string,
-                i,
-                true
+                i
               );
             }
           });
@@ -659,70 +600,34 @@ class HTMLElementsScope {
 
   appendComponent = async (
     target: IHTMLElementComponentTemplate['target'],
-    tagOrTemplate: string,
-    index: number,
-    isTemplate = false,
-    nestedEl?: NestedElement
-  ): Promise<
-    IHTMLElementComponent | HTMLElement[] | HTMLElement | undefined
-  > => {
-    if (isTemplate) {
-      const result = [] as HTMLElement[];
-      const temp = document.createElement('div');
-      temp.setAttribute('style', 'display: none');
-      temp.innerHTML += tagOrTemplate;
-      const children = [...(temp.children as unknown as HTMLElement[])];
-      temp.remove();
-      for (const child of children) {
-        if (!child.getAttribute('wcY')) {
-          child.setAttribute('wcY', index.toString());
-          result.push(child);
-          target.appendChild(child);
-        }
-      }
-      result.forEach((child, _index) => {
-        if (_index === 0) {
-          target.children[
-            this.getIndexPositionInParent(
-              index,
-              target.children as unknown as HTMLElement[]
-            )
-          ].insertAdjacentElement('beforebegin', child);
-        } else {
-          result[_index - 1].insertAdjacentElement('afterend', child);
-        }
-      });
-      return result;
-    } else {
-      if (!nestedEl) {
-        const componentConstructor = window.customElements.get(
-          tagOrTemplate
-        ) as CustomElementConstructor;
-        const component = new componentConstructor() as IHTMLElementComponent;
-        component.setAttribute('wcY', index.toString());
-
-        if (component) {
-          const indexPosition = this.getIndexPositionInParent(
-            index,
-            target.children as unknown as HTMLElement[]
-          );
-
-          if (indexPosition < 0) {
-            target.appendChild(component);
-          } else {
-            target.insertBefore(component, target.children[indexPosition]);
-          }
-          return component;
-        }
-      } else if (nestedEl) {
-        return (await this.oElementParser(
-          target,
-          nestedEl,
-          index
-        )) as HTMLElement;
+    innerHtml: string,
+    index: number
+  ): Promise<HTMLElement[] | HTMLElement | undefined> => {
+    const result = [] as HTMLElement[];
+    const temp = document.createElement('div');
+    temp.innerHTML += innerHtml;
+    const children = [...(temp.children as unknown as HTMLElement[])];
+    temp.remove();
+    for (const child of children) {
+      if (!child.getAttribute('wcY')) {
+        child.setAttribute('wcY', index.toString());
+        result.push(child);
+        target.appendChild(child);
       }
     }
-    return undefined;
+    result.forEach((child, _index) => {
+      if (_index === 0) {
+        target.children[
+          this.getIndexPositionInParent(
+            index,
+            target.children as unknown as HTMLElement[]
+          )
+        ].insertAdjacentElement('beforebegin', child);
+      } else {
+        result[_index - 1].insertAdjacentElement('afterend', child);
+      }
+    });
+    return result;
   };
 
   oElementParser = async (
@@ -793,58 +698,6 @@ class HTMLElementsScope {
     }
 
     return element as HTMLElement;
-  };
-
-  initiateComponentElement = async (
-    scopeTag: 'wcScope' | 'dhvScope',
-    child: IHTMLElementComponent,
-    scopes: Record<string, HTMLElementComponentStaticScope>
-  ) => {
-    const scopeId = child.getAttribute(scopeTag);
-    const forceInit = child.hasAttribute('wcInit');
-    if (forceInit || (scopeId && Object.keys(scopes).indexOf(scopeId) !== -1)) {
-      void this.asyncHydrationCallback(async () => {
-        return window.customElements
-          .whenDefined(child.tagName.toLowerCase())
-          .then(async () => {
-            if (scopeId) {
-              const scope = await scopes?.[scopeId];
-              if (scope) {
-                if (scope.tagName === child.tagName.toLowerCase()) {
-                  void child.initElement(scope as never);
-                } else {
-                  throw new Error(
-                    `Scope "${scopeId}" has the wrong composable! Please use the composable from "${child.tagName.toLowerCase()}" class!`
-                  );
-                }
-              }
-            } else {
-              void child.initElement();
-            }
-          });
-      });
-    }
-  };
-
-  parseChildren = (
-    scopeTag: Parameters<typeof this.initiateComponentElement>[0],
-    scopes?: Record<string, HTMLElementComponentStaticScope>
-  ) => {
-    return (child: IHTMLElementComponent): void => {
-      if (
-        (scopeTag === 'wcScope' ||
-          child.tagName.toLowerCase() !== 'dynamic-html-view-component') &&
-        scopes
-      ) {
-        void this.initiateComponentElement(scopeTag, child, scopes);
-      }
-
-      if (child.children.length) {
-        return [
-          ...(child.children as unknown as IHTMLElementComponent[])
-        ].forEach(this.parseChildren(scopeTag, scopes));
-      }
-    };
   };
 
   getIndexPositionInParent(index: number, children: HTMLElement[]): number {

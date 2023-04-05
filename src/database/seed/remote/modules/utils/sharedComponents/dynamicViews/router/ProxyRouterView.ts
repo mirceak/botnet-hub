@@ -8,7 +8,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       )
   });
 
-  class Element extends mainScope.HTMLElement {
+  class Element extends mainScope.BaseHtmlElement {
     initElement = this.useInitElement(mainScope, () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
@@ -17,7 +17,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  return new mainScope.HTMLComponent(
+  return new mainScope.BaseComponent(
     tagName || 'proxy-router-view-component',
     Element
   );

@@ -1,7 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
-  class Element extends mainScope.HTMLElement {
+  class Element extends mainScope.BaseHtmlElement {
     initElement = this.useInitElement(mainScope, () => {
       const { builder: o } = mainScope.useComponentsObject();
 
@@ -16,7 +16,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  return new mainScope.HTMLComponent(tagName || 'not-found-component', Element);
+  return new mainScope.BaseComponent(tagName || 'not-found-component', Element);
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;

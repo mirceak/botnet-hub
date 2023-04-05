@@ -1,4 +1,4 @@
-the HTMLElement builds it's scope out of the parameters passed down
+the BaseHtmlElement builds it's scope out of the parameters passed down
     it then asks the store if the data is reactive and registers a listener for it
 
 
