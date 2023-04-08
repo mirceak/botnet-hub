@@ -4,12 +4,19 @@ import type {
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
+type Middleware = (
+  to?: Route,
+  from?: Route,
+  channel?: keyof NonNullable<Route['middleware']>
+) => Promise<boolean> | boolean;
+
 export interface Route {
   path: string;
   name?: string;
   params?: object;
   redirect?: string;
   component?: () => Promise<IComponentStaticScope>;
+  middleware?: Record<'beforeEnter', Middleware[]>;
   children?: Route[];
   parent?: Route;
   computedPath?: string;
@@ -53,8 +60,6 @@ const getRouter = (): Router => {
         route.path = route.path.replace(/^\//g, '');
       }
 
-      // TODO: implement middleware
-
       const matched = this.routes.reduce(
         generalReducer.bind({
           searchVal: route.name || route.path,
@@ -64,6 +69,8 @@ const getRouter = (): Router => {
         }),
         [] as Route[]
       );
+
+      // TODO: implement middleware beforeEnter here
 
       if (!route.params && route.path) {
         const matchedRoute = match(
@@ -226,20 +233,20 @@ const routeMapper = (currentRoute: Route): Route => {
 };
 
 const generalReducer = function <
-  Original extends Current[],
+  Original extends Current,
   Current extends {
-    children?: Current[];
-    parent?: Current;
+    children?: Original[];
+    parent?: Original;
   }
 >(
   this: {
     condition: CallableFunction;
     searchVal: string;
-    _any: Original;
+    forceTypePropagation: Original;
   },
   reduced: Current[],
   current: Current
-): Original | Current[] {
+): Current[] {
   if (reduced.length) {
     return reduced;
   }
@@ -293,6 +300,13 @@ export const useRoutes = (mainScope: IMainScope): Route[] => [
     children: [
       {
         path: '',
+        middleware: {
+          beforeEnter: [
+            () => {
+              return true;
+            }
+          ]
+        },
         component() {
           return ProxyRouterViewComponent(mainScope);
         },
@@ -376,7 +390,7 @@ const {
           )
       )
       .then(({ getScope }) =>
-        getScope({ scopesGetter: mainLayoutComponents(mainScope) })
+        getScope({ children: mainLayoutComponents(mainScope) })
       );
   },
   PageHomeComponent(mainScope: IMainScope) {
@@ -409,7 +423,7 @@ const {
   }
 };
 
-const mainLayoutComponents = async (mainScope: IMainScope) => ({
+const mainLayoutComponents = (mainScope: IMainScope) => ({
   _Header: mainScope.asyncComponentScope(
     () =>
       import(

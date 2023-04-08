@@ -3,12 +3,6 @@ import type { Router } from '/remoteModules/frontend/engine/router.js';
 
 export type IMainScope = InstanceType<typeof HTMLElementsScope>;
 
-type NoExtraKeysError<
-  Target,
-  ComponentTag,
-  ExtraKeys extends string & keyof Target = string & keyof Target
-> = `Property '${ExtraKeys}' not in original scope of ${ComponentTag & string}`;
-
 type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y
   ? 1
   : 2
@@ -64,10 +58,6 @@ type ValueOrFunction<K> = K extends object
       [attr in keyof K]: (() => K[attr]) | K[attr];
     }
   : K;
-
-type ExcludeExtraKeys<Target, Scope> = {
-  [K in Exclude<keyof Scope, keyof Required<Target>>]?: never;
-};
 
 type OnlyEditableAttributes<K> = K extends object
   ? {
@@ -176,6 +166,7 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
   }
 
   disconnectedCallback() {
+    /* todo: add generalist way to add event listeners for elements */
     // add listener removers here
   }
 
@@ -444,7 +435,7 @@ class HTMLElementsScope {
         ) => Promise<unknown>
           ? _Scope
           : never,
-        Scope extends UnwrapAsyncAndPromise<InferredScope>,
+        Scope extends InferredScope,
         ElementScope extends Partial<DefaultElementScope>,
         Tag extends
           | `<${keyof Components & string}>`
@@ -494,36 +485,28 @@ class HTMLElementsScope {
           : HasRequired<InferredScope> extends true
           ? [
               tag: Tag,
-              scope: IsCustomComponent extends true
-                ? Required<UnwrapAsyncAndPromiseNested<InferredScope>> &
-                    RequiredNested<
-                      UnwrapAsyncAndPromiseNested<InferredScope>
-                    > extends UnwrapAsyncAndPromiseNested<Scope>
-                  ? AsyncAndPromise<Scope>
-                  : NoExtraKeysError<
-                      ExcludeExtraKeys<InferredScope, Scope>,
-                      Tag
-                    >
-                : never,
-              children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
+              scope: Required<UnwrapAsyncAndPromiseNested<InferredScope>> &
+                RequiredNested<
+                  UnwrapAsyncAndPromiseNested<InferredScope>
+                > extends UnwrapAsyncAndPromiseNested<Scope>
+                ? AsyncAndPromise<Scope>
+                : `Error: No extra properties allowed!`,
+              children?: AsyncAndPromise<NestedElement>[]
             ]
           : [
               tag: Tag,
-              scope?:
-                | (InferredScope extends object
-                    ? IsCustomComponent extends true
-                      ? Required<UnwrapAsyncAndPromiseNested<InferredScope>> &
-                          RequiredNested<
-                            UnwrapAsyncAndPromiseNested<InferredScope>
-                          > extends UnwrapAsyncAndPromiseNested<Scope>
-                        ? AsyncAndPromise<Scope>
-                        : NoExtraKeysError<
-                            ExcludeExtraKeys<InferredScope, Scope>,
-                            Tag
-                          >
-                      : never
-                    : never)
-                | AsyncAndPromise<AsyncAndPromise<NestedElement>[]>,
+              scope?: AsyncAndPromise<
+                RequiredNested<
+                  UnwrapAsyncAndPromiseNested<InferredScope>
+                > extends object
+                  ? Required<UnwrapAsyncAndPromiseNested<InferredScope>> &
+                      RequiredNested<
+                        UnwrapAsyncAndPromiseNested<InferredScope>
+                      > extends UnwrapAsyncAndPromiseNested<Scope>
+                    ? Scope
+                    : `Error: No extra properties allowed!`
+                  : AsyncAndPromise<NestedElement>[]
+              >,
               children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
             ]
       ) => {

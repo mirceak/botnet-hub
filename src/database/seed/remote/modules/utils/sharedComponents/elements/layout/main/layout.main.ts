@@ -6,11 +6,11 @@ import type {
 } from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalScope extends IComponentScope {
-  scopesGetter: Promise<{
+  children: {
     _Header: Promise<IComponentStaticScope>;
     _Footer: Promise<IComponentStaticScope>;
     _Nav: Promise<IComponentStaticScope>;
-  }>;
+  };
 }
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
@@ -30,44 +30,29 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     implements IHTMLElementComponent
   {
     /* *Required here and not in the "LayoutScope" because we might want to have layouts without props */
-    initElement = this.useInitElement(mainScope, async (scope: ILocalScope) => {
-      const { _Nav, _Footer, _Header } = await scope.scopesGetter;
+    initElement = this.useInitElement(mainScope, (scope: ILocalScope) => {
+      const { _Nav, _Footer, _Header } = scope.children;
 
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           async () => {
-            await _Header;
-            return o('<header-main-component>' as never);
+            return o((await _Header).tagName as never);
           },
-          o(
-            '<div>',
-            {
-              className: 'layout--content'
-            },
-            [
-              o(
-                '<div>',
-                {
-                  className: 'row full-height full-width'
-                },
-                [
-                  async () => {
-                    await _Nav;
-                    return o('<nav-left-main-component>' as never);
-                  },
-                  o('<router-view-component>', {
-                    attributes: {
-                      className: 'col'
-                    }
-                  })
-                ]
-              )
-            ]
-          ),
+          o('<div>', { className: 'layout--content' }, [
+            o('<div>', { className: 'row full-height full-width' }, [
+              async () => {
+                return o((await _Nav).tagName as never);
+              },
+              o('<router-view-component>', {
+                attributes: {
+                  className: 'col'
+                }
+              })
+            ])
+          ]),
           async () => {
-            await _Footer;
-            return o('<footer-main-component>' as never);
+            return o((await _Footer).tagName as never);
           },
           async () => {
             return instance.getScopedCss(
