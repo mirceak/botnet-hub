@@ -1,4 +1,7 @@
-import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
+import type {
+  IHTMLElementComponent,
+  IMainScope
+} from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject({
@@ -19,7 +22,10 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Element extends mainScope.BaseHtmlElement {
+  class Element
+    extends mainScope.BaseHtmlElement
+    implements IHTMLElementComponent
+  {
     initElement = this.useInitElement(mainScope, async () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
@@ -56,7 +62,6 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               o('<button-component>', {
                 elementAttributes: { innerText: 'Log In' },
                 attributes: { className: 'bg-primary' },
-                ss: 'string',
                 onClick() {
                   mainScope.router.push({ name: 'home' });
                 }

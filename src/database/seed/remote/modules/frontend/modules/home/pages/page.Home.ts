@@ -48,11 +48,10 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
             onClick() {
               mainScope.router.push({ name: 'components' });
             },
-            ss: 'asd',
-            elementAttributes: () => ({
+            elementAttributes: {
               innerText: 'Dev Components',
-              sclassName: 'bg-primary'
-            })
+              className: 'bg-primary'
+            }
           }),
           async () => {
             return instance.getScopedCss(await scopedCss);

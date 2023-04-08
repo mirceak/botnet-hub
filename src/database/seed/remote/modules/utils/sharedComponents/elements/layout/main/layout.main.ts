@@ -1,10 +1,11 @@
 import type {
   IComponentStaticScope,
-  IElementScope,
+  IComponentScope,
+  IHTMLElementComponent,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IElementScope {
+interface ILocalScope extends IComponentScope {
   scopesGetter: Promise<{
     _Header: Promise<IComponentStaticScope>;
     _Footer: Promise<IComponentStaticScope>;
@@ -24,7 +25,10 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Element extends mainScope.BaseHtmlElement {
+  class Element
+    extends mainScope.BaseHtmlElement
+    implements IHTMLElementComponent
+  {
     /* *Required here and not in the "LayoutScope" because we might want to have layouts without props */
     initElement = this.useInitElement(mainScope, async (scope: ILocalScope) => {
       const { _Nav, _Footer, _Header } = await scope.scopesGetter;

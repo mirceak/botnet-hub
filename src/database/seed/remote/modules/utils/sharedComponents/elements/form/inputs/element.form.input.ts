@@ -1,6 +1,7 @@
 import type {
   IMainScope,
-  IComponentExtendingElementScope
+  IComponentExtendingElementScope,
+  IHTMLElementComponent
 } from '/remoteModules/frontend/engine/components/Main.js';
 
 interface ILocalInputScope
@@ -11,7 +12,10 @@ interface ILocalInputScope
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject();
 
-  class Element extends mainScope.BaseHtmlElement {
+  class Element
+    extends mainScope.BaseHtmlElement
+    implements IHTMLElementComponent
+  {
     private removeInputListener?: CallableFunction;
 
     initElement = this.useInitElement(mainScope, (scope?: ILocalInputScope) => {
@@ -36,6 +40,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     });
 
     disconnectedCallback() {
+      super.disconnectedCallback();
       this.removeInputListener?.();
     }
   }

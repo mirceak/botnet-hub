@@ -1,7 +1,13 @@
-import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
+import type {
+  IHTMLElementComponent,
+  IMainScope
+} from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
-  class Element extends mainScope.BaseHtmlElement {
+  class Element
+    extends mainScope.BaseHtmlElement
+    implements IHTMLElementComponent
+  {
     initElement = this.useInitElement(mainScope, () => {
       const { builder: o } = mainScope.useComponentsObject();
 

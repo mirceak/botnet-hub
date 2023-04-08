@@ -10,7 +10,7 @@ await import('#kernel/Kernel.js').then(async (kernel) => {
     .then(async (kernel) => {
       await kernel.start();
     });
-  /*TODO: make sure the router overrides the default methods used for navigation so the website works without js out of the box*/
+
   /*TODO: login page*/
   /*TODO: add and test guards*/
   /*TODO: table component*/
