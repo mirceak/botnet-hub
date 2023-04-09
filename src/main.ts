@@ -11,7 +11,6 @@ await import('#kernel/Kernel.js').then(async (kernel) => {
       await kernel.start();
     });
 
-  /*TODO: login page*/
   /*TODO: add and test guards*/
   /*TODO: table component*/
   /*TODO: form component and elements implementation*/

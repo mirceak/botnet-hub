@@ -1,5 +1,7 @@
-import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
-import { IHTMLElementComponent } from '/remoteModules/frontend/engine/components/Main.js';
+import type {
+  IHTMLElementComponent,
+  IMainScope
+} from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject({
@@ -21,8 +23,8 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     extends mainScope.BaseHtmlElement
     implements IHTMLElementComponent
   {
-    initElement = this.useInitElement(mainScope, async () => {
-      await mainScope.asyncLoadComponentTemplate({
+    initElement = this.useInitElement(mainScope, () => {
+      mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           o('<input-component>', {

@@ -43,7 +43,7 @@ type UnwrapAsyncAndPromise<T> = T extends Promise<infer U>
   ? U
   : T;
 
-type UnwrapAsyncAndPromiseNested<T> = T extends AsyncAndPromise<infer _T>
+export type UnwrapAsyncAndPromiseNested<T> = T extends AsyncAndPromise<infer _T>
   ? _T extends object
     ? {
         [P in keyof _T]: UnwrapAsyncAndPromiseNested<
@@ -78,6 +78,15 @@ type OnlyWritableAttributes<K> = K extends object
 type FilteredElementTypeProperties<ElementType> = ValueOrFunction<
   Partial<OnlyWritableAttributes<OnlyEditableAttributes<ElementType>>>
 >;
+
+export type IMainScopeUseComponentsObject<RequiredComponents> =
+  keyof ReturnType<
+    typeof HTMLElementsScope.prototype.useComponentsObject<RequiredComponents>
+  >['components'] extends keyof RequiredComponents
+    ? ReturnType<
+        typeof HTMLElementsScope.prototype.useComponentsObject<RequiredComponents>
+      >
+    : 'Error: Missing required components!'; /* TODO: improve at some point by exposing actual problematic keys */
 
 interface IComponentScopeAttributesListeners<
   Element extends HTMLElement = HTMLElement,
@@ -119,7 +128,7 @@ export interface IHTMLElementComponent<
   initElement: (scope?: Scope) => Promise<void> | void;
 }
 
-interface HTMLComponentModule<S> {
+export interface HTMLComponentModule<S> {
   default: (
     mainScope: HTMLElementsScope
   ) => Promise<BaseComponent<S>> | BaseComponent<S>;
@@ -177,6 +186,7 @@ class BaseHtmlElement<
 }
 
 class BaseElement<Target extends HTMLElement = HTMLElement> {
+  /* TODO: add directives */
   target: Target;
   eventHandlerClosers: CallableFunction[] = [];
 
@@ -272,7 +282,9 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
   }
 }
 
-class BaseComponent<ILocalScope> implements IHTMLComponent<ILocalScope> {
+class BaseComponent<ILocalScope = IComponentScope>
+  implements IHTMLComponent<ILocalScope>
+{
   readonly tagName: string;
 
   private scopedCssIdIndex = 0;
@@ -481,7 +493,21 @@ class HTMLElementsScope {
         newComponent as unknown as Awaited<typeof newComponent>;
     }
 
-    return this.useComponents(pulledComponents);
+    return {
+      components,
+      ...this.useComponents(pulledComponents),
+      useComponentsObject: <
+        _Components =
+          | Record<string, () => Promise<HTMLComponentModule<object>>>
+          | undefined
+      >(
+        _components?: _Components
+      ) =>
+        this.useComponentsObject({
+          ..._components,
+          ...components
+        } as _Components & Components)
+    };
   };
 
   useComponents = <Components>(components: Components) => {
@@ -561,7 +587,7 @@ class HTMLElementsScope {
                         UnwrapAsyncAndPromiseNested<InferredScope>
                       > extends UnwrapAsyncAndPromiseNested<Scope>
                     ? Scope
-                    : `Error: No extra properties allowed!` /* Todo: improve at some point by exposing actual problematic keys */
+                    : `Error: No extra properties allowed!` /* Todo: adding multiple extensions should make things more readable. maybe externalize everything into a type series */
                   : AsyncAndPromise<NestedElement>[]
               >,
               children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
@@ -587,9 +613,12 @@ class HTMLElementsScope {
               .then((_constructor) => new _constructor());
           }
         }
-        const scopeGetter = (components[tag] ||
-          (() => scope)) as (typeof components)[typeof tag];
 
+        let scopeGetter;
+        if (components) {
+          scopeGetter = (components[tag] ||
+            (() => scope)) as (typeof components)[typeof tag];
+        }
         return {
           scopeGetter,
           scope,
@@ -603,7 +632,10 @@ class HTMLElementsScope {
   };
 
   /*lazy loads components*/
-  asyncLoadComponentTemplate = (template: IHTMLElementComponentTemplate) => {
+  asyncLoadComponentTemplate = (template: {
+    components: (any | (() => Promise<string>))[];
+    target: HTMLElement;
+  }) => {
     for (let i = 0; i < template.components.length; i++) {
       if (template.components[i]) {
         let component = template.components[i];
