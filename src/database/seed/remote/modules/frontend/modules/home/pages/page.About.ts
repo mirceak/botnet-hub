@@ -8,6 +8,8 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       )
   });
 
+  /* Todo: implement and test out a refactor to the useComponentObject method that makes it return another useComponentObject method that would just pile on components onto the previous set */
+
   const scopedCss = mainScope.asyncStaticFile(
     () => import('/remoteModules/frontend/modules/home/pages/page.About.scss')
   );

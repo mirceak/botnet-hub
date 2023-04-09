@@ -547,7 +547,7 @@ class HTMLElementsScope {
                   UnwrapAsyncAndPromiseNested<InferredScope>
                 > extends UnwrapAsyncAndPromiseNested<Scope>
                 ? AsyncAndPromise<Scope>
-                : `Error: No extra properties allowed!`,
+                : `Error: No extra properties allowed!` /* Todo: improve at some point by exposing actual problematic keys */,
               children?: AsyncAndPromise<NestedElement>[]
             ]
           : [
@@ -561,7 +561,7 @@ class HTMLElementsScope {
                         UnwrapAsyncAndPromiseNested<InferredScope>
                       > extends UnwrapAsyncAndPromiseNested<Scope>
                     ? Scope
-                    : `Error: No extra properties allowed!`
+                    : `Error: No extra properties allowed!` /* Todo: improve at some point by exposing actual problematic keys */
                   : AsyncAndPromise<NestedElement>[]
               >,
               children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
@@ -1044,3 +1044,5 @@ export const registerMainComponent = () => {
 
 /*entrypoint*/
 registerMainComponent();
+
+/* TODO: Rule of thumb: scope separation between framework scopes and component/element scopes. Framework scopes should not be freely accessible through dom querying */

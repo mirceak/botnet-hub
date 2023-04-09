@@ -13,6 +13,8 @@ interface HomeModuleState {
   };
 }
 
+// todo: add system that allows new modules to be registered to the state. maybe use the components composition style. start with userModule
+
 class State {
   home: HomeModuleState = {
     title: 'Welcome',
