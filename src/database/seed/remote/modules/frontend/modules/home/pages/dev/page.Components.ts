@@ -34,13 +34,22 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
             o('<div>', { className: 'header row items-center' }, [
               o('<button-component>', {
                 elementAttributes: {
-                  innerText: 'Back'
+                  innerText: 'Back',
+                  handlers: {
+                    click: [
+                      {
+                        callback: async (e) => {
+                          e.preventDefault();
+                          mainScope.router.push({
+                            path: 'home'
+                          });
+                        }
+                      }
+                    ]
+                  }
                 },
                 attributes: {
                   className: 'bg-primary m-r-16'
-                },
-                onClick() {
-                  mainScope.router.push({ name: 'home' });
                 }
               }),
               o('<h1>', { innerText: 'Components' })

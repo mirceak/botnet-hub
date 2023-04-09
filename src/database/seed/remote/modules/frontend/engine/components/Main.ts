@@ -79,16 +79,34 @@ type FilteredElementTypeProperties<ElementType> = ValueOrFunction<
   Partial<OnlyWritableAttributes<OnlyEditableAttributes<ElementType>>>
 >;
 
-export interface IComponentScope {
-  attributes?: AsyncAndPromise<FilteredElementTypeProperties<HTMLElement>>;
+interface IComponentScopeAttributesListeners<
+  Element extends HTMLElement = HTMLElement,
+  E extends keyof GlobalEventHandlersEventMap = keyof GlobalEventHandlersEventMap
+> {
+  handlers?: Partial<
+    Record<
+      E,
+      {
+        callback: (e: EventListenerCallbackEvent<E>) => void;
+        options?: Parameters<Element['addEventListener']>[2];
+      }[]
+    >
+  >;
+}
+
+export interface IComponentScope<
+  ElementType extends HTMLElement = HTMLElement
+> {
+  attributes?: AsyncAndPromise<
+    FilteredElementTypeProperties<ElementType> &
+      IComponentScopeAttributesListeners<ElementType>
+  >;
 }
 
 export interface IComponentExtendingElementScope<
   ElementType extends HTMLElement = HTMLElement
 > extends IComponentScope {
-  elementAttributes?: AsyncAndPromise<
-    FilteredElementTypeProperties<ElementType>
-  >;
+  elementAttributes?: IComponentScope<ElementType>['attributes'];
 }
 
 export interface IComponentStaticScope {
@@ -160,19 +178,21 @@ class BaseHtmlElement<
 
 class BaseElement<Target extends HTMLElement = HTMLElement> {
   target: Target;
+  eventHandlerClosers: CallableFunction[] = [];
 
   constructor(element: Target) {
     this.target = element;
   }
 
   disconnectedCallback() {
-    /* todo: add generalist way to add event listeners for elements */
-    // add listener removers here
+    this.eventHandlerClosers.forEach((currentEventHandlerCloser) => {
+      currentEventHandlerCloser();
+    });
   }
 
   async initElement(
     mainScope: IMainScope,
-    scope?: Record<string, unknown>
+    scope?: UnwrapAsyncAndPromiseNested<IComponentScope['attributes']>
   ): Promise<void> {
     if (mainScope.helpers.isFunctionOrAsyncFunction(scope)) {
       scope = await (scope as unknown as CallableFunction)();
@@ -181,13 +201,16 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
     const { staticObject, reactiveObject } = (scope &&
       Object.keys(scope).reduce(
         (reduced, key) => {
-          if (mainScope.helpers.isFunction(scope?.[key])) {
+          if (
+            mainScope.helpers.isFunction(scope?.[key as keyof typeof scope])
+          ) {
             reduced.reactiveObject[key as keyof typeof scope] = scope?.[
               key as keyof typeof scope
-            ] as CallableFunction;
+            ] as never;
           } else {
-            reduced.staticObject[key as keyof typeof scope] =
-              scope?.[key as keyof typeof scope];
+            reduced.staticObject[key as keyof typeof scope] = scope?.[
+              key as keyof typeof scope
+            ] as never;
           }
           return reduced;
         },
@@ -200,12 +223,19 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
       const render = () => {
         const reactiveResultsObject = Object.keys(reactiveObject).reduce(
           (reduced, key) => {
-            reduced[key] = reactiveObject[key]();
+            reduced[key as keyof typeof reduced] = (
+              reactiveObject[
+                key as keyof typeof reactiveObject
+              ] as CallableFunction
+            )();
             return reduced;
           },
           {} as Record<keyof typeof reactiveObject, unknown>
         );
-        Object.assign(this.target, reactiveResultsObject);
+        Object.assign(
+          this.target,
+          Object.assign(reactiveResultsObject, { handlers: undefined })
+        );
       };
       mainScope.store.registerOnChangeCallback(
         [...Object.values(reactiveObject)],
@@ -213,7 +243,32 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
       );
       render();
     }
-    Object.assign(this.target, staticObject);
+    if (staticObject) {
+      Object.assign(
+        this.target,
+        Object.assign(staticObject, { handlers: undefined })
+      );
+    }
+
+    if (scope?.handlers) {
+      Object.keys(scope.handlers).forEach((key) => {
+        if (scope) {
+          const handlers = scope.handlers?.[key as keyof typeof scope.handlers];
+          if (handlers && handlers.length) {
+            handlers.forEach((currentHandler) => {
+              this.eventHandlerClosers.push(
+                mainScope.registerEventListener(
+                  this.target,
+                  key as keyof GlobalEventHandlersEventMap,
+                  currentHandler.callback
+                )
+              );
+            });
+          }
+        }
+      });
+      scope.handlers.click;
+    }
   }
 }
 
@@ -277,6 +332,8 @@ class HTMLElementsScope {
   registerEventListener = <
     T extends Element | Window,
     E extends
+      | keyof GlobalEventHandlersEventMap
+      | keyof WindowEventHandlersEventMap =
       | keyof GlobalEventHandlersEventMap
       | keyof WindowEventHandlersEventMap
   >(

@@ -26,29 +26,56 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
         target: this,
         components: [
           o('<input-component>', {
-            onInput(value: string) {
-              mainScope.store.data.home.nameInput = value;
-            },
             attributes: {
               className: 'm-t-64'
             },
             elementAttributes: {
+              handlers: {
+                input: [
+                  {
+                    callback: async (e) => {
+                      e.preventDefault();
+                      mainScope.store.data.home.nameInput = (
+                        e.target as HTMLInputElement
+                      ).value;
+                    }
+                  }
+                ]
+              },
               placeholder: 'Enter some text...'
             }
           }),
           o('<button-component>', {
-            onClick() {
-              mainScope.router.push({ name: 'about' });
-            },
             elementAttributes: {
+              handlers: {
+                click: [
+                  {
+                    callback: async (e) => {
+                      e.preventDefault();
+                      mainScope.router.push({
+                        name: 'about'
+                      });
+                    }
+                  }
+                ]
+              },
               innerText: 'About'
             }
           }),
           o('<button-component>', {
-            onClick() {
-              mainScope.router.push({ name: 'components' });
-            },
             elementAttributes: {
+              handlers: {
+                click: [
+                  {
+                    callback: async (e) => {
+                      e.preventDefault();
+                      mainScope.router.push({
+                        name: 'components'
+                      });
+                    }
+                  }
+                ]
+              },
               innerText: 'Dev Components',
               className: 'bg-primary'
             }

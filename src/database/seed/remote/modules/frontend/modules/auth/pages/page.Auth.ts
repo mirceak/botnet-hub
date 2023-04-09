@@ -38,33 +38,62 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
             ]),
             o('<div>', { className: 'content' }, [
               o('<input-component>', {
-                elementAttributes: { placeholder: 'Username' },
+                elementAttributes: {
+                  placeholder: 'Username',
+                  handlers: {
+                    input: [
+                      {
+                        callback: async (e) => {
+                          e.preventDefault();
+                          mainScope.store.data.home.nameInput = (
+                            e.target as HTMLInputElement
+                          ).value;
+                        }
+                      }
+                    ]
+                  }
+                },
                 attributes: {
                   className: 'bg-default m-b-8'
-                },
-                onInput(value: string) {
-                  mainScope.store.data.home.nameInput = value;
                 }
               }),
 
               o('<input-component>', {
                 elementAttributes: {
                   placeholder: 'Password',
-                  type: 'password'
+                  type: 'password',
+                  handlers: {
+                    input: [
+                      {
+                        callback: async (e) => {
+                          e.preventDefault();
+                          console.log((e.target as HTMLInputElement).value);
+                        }
+                      }
+                    ]
+                  }
                 },
-                attributes: { className: 'bg-default' },
-                onInput(value: string) {
-                  console.log(value);
-                }
+                attributes: { className: 'bg-default' }
               })
             ]),
             o('<div>', { className: 'actions' }, [
               o('<button-component>', {
-                elementAttributes: { innerText: 'Log In' },
-                attributes: { className: 'bg-primary' },
-                onClick() {
-                  mainScope.router.push({ name: 'home' });
-                }
+                elementAttributes: {
+                  innerText: 'Log In',
+                  handlers: {
+                    click: [
+                      {
+                        callback: async (e) => {
+                          e.preventDefault();
+                          mainScope.router.push({
+                            path: 'home'
+                          });
+                        }
+                      }
+                    ]
+                  }
+                },
+                attributes: { className: 'bg-primary' }
               })
             ])
           ]),

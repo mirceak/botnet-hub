@@ -23,13 +23,20 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               o('<button-component>', () => ({
                 elementAttributes: () => ({
                   className: 'bg-primary p-x-16',
-                  innerText: 'Home'
-                }),
-                onClick() {
-                  mainScope.router.push({
-                    path: 'home'
-                  });
-                }
+                  innerText: 'Home',
+                  handlers: {
+                    click: [
+                      {
+                        callback: async (e) => {
+                          e.preventDefault();
+                          mainScope.router.push({
+                            path: 'home'
+                          });
+                        }
+                      }
+                    ]
+                  }
+                })
               }))
             ])
           ]),

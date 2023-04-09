@@ -4,10 +4,7 @@ import type {
   IHTMLElementComponent
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalInputScope
-  extends IComponentExtendingElementScope<HTMLInputElement> {
-  onInput?: (value: string) => void;
-}
+type ILocalInputScope = IComponentExtendingElementScope<HTMLInputElement>;
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject();
@@ -16,8 +13,6 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     extends mainScope.BaseHtmlElement
     implements IHTMLElementComponent
   {
-    private removeInputListener?: CallableFunction;
-
     initElement = this.useInitElement(mainScope, (scope?: ILocalInputScope) => {
       const inputTemplate = o('<input>', scope?.elementAttributes);
 
@@ -25,24 +20,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
         target: this,
         components: [inputTemplate]
       });
-
-      if (scope?.onInput) {
-        inputTemplate.element.then((el) => {
-          this.removeInputListener = mainScope.registerEventListener(
-            el,
-            'input',
-            (e) => {
-              scope.onInput?.((e.target as HTMLInputElement).value);
-            }
-          );
-        });
-      }
     });
-
-    disconnectedCallback() {
-      super.disconnectedCallback();
-      this.removeInputListener?.();
-    }
   }
 
   return new mainScope.BaseComponent<ILocalInputScope>(
