@@ -3,10 +3,12 @@ import type {
   IHTMLElementComponent,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
+import type { IStore } from '/remoteModules/frontend/engine/store.js';
 
 type Middleware = (
-  to?: Route,
-  from?: Route,
+  router: Router,
+  to?: Partial<Route>,
+  from?: Partial<Route>,
   channel?: keyof NonNullable<Route['middleware']>
 ) => Promise<boolean> | boolean;
 
@@ -26,6 +28,7 @@ export interface Route {
 export interface Router {
   ready?: true;
   routes: Route[];
+  store?: IStore;
   push: (route: Partial<Route>, replace?: boolean) => Promise<void>;
   onPopState: (e: PopStateEvent) => void;
   onDestroy: () => void;
@@ -70,7 +73,19 @@ const getRouter = (): Router => {
         [] as Route[]
       );
 
-      // TODO: implement middleware beforeEnter here
+      const middlewareResults = await getMiddlewareResults(
+        this,
+        {
+          from: this.currentRoute,
+          to: route
+        },
+        matched,
+        'beforeEnter'
+      );
+
+      if (!middlewareResults) {
+        return;
+      }
 
       if (!route.params && route.path) {
         const matchedRoute = match(
@@ -146,6 +161,64 @@ const getRouter = (): Router => {
   };
 };
 
+const getMiddlewareResults = async (
+  router: Router,
+  routesOrigins: {
+    to?: Partial<Route>;
+    from?: Partial<Route>;
+  },
+  routes: Route[],
+  type: keyof NonNullable<Route['middleware']>
+) => {
+  let currentRoute: Route | undefined = routes[0];
+  let parent = currentRoute?.parent;
+  let middleware = currentRoute?.middleware?.[type];
+  let middlewareResult = await middleware?.reduce(
+    async (reduced, currentMiddleware) => {
+      return (
+        (await reduced) === false ||
+        (await currentMiddleware(
+          router,
+          routesOrigins.to,
+          routesOrigins.from,
+          type
+        ))
+      );
+    },
+    Promise.resolve(true)
+  );
+
+  if (middlewareResult === false) {
+    return false;
+  }
+
+  while (parent) {
+    currentRoute = currentRoute?.parent;
+    parent = currentRoute?.parent;
+    middleware = currentRoute?.middleware?.[type];
+    middlewareResult = await middleware?.reduce(
+      async (reduced, currentMiddleware) => {
+        return (
+          (await reduced) === false ||
+          (await currentMiddleware(
+            router,
+            routesOrigins.to,
+            routesOrigins.from,
+            type
+          ))
+        );
+      },
+      Promise.resolve(true)
+    );
+
+    if (middlewareResult === false) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
   const router = getRouter();
   if (!pathToRegexp) {
@@ -183,23 +256,35 @@ export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
     await router.push({ ...router.currentRoute }, true);
   }
 
-  const realComputedPath = match(
-    (router.currentRoute.computedPath as string).replace(/^\//g, ''),
-    {
-      decode: decodeURIComponent
-    }
-  )(window.location.pathname.replace(/^\//g, ''));
+  if (
+    await getMiddlewareResults(
+      router,
+      {
+        from: undefined,
+        to: { ...router.currentRoute }
+      },
+      router.matchedRoutes,
+      'beforeEnter'
+    )
+  ) {
+    const realComputedPath = match(
+      (router.currentRoute.computedPath as string).replace(/^\//g, ''),
+      {
+        decode: decodeURIComponent
+      }
+    )(window.location.pathname.replace(/^\//g, ''));
 
-  window.history.replaceState(
-    {
-      name: router.currentRoute.name,
-      params: realComputedPath && realComputedPath.params
-    },
-    '',
-    `/${(realComputedPath && realComputedPath.path) || ''}${
-      window.location.search || ''
-    }`
-  );
+    window.history.replaceState(
+      {
+        name: router.currentRoute.name,
+        params: realComputedPath && realComputedPath.params
+      },
+      '',
+      `/${(realComputedPath && realComputedPath.path) || ''}${
+        window.location.search || ''
+      }`
+    );
+  }
 
   router.removePopstateListener = mainScope.registerEventListener(
     window,
@@ -297,16 +382,16 @@ export const useRoutes = (mainScope: IMainScope): Route[] => [
     component() {
       return LayoutMainComponent(mainScope);
     },
+    middleware: {
+      beforeEnter: [
+        () => {
+          return true;
+        }
+      ]
+    },
     children: [
       {
         path: '',
-        middleware: {
-          beforeEnter: [
-            () => {
-              return true;
-            }
-          ]
-        },
         component() {
           return ProxyRouterViewComponent(mainScope);
         },

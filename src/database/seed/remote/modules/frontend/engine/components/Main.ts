@@ -956,6 +956,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
         .then(async ({ useRouter }) =>
           useRouter(mainScope).then(async (router) => {
             mainScope.router = router;
+            mainScope.router.store = mainScope.store;
 
             const { builder: o } = mainScope.useComponentsObject({
               ['router-view-component']: () =>
