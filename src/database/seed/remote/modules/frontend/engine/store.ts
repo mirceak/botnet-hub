@@ -1,27 +1,37 @@
-import type {
-  ProxyExternalProps,
-  ProxyObject as IProxyObject
-} from '/remoteModules/utils/reactivity/objectProxy.js';
+import type { ProxyObject as IProxyObject } from '/remoteModules/utils/reactivity/objectProxy.js';
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
+
+type NestedUnknown = {
+  [Key: string]: string | symbol | number | boolean | NestedUnknown;
+};
+
+interface StoreModule<State> {
+  data?: State;
+  modules?: Record<symbol | string | number, DynamicStoreModule<State>>;
+  __deleteKey?: 'DELETE THIS PROPERTY TO DELETE THE ENTIRE TREE AND REMOVES ALL PREVIOUS WATCHERS AND REFERENCES';
+}
+
+/* TODO: add option to access store data without the reactivity layer maybe enter the same tree through a different key like 'nonReactive' at the root of every module. */
+interface DynamicStoreModule<State> extends StoreModule<State> {
+  destroy: () => void;
+}
 
 interface HomeModuleState {
   title?: string;
   titleWithName?: string;
   nameInput?: string;
-  asd: {
-    tsa: number;
-  };
 }
-
-// todo: add system that allows new modules to be registered to the state. maybe use the components composition style. start with userModule
-
-class State {
+class State implements StoreModule<NestedUnknown> {
+  modules: Record<
+    symbol | string | number,
+    DynamicStoreModule<NestedUnknown>
+  > extends Record<symbol | string | number, DynamicStoreModule<infer State>>
+    ? Record<symbol | string | number, DynamicStoreModule<State>>
+    : never = {};
   home: HomeModuleState = {
-    title: 'Welcome',
-    asd: {
-      tsa: 333
-    }
+    title: 'Welcome'
   };
+  __deleteKey?: 'DELETE THIS PROPERTY TO DELETE THE ENTIRE TREE AND REMOVES ALL PREVIOUS WATCHERS AND REFERENCES';
 }
 
 const useState = () => new State();
@@ -61,15 +71,46 @@ export const useStore = async (mainScope: IMainScope) => {
     () => import('/remoteModules/utils/reactivity/objectProxy.js')
   );
   const proxyObject = await useProxyState(ProxyObject, mainScope);
+  const { data, registerOnChangeCallback, unRegisterOnChangeCallback } =
+    proxyObject;
   startComputing(proxyObject);
+
+  const registerDynamicModule = <ModuleState>(
+    moduleState: StoreModule<NestedUnknown & ModuleState>,
+    key?: symbol | string | number
+  ) => {
+    key =
+      typeof key === 'string'
+        ? key
+        : typeof key === 'number'
+        ? key
+        : Symbol('');
+
+    data.modules[key] = {
+      data: moduleState.data,
+      modules: moduleState.modules,
+      destroy: () => {
+        delete moduleState.__deleteKey;
+      }
+    };
+    return {
+      key,
+      registerDynamicModule,
+      modules: data.modules[key].modules,
+      data: data.modules[key].data,
+      destroy: data.modules[key].destroy,
+      registerOnChangeCallback: registerOnChangeCallback,
+      unRegisterOnChangeCallback: unRegisterOnChangeCallback
+    };
+  };
+
   return {
-    data: proxyObject.data as ProxyExternalProps<State>,
-    registerOnChangeCallback: proxyObject.registerOnChangeCallback,
-    unRegisterOnChangeCallback: proxyObject.unRegisterOnChangeCallback,
+    data: data,
+    registerOnChangeCallback: registerOnChangeCallback,
+    unRegisterOnChangeCallback: unRegisterOnChangeCallback,
+    registerDynamicModule,
     onDestroy() {
-      const store = proxyObject as Partial<typeof proxyObject>;
-      delete store.data?.__removeTree;
-      delete store.data;
+      delete proxyObject.data?.__deleteKey;
     }
   };
 };

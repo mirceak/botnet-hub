@@ -462,7 +462,7 @@ const {
     return mainScope.asyncComponentScope(
       () =>
         import(
-          '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+          '/remoteModules/frontend/engine/components/shared/dynamicViews/router/ProxyRouterView.js'
         )
     );
   },
@@ -471,7 +471,7 @@ const {
       .asyncComponent(
         () =>
           import(
-            '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+            '/remoteModules/frontend/engine/components/shared/elements/layout/main/layout.main.js'
           )
       )
       .then(({ getScope }) =>
@@ -512,20 +512,20 @@ const mainLayoutComponents = (mainScope: IMainScope) => ({
   _Header: mainScope.asyncComponentScope(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/header/header.main.js'
       )
   ),
   _Footer: mainScope.asyncComponentScope(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/footer/footer.main.js'
       )
   ),
   _Nav: mainScope
     .asyncComponentScope(
       () =>
         import(
-          '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+          '/remoteModules/frontend/engine/components/shared/elements/layout/main/nav/left/nav.main.js'
         )
     )
     .then((scope) => {

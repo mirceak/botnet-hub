@@ -18,10 +18,6 @@ type IOptions<T = InstanceType<typeof WeakMap>> = {
 
 type Nested<T> = T & Record<string, T>;
 
-export type ProxyExternalProps<T> = T & {
-  __removeTree?: 'DELETE THIS PROPERTY TO DELETE THE ENTIRE TREE AND REMOVES ALL PREVIOUS WATCHERS AND REFERENCES';
-};
-
 type ProxyInternalProps<T> = Nested<
   T & {
     _proxySet: InstanceType<typeof Map<string, T>> & T;
@@ -214,7 +210,7 @@ const handler = <ObjectType>(
           );
         }
       } else {
-        /* we're assigning a new proxy entirely or the previous value was removed using the ".__removeTree" property having all existing proxies removed */
+        /* we're assigning a new proxy entirely or the previous value was removed using the ".__deleteKey" property having all existing proxies removed */
         Reflect.set(
           obj,
           prop,
@@ -241,7 +237,7 @@ const handler = <ObjectType>(
   },
   deleteProperty(obj: ProxyInternalProps<ObjectType>, prop: string) {
     /* this removes references to existing variables invalidating existing watchers using external variables to reference the tree */
-    if (`${prop}` === '__removeTree') {
+    if (`${prop}` === '__deleteKey') {
       if (this._parent) {
         if (this._parent._proxySet.has(this._thisProp)) {
           this._parent._proxySet.delete(this._thisProp);
@@ -301,10 +297,7 @@ export const ProxyObject = async <T>(obj: T, mainScope: IMainScope) => {
   };
   return {
     /*need to make this entire object a proxy and protect data from deletion as well as make sure new entries */
-    data: new Proxy(
-      obj as never,
-      handler(options, undefined, 'root')
-    ) as ProxyExternalProps<T>,
+    data: new Proxy(obj as never, handler(options, undefined, 'root')) as T,
     registerOnChangeCallback: options.registerOnChangeCallback.bind(options),
     unRegisterOnChangeCallback:
       options.unRegisterOnChangeCallback.bind(options),

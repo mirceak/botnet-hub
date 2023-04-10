@@ -186,7 +186,6 @@ class BaseHtmlElement<
 }
 
 class BaseElement<Target extends HTMLElement = HTMLElement> {
-  /* TODO: add directives */
   target: Target;
   eventHandlerClosers: CallableFunction[] = [];
 
@@ -485,6 +484,7 @@ class HTMLElementsScope {
       >['getScope'];
     };
 
+    /* refactor so that we only get the module and extract the component name from that. no need to define them twice */
     for (const key in components) {
       const newComponent = this.asyncComponentScopeGetter(
         components[key] as () => Promise<HTMLComponentModule<unknown>>
@@ -631,11 +631,10 @@ class HTMLElementsScope {
     };
   };
 
+  /* TODO: add option for closing tag that does not instantiate component, but assigns the props. */
+
   /*lazy loads components*/
-  asyncLoadComponentTemplate = (template: {
-    components: (any | (() => Promise<string>))[];
-    target: HTMLElement;
-  }) => {
+  asyncLoadComponentTemplate = (template: IHTMLElementComponentTemplate) => {
     for (let i = 0; i < template.components.length; i++) {
       if (template.components[i]) {
         let component = template.components[i];
@@ -1050,7 +1049,7 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
             const { builder: o } = mainScope.useComponentsObject({
               ['router-view-component']: () =>
                 import(
-                  '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+                  '/remoteModules/frontend/engine/components/shared/dynamicViews/router/RouterView.js'
                 )
             });
 
@@ -1058,6 +1057,12 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
               target: this,
               components: [o('<router-view-component>')]
             });
+
+            const { initModel } = await mainScope.asyncStaticModule(
+              () => import('/remoteModules/services/models/User/model.User.js')
+            );
+
+            initModel(mainScope);
           })
         );
     }

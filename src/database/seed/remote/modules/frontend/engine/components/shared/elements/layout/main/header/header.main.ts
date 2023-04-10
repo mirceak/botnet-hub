@@ -9,7 +9,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const scopedCss = mainScope.asyncStaticFile(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.scss'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/header/header.main.scss'
       )
   );
 

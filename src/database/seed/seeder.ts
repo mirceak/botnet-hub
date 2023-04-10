@@ -174,61 +174,65 @@ export const init: IKernelModuleInit = async (context) => {
   );
 
   await loadSeederModule(
+    () => import('/remoteModules/services/models/User/model.User.js')
+  );
+
+  await loadSeederModule(
     () => import('/remoteModules/utils/helpers/shared/utils.js')
   );
 
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/layout.main.js'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/layout.main.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.js'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/header/header.main.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.js'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/footer/footer.main.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.js'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/nav/left/nav.main.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+        '/remoteModules/frontend/engine/components/shared/dynamicViews/router/RouterView.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/router/ProxyRouterView.js'
+        '/remoteModules/frontend/engine/components/shared/dynamicViews/router/ProxyRouterView.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+        '/remoteModules/frontend/engine/components/shared/elements/form/inputs/element.form.input.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.select.js'
+        '/remoteModules/frontend/engine/components/shared/elements/form/inputs/element.form.select.js'
       )
   );
   await loadSeederModule(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        '/remoteModules/frontend/engine/components/shared/elements/form/element.form.button.js'
       )
   );
 
@@ -242,19 +246,19 @@ export const init: IKernelModuleInit = async (context) => {
   await loadSeederFile(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/header/header.main.scss'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/header/header.main.scss'
       )
   );
   await loadSeederFile(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.scss'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/nav/left/nav.main.scss'
       )
   );
   await loadSeederFile(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/footer/footer.main.scss'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/footer/footer.main.scss'
       )
   );
   await loadSeederFile(

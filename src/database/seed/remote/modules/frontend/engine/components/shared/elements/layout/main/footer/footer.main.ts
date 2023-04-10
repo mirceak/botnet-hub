@@ -9,7 +9,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const scopedCss = mainScope.asyncStaticFile(
     () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/layout/main/nav/left/nav.main.scss'
+        '/remoteModules/frontend/engine/components/shared/elements/layout/main/footer/footer.main.scss'
       )
   );
 
@@ -17,12 +17,12 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     extends mainScope.BaseHtmlElement
     implements IHTMLElementComponent
   {
-    initElement = this.useInitElement(mainScope, () => {
+    initElement = this.useInitElement(mainScope, async () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
           o('<h1>', {
-            innerText: () => mainScope.store.data.home.titleWithName
+            innerText: 'Footer'
           }),
           async () => {
             return instance.getScopedCss(await scopedCss);
@@ -33,7 +33,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
   }
 
   const instance = new mainScope.BaseComponent(
-    tagName || 'nav-left-main-component',
+    tagName || 'footer-main-component',
     Element
   );
   return instance;

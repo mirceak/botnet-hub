@@ -7,11 +7,11 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject({
     ['button-component']: () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        '/remoteModules/frontend/engine/components/shared/elements/form/element.form.button.js'
       ),
     ['input-component']: () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/inputs/element.form.input.js'
+        '/remoteModules/frontend/engine/components/shared/elements/form/inputs/element.form.input.js'
       )
   });
 

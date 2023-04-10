@@ -17,7 +17,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject({
     ['router-view-component']: () =>
       import(
-        '/remoteModules/utils/sharedComponents/dynamicViews/router/RouterView.js'
+        '/remoteModules/frontend/engine/components/shared/dynamicViews/router/RouterView.js'
       )
   });
 

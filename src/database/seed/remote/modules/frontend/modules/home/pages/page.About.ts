@@ -4,7 +4,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject({
     ['button-component']: () =>
       import(
-        '/remoteModules/utils/sharedComponents/elements/form/element.form.button.js'
+        '/remoteModules/frontend/engine/components/shared/elements/form/element.form.button.js'
       )
   });
 
@@ -13,7 +13,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
   );
 
   class Element extends mainScope.BaseHtmlElement {
-    initElement = this.useInitElement(mainScope, async () => {
+    initElement = this.useInitElement(mainScope, () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
@@ -27,9 +27,9 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                   handlers: {
                     click: [
                       {
-                        callback: async (e) => {
+                        callback: (e) => {
                           e.preventDefault();
-                          mainScope.router.push({
+                          void mainScope.router.push({
                             path: 'home'
                           });
                         }

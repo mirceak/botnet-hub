@@ -14,6 +14,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     implements IHTMLElementComponent
   {
     initElement = this.useInitElement(
+      /* TODO: add directives */
       mainScope,
       (scope?: ILocalButtonScope) => {
         const buttonTemplate = o('<button>', scope?.elementAttributes);
