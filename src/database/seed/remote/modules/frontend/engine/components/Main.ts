@@ -496,7 +496,7 @@ class HTMLElementsScope {
     return {
       components,
       ...this.useComponents(pulledComponents),
-      useComponentsObject: <
+      composeComponentObject: <
         _Components =
           | Record<string, () => Promise<HTMLComponentModule<object>>>
           | undefined

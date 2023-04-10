@@ -1,5 +1,5 @@
 import type {
-  ExternalNested,
+  ProxyExternalProps,
   ProxyObject as IProxyObject
 } from '/remoteModules/utils/reactivity/objectProxy.js';
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
@@ -63,7 +63,7 @@ export const useStore = async (mainScope: IMainScope) => {
   const proxyObject = await useProxyState(ProxyObject, mainScope);
   startComputing(proxyObject);
   return {
-    data: proxyObject.data as ExternalNested<State>,
+    data: proxyObject.data as ProxyExternalProps<State>,
     registerOnChangeCallback: proxyObject.registerOnChangeCallback,
     unRegisterOnChangeCallback: proxyObject.unRegisterOnChangeCallback,
     onDestroy() {

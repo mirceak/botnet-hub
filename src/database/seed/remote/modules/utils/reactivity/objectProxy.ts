@@ -18,10 +18,10 @@ type IOptions<T = InstanceType<typeof WeakMap>> = {
 
 type Nested<T> = T & Record<string, T>;
 
-export type ExternalNested<T> = T & Nested<T & ProxyExternalProps<T>>;
-type ProxyExternalProps<T> = T & {
-  __removeTree?: never;
+export type ProxyExternalProps<T> = T & {
+  __removeTree?: 'DELETE THIS PROPERTY TO DELETE THE ENTIRE TREE AND REMOVES ALL PREVIOUS WATCHERS AND REFERENCES';
 };
+
 type ProxyInternalProps<T> = Nested<
   T & {
     _proxySet: InstanceType<typeof Map<string, T>> & T;
