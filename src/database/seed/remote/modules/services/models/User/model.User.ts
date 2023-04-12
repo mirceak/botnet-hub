@@ -10,10 +10,14 @@ interface User {
   };
 }
 
-export type ModuleState = ReturnType<typeof initModel>;
-
 export const initModel = (mainScope: IMainScope) => {
-  return mainScope.store.registerDynamicModule<User>({
-    data: {}
-  });
+  return mainScope.store.registerDynamicModule<User>(
+    {
+      info: {
+        name: 'asd',
+        age: 34
+      }
+    },
+    'user'
+  );
 };

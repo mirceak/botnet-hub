@@ -63,12 +63,12 @@ if (cluster.default.isPrimary) {
 //     const channel = new MessageChannel();
 //
 //     worker.addEventListener('message', (event) => {
-//       if (event.data === 'ready') {
+//       if (event.mainModule === 'ready') {
 //         resolve(channel.port1);
 //       } else {
 //         console.error(
 //           'Unknown message received from service worker:',
-//           event.data
+//           event.mainModule
 //         );
 //       }
 //     });
@@ -100,7 +100,7 @@ if (cluster.default.isPrimary) {
 //
 //     // Use the message port to communicate with the service worker
 //     port.addEventListener('message', (event) => {
-//       console.log('Message received from service worker:', event.data);
+//       console.log('Message received from service worker:', event.mainModule);
 //     });
 //
 //     port.start();

@@ -1,12 +1,12 @@
+import type { initModel } from '/remoteModules/services/models/User/model.User.js';
 import type {
   IComponentStaticScope,
   IHTMLElementComponent,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
-import type { IStore } from '/remoteModules/frontend/engine/store.js';
 
 type Middleware = (
-  router: Router,
+  mainScope: IMainScope,
   to?: Partial<Route>,
   from?: Partial<Route>,
   channel?: keyof NonNullable<Route['middleware']>
@@ -28,7 +28,6 @@ export interface Route {
 export interface Router {
   ready?: true;
   routes: Route[];
-  store?: IStore;
   push: (route: Partial<Route>, replace?: boolean) => Promise<void>;
   onPopState: (e: PopStateEvent) => void;
   onDestroy: () => void;
@@ -49,7 +48,7 @@ let pathToRegexp: typeof import('path-to-regexp/dist/index.js')['pathToRegexp'];
 let compile: typeof import('path-to-regexp/dist/index.js')['compile'];
 let match: typeof import('path-to-regexp/dist/index.js')['match'];
 
-const getRouter = (): Router => {
+const getRouter = (mainScope: IMainScope): Router => {
   return {
     routes: [] as Route[],
     onPopState(e: IPopStateEvent) {
@@ -74,7 +73,7 @@ const getRouter = (): Router => {
       );
 
       const middlewareResults = await getMiddlewareResults(
-        this,
+        mainScope,
         {
           from: this.currentRoute,
           to: route
@@ -162,7 +161,7 @@ const getRouter = (): Router => {
 };
 
 const getMiddlewareResults = async (
-  router: Router,
+  mainScope: IMainScope,
   routesOrigins: {
     to?: Partial<Route>;
     from?: Partial<Route>;
@@ -178,7 +177,7 @@ const getMiddlewareResults = async (
       return (
         (await reduced) === false ||
         (await currentMiddleware(
-          router,
+          mainScope,
           routesOrigins.to,
           routesOrigins.from,
           type
@@ -201,7 +200,7 @@ const getMiddlewareResults = async (
         return (
           (await reduced) === false ||
           (await currentMiddleware(
-            router,
+            mainScope,
             routesOrigins.to,
             routesOrigins.from,
             type
@@ -220,7 +219,7 @@ const getMiddlewareResults = async (
 };
 
 export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
-  const router = getRouter();
+  const router = getRouter(mainScope);
   if (!pathToRegexp) {
     /*TODO: Replace with own implementation of path interpreter*/
     await mainScope
@@ -256,35 +255,35 @@ export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
     await router.push({ ...router.currentRoute }, true);
   }
 
-  if (
-    await getMiddlewareResults(
-      router,
-      {
-        from: undefined,
-        to: { ...router.currentRoute }
-      },
-      router.matchedRoutes,
-      'beforeEnter'
-    )
-  ) {
-    const realComputedPath = match(
-      (router.currentRoute.computedPath as string).replace(/^\//g, ''),
-      {
-        decode: decodeURIComponent
-      }
-    )(window.location.pathname.replace(/^\//g, ''));
+  getMiddlewareResults(
+    mainScope,
+    {
+      from: undefined,
+      to: { ...router.currentRoute }
+    },
+    router.matchedRoutes,
+    'beforeEnter'
+  ).then((condition) => {
+    if (condition && router.currentRoute) {
+      const realComputedPath = match(
+        (router.currentRoute.computedPath as string).replace(/^\//g, ''),
+        {
+          decode: decodeURIComponent
+        }
+      )(window.location.pathname.replace(/^\//g, ''));
 
-    window.history.replaceState(
-      {
-        name: router.currentRoute.name,
-        params: realComputedPath && realComputedPath.params
-      },
-      '',
-      `/${(realComputedPath && realComputedPath.path) || ''}${
-        window.location.search || ''
-      }`
-    );
-  }
+      window.history.replaceState(
+        {
+          name: router.currentRoute.name,
+          params: realComputedPath && realComputedPath.params
+        },
+        '',
+        `/${(realComputedPath && realComputedPath.path) || ''}${
+          window.location.search || ''
+        }`
+      );
+    }
+  });
 
   router.removePopstateListener = mainScope.registerEventListener(
     window,
@@ -371,6 +370,18 @@ const matchedRouteNameCondition = (
   return currentRoute.name === searchVal;
 };
 
+const middlewareGuardAuth: Middleware = ({ store, router }) => {
+  const condition = !!(
+    store.modules['user'].data as Awaited<ReturnType<typeof initModel>>['data']
+  ).auth?.token;
+
+  if (!condition) {
+    void router.push({ name: 'auth' });
+  }
+
+  return condition;
+};
+
 export const useRoutes = (mainScope: IMainScope): Route[] => [
   {
     path: '/',
@@ -383,11 +394,7 @@ export const useRoutes = (mainScope: IMainScope): Route[] => [
       return LayoutMainComponent(mainScope);
     },
     middleware: {
-      beforeEnter: [
-        () => {
-          return true;
-        }
-      ]
+      beforeEnter: [middlewareGuardAuth]
     },
     children: [
       {

@@ -1,11 +1,10 @@
-@use '../src/database/seed/remote/modules/utils/assets/scss/variables/color' as
+@use 'src/database/seed/remote/modules/utils/assets/scss/variables/color' as
   colorVars;
-@use '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows'
-  as shadowVars;
+@use 'src/database/seed/remote/modules/utils/assets/scss/variables/shadows' as
+  shadowVars;
 
 main-component {
   auth-component {
-    align-items: center;
     animation: color-change 15s linear infinite alternate;
     background: radial-gradient(
         farthest-corner at top,
@@ -19,6 +18,7 @@ main-component {
     height: 100%;
     justify-content: center;
     text-shadow: shadowVars.$shadow-text-1;
+    align-items: center;
 
     dynamic-html-view-component {
       display: none;

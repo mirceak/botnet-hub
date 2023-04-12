@@ -27,61 +27,66 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          o('<input-component>', {
-            attributes: {
-              className: 'm-t-64'
-            },
-            elementAttributes: {
-              handlers: {
-                input: [
-                  {
-                    callback: async (e) => {
-                      e.preventDefault();
-                      mainScope.store.data.home.nameInput = (
-                        e.target as HTMLInputElement
-                      ).value;
+          o('<div>', { className: 'card m-t-64 fit-content' }, [
+            o('<h1>', { innerText: 'Home Page' }),
+            o('<div>', { className: 'row full-width justify-center' }, [
+              o('<div>', { className: 'content' }, [
+                o('<input-component>', {
+                  elementAttributes: {
+                    handlers: {
+                      input: [
+                        {
+                          callback: (e) => {
+                            e.preventDefault();
+                            if (mainScope.store.data)
+                              mainScope.store.data.home.nameInput = (
+                                e.target as HTMLInputElement
+                              ).value;
+                          }
+                        }
+                      ]
+                    },
+                    placeholder: 'Enter some text...'
+                  }
+                }),
+                o('<button-component>', {
+                  elementAttributes: {
+                    handlers: {
+                      click: [
+                        {
+                          callback: (e) => {
+                            e.preventDefault();
+                            mainScope.router.push({
+                              name: 'about'
+                            });
+                          }
+                        }
+                      ]
+                    },
+                    innerText: 'About'
+                  }
+                }),
+                o('<button-component>', {
+                  elementAttributes: {
+                    innerText: 'Dev Components',
+                    className: 'bg-primary',
+                    handlers: {
+                      click: [
+                        {
+                          callback: (e) => {
+                            e.preventDefault();
+                            void mainScope.router.push({
+                              name: 'components'
+                            });
+                          }
+                        }
+                      ]
                     }
                   }
-                ]
-              },
-              placeholder: 'Enter some text...'
-            }
-          }),
-          o('<button-component>', {
-            elementAttributes: {
-              handlers: {
-                click: [
-                  {
-                    callback: async (e) => {
-                      e.preventDefault();
-                      mainScope.router.push({
-                        name: 'about'
-                      });
-                    }
-                  }
-                ]
-              },
-              innerText: 'About'
-            }
-          }),
-          o('<button-component>', {
-            elementAttributes: {
-              handlers: {
-                click: [
-                  {
-                    callback: async (e) => {
-                      e.preventDefault();
-                      mainScope.router.push({
-                        name: 'components'
-                      });
-                    }
-                  }
-                ]
-              },
-              innerText: 'Dev Components',
-              className: 'bg-primary'
-            }
-          }),
+                })
+              ])
+            ])
+          ]),
           async () => {
             return instance.getScopedCss(await scopedCss);
           }

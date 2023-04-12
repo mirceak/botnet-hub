@@ -1,8 +1,8 @@
 @use 'sass:color' as color;
-@use '../src/database/seed/remote/modules/utils/assets/scss/variables/color' as
+@use 'src/database/seed/remote/modules/utils/assets/scss/variables/color' as
   colorVars;
-@use '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows'
-  as shadowVars;
+@use 'src/database/seed/remote/modules/utils/assets/scss/variables/shadows' as
+  shadowVars;
 
 @mixin default-hover($element) {
   &:has(#{$element}:hover) {

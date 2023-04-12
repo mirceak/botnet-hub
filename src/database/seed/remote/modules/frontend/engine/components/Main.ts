@@ -79,15 +79,6 @@ type FilteredElementTypeProperties<ElementType> = ValueOrFunction<
   Partial<OnlyWritableAttributes<OnlyEditableAttributes<ElementType>>>
 >;
 
-export type IMainScopeUseComponentsObject<RequiredComponents> =
-  keyof ReturnType<
-    typeof HTMLElementsScope.prototype.useComponentsObject<RequiredComponents>
-  >['components'] extends keyof RequiredComponents
-    ? ReturnType<
-        typeof HTMLElementsScope.prototype.useComponentsObject<RequiredComponents>
-      >
-    : 'Error: Missing required components!'; /* TODO: improve at some point by exposing actual problematic keys */
-
 interface IComponentScopeAttributesListeners<
   Element extends HTMLElement = HTMLElement,
   E extends keyof GlobalEventHandlersEventMap = keyof GlobalEventHandlersEventMap
@@ -161,19 +152,22 @@ interface NestedElement {
 class BaseHtmlElement<
   Target extends HTMLElement = HTMLElement
 > extends window.HTMLElement {
-  component: BaseElement<Target>;
-  mainScope?: IMainScope;
+  public component: BaseElement<Target>;
+  mainScope: IMainScope;
 
-  public constructor() {
+  public constructor(mainScope: IMainScope) {
     super();
-    this.component = new BaseElement<Target>(this as unknown as Target);
+    this.mainScope = mainScope;
+    this.component = new BaseElement<Target>(
+      mainScope,
+      this as unknown as Target
+    );
   }
 
   useInitElement(mainScope: IMainScope, callback: CallableFunction) {
     this.mainScope = mainScope;
     return (scope?: unknown): void => {
       void this.component.initElement(
-        mainScope,
         (scope as Record<'attributes', never>)?.attributes
       );
       return callback(scope);
@@ -185,12 +179,14 @@ class BaseHtmlElement<
   }
 }
 
-class BaseElement<Target extends HTMLElement = HTMLElement> {
-  target: Target;
+class BaseElement<Target extends HTMLElement> {
+  public target: Target;
+  mainScope: IMainScope;
   eventHandlerClosers: CallableFunction[] = [];
 
-  constructor(element: Target) {
+  constructor(mainScope: IMainScope, element: Target) {
     this.target = element;
+    this.mainScope = mainScope;
   }
 
   disconnectedCallback() {
@@ -200,18 +196,18 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
   }
 
   async initElement(
-    mainScope: IMainScope,
     scope?: UnwrapAsyncAndPromiseNested<IComponentScope['attributes']>
   ): Promise<void> {
-    if (mainScope.helpers.isFunctionOrAsyncFunction(scope)) {
+    if (this.mainScope.helpers.isFunctionOrAsyncFunction(scope)) {
       scope = await (scope as unknown as CallableFunction)();
     }
-
     const { staticObject, reactiveObject } = (scope &&
       Object.keys(scope).reduce(
         (reduced, key) => {
           if (
-            mainScope.helpers.isFunction(scope?.[key as keyof typeof scope])
+            this.mainScope.helpers.isFunction(
+              scope?.[key as keyof typeof scope]
+            )
           ) {
             reduced.reactiveObject[key as keyof typeof scope] = scope?.[
               key as keyof typeof scope
@@ -246,13 +242,14 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
           Object.assign(reactiveResultsObject, { handlers: undefined })
         );
       };
-      mainScope.store.registerOnChangeCallback(
+      this.mainScope.store.registerOnChangeCallback(
         [...Object.values(reactiveObject)],
         render
       );
       render();
     }
-    if (staticObject) {
+
+    if (staticObject && Object.values(staticObject).length) {
       Object.assign(
         this.target,
         Object.assign(staticObject, { handlers: undefined })
@@ -266,7 +263,7 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
           if (handlers && handlers.length) {
             handlers.forEach((currentHandler) => {
               this.eventHandlerClosers.push(
-                mainScope.registerEventListener(
+                this.mainScope.registerEventListener(
                   this.target,
                   key as keyof GlobalEventHandlersEventMap,
                   currentHandler.callback
@@ -284,7 +281,7 @@ class BaseElement<Target extends HTMLElement = HTMLElement> {
 class BaseComponent<ILocalScope = IComponentScope>
   implements IHTMLComponent<ILocalScope>
 {
-  readonly tagName: string;
+  tagName: string;
 
   private scopedCssIdIndex = 0;
   constructor(
@@ -324,13 +321,13 @@ class BaseComponent<ILocalScope = IComponentScope>
 }
 
 class HTMLElementsScope {
-  store!: IStore;
-  router!: Router;
+  public store!: IStore;
+  public router!: Router;
 
   BaseComponent = BaseComponent;
   BaseHtmlElement = BaseHtmlElement;
 
-  preloadedRequests: Record<'code' | 'path', string | unknown>[] = [];
+  preloadedRequests: Record<'code' | 'path', string | Promise<unknown>>[] = [];
 
   asyncHydrationCallbackIndex = 0;
 
@@ -365,7 +362,10 @@ class HTMLElementsScope {
       );
   };
 
-  asyncStaticModule<S>(importer: () => S, type = 'text/javascript') {
+  asyncStaticModule<Module, S extends Promise<Module>>(
+    importer: () => S,
+    type = 'text/javascript'
+  ) {
     const parsedPath = importer
       .toString()
       .match(/import\('.*'\)/g)?.[0]
@@ -381,7 +381,7 @@ class HTMLElementsScope {
             type
           });
           const url = URL.createObjectURL(blob);
-          module.code = import(url) as unknown as typeof module.code;
+          module.code = import(url) as S;
           URL.revokeObjectURL(url);
           return module.code as S;
         } else {
@@ -523,10 +523,14 @@ class HTMLElementsScope {
         Tag extends
           | `<${keyof Components & string}>`
           | `<${keyof Components & string}/>`
+          | `<${keyof Components & string}<>`
           | `<${keyof HTMLElementTagNameMap & string}>`
-          | `<${keyof HTMLElementTagNameMap & string}/>`,
-        Children,
-        TagName = Tag extends `<${infer _TagName}>` | `<${infer _TagName}/>`
+          | `<${keyof HTMLElementTagNameMap & string}/>`
+          | `<${keyof HTMLElementTagNameMap & string}<>`,
+        TagName = Tag extends
+          | `<${infer _TagName}>`
+          | `<${infer _TagName}/>`
+          | `<${infer _TagName}<>`
           ? _TagName
           : never,
         DefaultElementScope = TagName extends keyof HTMLElementTagNameMap
@@ -536,7 +540,10 @@ class HTMLElementsScope {
         IsClosedTag = Tag extends `<${string}/>` ? true : false
       >(
         ...e: IsClosedTag extends true
-          ? [tag: Tag, children?: Children[]] extends [
+          ? [
+              tag: Tag,
+              children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
+            ] extends [
               tag: Tag,
               children?: AsyncAndPromise<AsyncAndPromise<NestedElement>[]>
             ]
@@ -594,7 +601,7 @@ class HTMLElementsScope {
             ]
       ) => {
         const [tagName, scope, children] = e as [Tag, never, never];
-        const tag = tagName.replace(/^<|\/?>$/g, '') as keyof Components &
+        const tag = tagName.replace(/^<|\/|<?>$/g, '') as keyof Components &
           string;
         const constructor = window.customElements.get(tag);
         const isCustomElement =
@@ -602,15 +609,15 @@ class HTMLElementsScope {
         let element: Promise<HTMLElement>;
         if (!isCustomElement) {
           const temp = document.createElement(tag);
-          (temp as BaseHtmlElement).component = new BaseElement(temp);
+          (temp as BaseHtmlElement).component = new BaseElement(this, temp);
           element = new Promise((resolve) => resolve(temp));
         } else {
           if (constructor) {
-            element = new Promise((resolve) => resolve(new constructor()));
+            element = new Promise((resolve) => resolve(new constructor(this)));
           } else {
             element = window.customElements
               .whenDefined(tag)
-              .then((_constructor) => new _constructor());
+              .then((_constructor) => new _constructor(this));
           }
         }
 
@@ -630,8 +637,6 @@ class HTMLElementsScope {
       }
     };
   };
-
-  /* TODO: add option for closing tag that does not instantiate component, but assigns the props. */
 
   /*lazy loads components*/
   asyncLoadComponentTemplate = (template: IHTMLElementComponentTemplate) => {
@@ -676,6 +681,7 @@ class HTMLElementsScope {
     const temp = document.createElement('div');
     temp.innerHTML += innerHtml;
     const children = [...(temp.children as unknown as HTMLElement[])];
+    temp.innerHTML = '';
     temp.remove();
     for (const child of children) {
       if (!child.getAttribute('wcY')) {
@@ -708,58 +714,130 @@ class HTMLElementsScope {
       child = await (child as unknown as CallableFunction)();
     }
 
-    const shouldInstantiate = !child.tagName.match(/^<(.*)\/>$/gis);
+    const shouldAddProps = !!child.tagName.match(/^<(.*)<>$/gis);
+    const shouldInstantiate =
+      !shouldAddProps && !child.tagName.match(/^<(.*)\/>$/gis);
     const element = (await child.element) as
-      | (BaseElement & HTMLElement)
+      | (BaseElement<HTMLElement> & HTMLElement)
       | BaseHtmlElement;
 
     if (element) {
-      element.setAttribute('wcY', index.toString());
-      const indexPosition = this.getIndexPositionInParent(
-        index,
-        target.children as unknown as HTMLElement[]
-      );
-      if (indexPosition < 0) {
-        target.appendChild(element);
-      } else {
-        target.insertBefore(element, target.children[indexPosition]);
-      }
-
       if (child) {
-        if (
-          (!child.children && this.helpers.isArray(child.scope)) ||
-          child?.children
-        ) {
+        if (shouldAddProps || shouldInstantiate) {
+          if (
+            child.scope &&
+            (!child.children || this.helpers.isObject(child.scope))
+          ) {
+            if (this.helpers.isFunctionOrAsyncFunction(child.scope)) {
+              child.scope = await (child.scope as CallableFunction)();
+            }
+
+            if (child.scopeGetter) {
+              if (
+                this.helpers.isFunctionOrAsyncFunction(await child.scopeGetter)
+              ) {
+                child.scope = await (
+                  (await child.scopeGetter) as CallableFunction
+                )(await child.scope);
+              } else {
+                throw new Error('Scope getter should be a method');
+              }
+            }
+          }
+        }
+
+        if (shouldAddProps) {
+          if (child.isCustomElement) {
+            if (
+              this.helpers.isFunctionOrAsyncFunction(child.scope?.attributes)
+            ) {
+              child.scope.attributes = await (
+                (await child.scope.attributes) as CallableFunction
+              )();
+            }
+
+            child.scope.attributes = await Promise.all(
+              Object.keys(child.scope.attributes).reduce(
+                async (reduced, key) => {
+                  if (this.helpers.isFunction(reduced[key])) {
+                    reduced[key] = await (
+                      child.scope.attributes[key] as CallableFunction
+                    )(await element);
+                  } else {
+                    reduced[key] = await child.scope.attributes[key];
+                  }
+                  return reduced;
+                },
+                {} as typeof child.scope.attributes
+              )
+            );
+
+            Object.assign(element, child.scope);
+          } else {
+            if (this.helpers.isFunctionOrAsyncFunction(child.scope)) {
+              child.scope = await ((await child.scope) as CallableFunction)();
+            }
+
+            child.scope = await Promise.all(
+              Object.keys(child.scope).reduce(async (reduced, key) => {
+                if (this.helpers.isFunctionOrAsyncFunction(child.scope[key])) {
+                  reduced[key] = await (
+                    (await child.scope[key]) as CallableFunction
+                  )(await element);
+                } else {
+                  reduced[key] = await child.scope[key];
+                }
+                return reduced;
+              }, {} as typeof child.scope)
+            );
+
+            Object.assign(element, child.scope);
+          }
+        }
+
+        if (child.children) {
           if (this.helpers.isFunctionOrAsyncFunction(child.children)) {
             child.children = await (child.children as CallableFunction)();
           }
+
+          child.children = await Promise.all(
+            (child.children as NestedElement[]).map(async (_child) => {
+              _child = await _child;
+              if (this.helpers.isFunctionOrAsyncFunction(_child)) {
+                _child = await (_child as unknown as CallableFunction)();
+              }
+
+              return _child;
+            }, [])
+          );
+
           for (const [_index, _child] of (
             (child.children as []) || (child.scope as unknown as [])
           ).entries()) {
             void this.oElementParser(element, _child as NestedElement, _index);
           }
         }
+
+        element.setAttribute('wcY', index.toString());
+        const indexPosition = this.getIndexPositionInParent(
+          index,
+          target.children as unknown as HTMLElement[]
+        );
+
+        if (indexPosition < 0) {
+          target.appendChild(element);
+        } else {
+          target.insertBefore(element, target.children[indexPosition]);
+        }
+
         if (shouldInstantiate) {
-          if (this.helpers.isFunctionOrAsyncFunction(child.scope)) {
-            child.scope = await (child.scope as unknown as CallableFunction)();
-          }
-          if (child.scopeGetter) {
-            if (
-              this.helpers.isFunctionOrAsyncFunction(await child.scopeGetter)
-            ) {
-              child.scope = await (
-                (await child.scopeGetter) as CallableFunction
-              )(await child.scope);
-            } else {
-              throw new Error('Scope getter should be a method');
-            }
-          }
           if (child.isCustomElement) {
-            void (element as BaseElement).initElement(child.scope);
+            void (
+              element as BaseElement<HTMLElement> & HTMLElement
+            ).initElement(child.scope);
           } else {
             void (element as BaseHtmlElement).component?.initElement(
-              this,
-              child.scope as Record<string, unknown>
+              child.scope
             );
           }
         }
@@ -1035,6 +1113,13 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
         )
         .then(async ({ useStore }) => {
           mainScope.store = await useStore(mainScope);
+          await mainScope
+            .asyncStaticModule(
+              () => import('/remoteModules/services/models/User/model.User.js')
+            )
+            .then(async ({ initModel }) => {
+              await initModel(mainScope);
+            });
         });
 
       return mainScope
@@ -1044,7 +1129,6 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
         .then(async ({ useRouter }) =>
           useRouter(mainScope).then(async (router) => {
             mainScope.router = router;
-            mainScope.router.store = mainScope.store;
 
             const { builder: o } = mainScope.useComponentsObject({
               ['router-view-component']: () =>
@@ -1057,12 +1141,6 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
               target: this,
               components: [o('<router-view-component>')]
             });
-
-            const { initModel } = await mainScope.asyncStaticModule(
-              () => import('/remoteModules/services/models/User/model.User.js')
-            );
-
-            initModel(mainScope);
           })
         );
     }

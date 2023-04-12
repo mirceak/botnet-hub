@@ -2,6 +2,7 @@ import type {
   IHTMLElementComponent,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
+import type { initModel } from '/remoteModules/services/models/User/model.User.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject({
@@ -37,7 +38,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
               })
             ]),
             o('<div>', { className: 'content' }, [
-              o('<input-component>', {
+              o('<input-component>', () => ({
                 elementAttributes: {
                   placeholder: 'Username',
                   handlers: {
@@ -56,8 +57,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                 attributes: {
                   className: 'bg-default m-b-8'
                 }
-              }),
-
+              })),
               o('<input-component>', {
                 elementAttributes: {
                   placeholder: 'Password',
@@ -85,7 +85,14 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                       {
                         callback: async (e) => {
                           e.preventDefault();
-                          mainScope.router.push({
+                          const userStoreData = mainScope.store.modules['user']
+                            .data as Awaited<
+                            ReturnType<typeof initModel>
+                          >['data'];
+
+                          userStoreData.auth = { token: 'token' };
+
+                          void mainScope.router.push({
                             path: 'home'
                           });
                         }

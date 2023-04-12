@@ -22,7 +22,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
         target: this,
         components: [
           o('<h1>', {
-            innerText: () => mainScope.store.data.home.titleWithName
+            innerText: () => mainScope.store.data?.home.titleWithName
           }),
           async () => {
             return instance.getScopedCss(await scopedCss);

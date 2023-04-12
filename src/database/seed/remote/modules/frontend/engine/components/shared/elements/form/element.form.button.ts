@@ -14,11 +14,11 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     implements IHTMLElementComponent
   {
     initElement = this.useInitElement(
-      /* TODO: add directives */
+      /* TODO: add wc-if directives */
+      /* TODO: refactor asyncAndPromise system to work with helpers */
       mainScope,
       (scope?: ILocalButtonScope) => {
         const buttonTemplate = o('<button>', scope?.elementAttributes);
-
         mainScope.asyncLoadComponentTemplate({
           target: this,
           components: [buttonTemplate]

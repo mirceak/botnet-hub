@@ -1,4 +1,4 @@
-@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/display';
+@import 'src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/display';
 
 input-component {
   @include default-interactive-component(input);

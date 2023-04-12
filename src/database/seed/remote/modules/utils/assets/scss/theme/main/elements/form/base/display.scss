@@ -1,9 +1,9 @@
 @use 'sass:color' as color;
 
-@import '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows';
-@import '../src/database/seed/remote/modules/utils/assets/scss/variables/color';
-@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/font';
-@import '../src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/interacting';
+@import 'src/database/seed/remote/modules/utils/assets/scss/variables/shadows';
+@import 'src/database/seed/remote/modules/utils/assets/scss/variables/color';
+@import 'src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/font';
+@import 'src/database/seed/remote/modules/utils/assets/scss/theme/main/elements/form/base/interacting';
 
 $default-display-border-radius: 4px;
 

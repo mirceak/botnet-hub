@@ -30,7 +30,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          o('<div>', { className: 'card gap-8 m-a-16 fit-content' }, [
+          o('<div>', { className: 'card gap-8 m-t-64 fit-content' }, [
             o('<div>', { className: 'header row items-center' }, [
               o('<button-component>', {
                 elementAttributes: {

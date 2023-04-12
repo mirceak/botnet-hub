@@ -1,5 +1,7 @@
-@use '../src/database/seed/remote/modules/utils/assets/scss/variables/shadows'
-  as shadowVars;
+@use 'src/database/seed/remote/modules/utils/assets/scss/variables/shadows' as
+  shadowVars;
+@use 'src/database/seed/remote/modules/utils/assets/scss/variables/color' as
+  colorVars;
 
 :root {
   --card-border-radius: 8px;
