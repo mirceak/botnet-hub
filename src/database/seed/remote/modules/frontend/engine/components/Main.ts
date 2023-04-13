@@ -183,6 +183,10 @@ class BaseElement<Target extends HTMLElement> {
   public target: Target;
   mainScope: IMainScope;
   eventHandlerClosers: CallableFunction[] = [];
+  reactiveValuesClosers: {
+    props: CallableFunction[];
+    callback: CallableFunction;
+  }[] = [];
 
   constructor(mainScope: IMainScope, element: Target) {
     this.target = element;
@@ -193,7 +197,12 @@ class BaseElement<Target extends HTMLElement> {
     this.eventHandlerClosers.forEach((currentEventHandlerCloser) => {
       currentEventHandlerCloser();
     });
-    /* todo: add UN-registerOnChangeCallback */
+    this.reactiveValuesClosers.forEach((currentEventHandlerCloser) => {
+      this.mainScope.store.unRegisterOnChangeCallback(
+        currentEventHandlerCloser.props,
+        currentEventHandlerCloser.callback
+      );
+    });
   }
 
   async initElement(
@@ -234,6 +243,10 @@ class BaseElement<Target extends HTMLElement> {
             this.target[key as keyof typeof this.target] =
               reactiveObject[key]();
           };
+          this.reactiveValuesClosers.push({
+            props: [reactiveObject[key]],
+            callback: render
+          });
           this.mainScope.store.registerOnChangeCallback(
             [reactiveObject[key]],
             render
@@ -242,7 +255,7 @@ class BaseElement<Target extends HTMLElement> {
         }
       }
 
-      if (staticObject && Object.values(staticObject).length) {
+      if (staticObject) {
         Object.assign(this.target, Object.assign(staticObject));
       }
 
@@ -782,51 +795,42 @@ class HTMLElementsScope {
                   );
               }
 
-              nestedElement.scope.attributes = await Promise.all(
-                Object.keys(nestedElement.scope.attributes).reduce(
-                  async (reduced, key) => {
-                    if (
-                      this.helpers.validationsProto.isAsyncOrFunction(
-                        reduced[key]
-                      )
-                    ) {
-                      reduced[key] =
-                        await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                          (nestedElement as NestedElement).scope.attributes[key]
-                        );
-                    } else {
-                      reduced[key] = await (nestedElement as NestedElement)
-                        .scope.attributes[key];
-                    }
-                    return reduced;
-                  },
-                  {} as typeof nestedElement.scope.attributes
-                )
-              );
+              nestedElement.scope.attributes = await Object.keys(
+                nestedElement.scope.attributes
+              ).reduce(async (reduced, key) => {
+                if (
+                  this.helpers.validationsProto.isAsyncOrFunction(reduced[key])
+                ) {
+                  reduced[key] =
+                    await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                      (nestedElement as NestedElement).scope.attributes[key]
+                    );
+                } else {
+                  reduced[key] = await (nestedElement as NestedElement).scope
+                    .attributes[key];
+                }
+                return reduced;
+              }, {} as typeof nestedElement.scope.attributes);
 
-              Object.assign(element, nestedElement.scope);
+              Object.assign(element, nestedElement.scope.attributes);
             } else {
-              nestedElement.scope = await Promise.all(
-                Object.keys(nestedElement.scope).reduce(
-                  async (reduced, key) => {
-                    if (
-                      this.helpers.validationsProto.isAsyncOrFunction(
-                        (nestedElement as NestedElement).scope[key]
-                      )
-                    ) {
-                      await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                        (nestedElement as NestedElement).scope[key]
-                      );
-                    } else {
-                      reduced[key] = (nestedElement as NestedElement).scope[
-                        key
-                      ];
-                    }
-                    return reduced;
-                  },
-                  {} as typeof nestedElement.scope
-                )
-              );
+              nestedElement.scope = await Object.keys(
+                nestedElement.scope
+              ).reduce(async (reduced, key) => {
+                if (
+                  this.helpers.validationsProto.isAsyncOrFunction(
+                    (nestedElement as NestedElement).scope[key]
+                  )
+                ) {
+                  reduced[key] =
+                    await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                      (nestedElement as NestedElement).scope[key]
+                    );
+                } else {
+                  reduced[key] = (nestedElement as NestedElement).scope[key];
+                }
+                return reduced;
+              }, {} as typeof nestedElement.scope);
 
               Object.assign(element, nestedElement.scope);
             }
