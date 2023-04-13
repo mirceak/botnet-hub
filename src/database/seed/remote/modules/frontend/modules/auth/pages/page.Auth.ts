@@ -85,7 +85,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                       {
                         callback: async (e) => {
                           e.preventDefault();
-                          const userStoreData = mainScope.store.modules['user']
+                          const userStoreData = mainScope.store.modules.user
                             .data as Awaited<
                             ReturnType<typeof initModel>
                           >['data'];

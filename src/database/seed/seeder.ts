@@ -13,6 +13,7 @@ import path from 'path';
 const loadSeederModule = async <T>(importer: () => Promise<T>) => {
   const moduleBasePath = importer
     .toString()
+    .replaceAll(/\/src\/database\/seed\/remote\/modules\//g, '/remoteModules')
     .replaceAll(/[\n\r\t ]/g, '')
     .match(/import\(.*\)/g)?.[0]
     .replace("import('", '')
@@ -177,7 +178,17 @@ export const init: IKernelModuleInit = async (context) => {
   );
 
   await loadSeederModule(
-    () => import('/remoteModules/utils/helpers/shared/utils.js')
+    () =>
+      import(
+        '/remoteModules/utils/helpers/shared/transformations/validations.proto.js'
+      )
+  );
+
+  await loadSeederModule(
+    () =>
+      import(
+        '/remoteModules/utils/helpers/shared/transformations/reducers.functions.js'
+      )
   );
 
   await loadSeederModule(

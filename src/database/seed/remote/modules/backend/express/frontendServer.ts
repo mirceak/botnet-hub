@@ -137,7 +137,9 @@ app.get('/(.*)', (...[req, res]) => {
   const routeReducer = (result: { requests: string[] }, route: any) => {
     route.requests?.reduce(requestReducer, result);
     if (route.useRouter) {
-      result.requests.push('#remoteModules/utils/helpers/shared/utils.js');
+      result.requests.push(
+        '#remoteModules/utils/helpers/shared/transformations/validations.proto.js'
+      );
       result.requests.push('#remoteModules/frontend/engine/router.js');
       result.requests.push('/node_modules/path-to-regexp/dist.es2015/index.js');
     }

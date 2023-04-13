@@ -37,10 +37,6 @@
       "node": "./build/*.js",
       "default": "./src/*.js"
     },
-    "#src/*.scss": {
-      "node": "./build/*.scss",
-      "default": "./src/*.scss"
-    },
     "#remoteModules/*.js": {
       "node": "./build/database/seed/remote/modules/*.js",
       "default": "./src/database/seed/remote/modules/*.js"

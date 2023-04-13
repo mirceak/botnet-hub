@@ -56,7 +56,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                         {
                           callback: (e) => {
                             e.preventDefault();
-                            mainScope.router.push({
+                            void mainScope.router.push({
                               name: 'about'
                             });
                           }

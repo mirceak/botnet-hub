@@ -1,9 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 type IOptions<T = InstanceType<typeof WeakMap>> = {
-  helpers: {
-    isObjectOrArray: (val: unknown) => boolean;
-  };
+  mainScope: IMainScope;
   watchedProxiesMap: T;
   registeringNestedOnChangeCallback: boolean;
   reRegisteringOnChangeCallback: boolean;
@@ -105,8 +103,8 @@ const triggerWatchers = <ProxyMap extends InstanceType<typeof WeakMap>>(
               callbacks[i]
             );
           }
-          let foundChange = false;
           const newValues = [] as unknown[];
+          let foundChange = false;
           Object.keys(propCallbacks[i]).forEach((key, index) => {
             if (!isNaN(+key) && typeof +key === 'number') {
               const newValue = propCallbacks[i][+key]();
@@ -147,7 +145,7 @@ const handler = <ObjectType>(
     prop: string,
     receiver: ProxyInternalProps<ObjectType>
   ) {
-    if (options.helpers.isObjectOrArray(obj[prop])) {
+    if (options.mainScope.helpers.validationsProto.isObjectOrArray(obj[prop])) {
       if (!this._proxySet.has(prop)) {
         Reflect.set(
           obj,
@@ -185,6 +183,15 @@ const handler = <ObjectType>(
     }
 
     return Reflect.get(obj, prop, receiver);
+
+    /* 
+      TODO: add option to access store mainModule without the reactivity layer, maybe enter the same tree through a different key like 'nonReactive' at the root of every module.
+    */
+    /* TODO: this should return a proxy to enable base type values to be transferred directly removing the need to either explicitly call the path or parent object when registering watchers */
+    /* This proxy should should remember it's value and this should be returned when the value is accessed */
+    /* This also means that you cannot delete the proxies anymore, removing ghost trees so setting the value would happen in the same proxy all the time */
+    /* Deleting a base type proxy would only clear out it's value and this way, resigning a value after deleting it will just update the empty proxy's value */
+    /* Add composable that returns an empty object strong typed with the structure it represented for edit forms */
   },
   set(
     obj: ProxyInternalProps<ObjectType>,
@@ -192,7 +199,7 @@ const handler = <ObjectType>(
     value: unknown,
     receiver: ProxyInternalProps<ObjectType>
   ) {
-    if (options.helpers.isObjectOrArray(value)) {
+    if (options.mainScope.helpers.validationsProto.isObjectOrArray(value)) {
       /* keep all previous references alive. removing this would replace references to existing variables invalidating existing watchers using external variables to reference the tree */
       if (this._proxySet.has(prop)) {
         if (obj[prop] != null) {
@@ -260,14 +267,8 @@ const handler = <ObjectType>(
 /*Whenever a branch of the tree is removed (a nested property that is an object) the Proxy's branch will still exist because we still have references that watch the old branch instance. If the branch gets reassigned a new value, a new ProxyInternalProps branch will get created but the old one will still exist as ghost branches.*/
 /*Ghost branches (duplicated branches) can be removed by unregistering the watchers that referenced them*/
 export const ProxyObject = async <T>(obj: T, mainScope: IMainScope) => {
-  const { isObjectOrArray } = await mainScope.asyncStaticModule(
-    () => import('/remoteModules/utils/helpers/shared/utils.js')
-  );
-
   const options = {
-    helpers: {
-      isObjectOrArray
-    },
+    mainScope,
     watchedProxiesMap: new WeakMap(),
     registeringNestedOnChangeCallback: false,
     unRegisteringOnChangeCallback: false,

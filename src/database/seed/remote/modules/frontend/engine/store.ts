@@ -18,10 +18,6 @@ class StoreModule<State, ParentState> {
   };
 }
 
-/* 
-  TODO: add option to access store mainModule without the reactivity layer, maybe enter the same tree through a different key like 'nonReactive' at the root of every module.
-*/
-
 interface HomeModuleState {
   title: string;
   titleWithName?: string;

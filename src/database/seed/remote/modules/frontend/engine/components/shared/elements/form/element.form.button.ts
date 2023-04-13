@@ -15,7 +15,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   {
     initElement = this.useInitElement(
       /* TODO: add wc-if directives */
-      /* TODO: refactor asyncAndPromise system to work with helpers */
+      /* TODO: refactor asyncAndPromise system to work with helper functions */
       mainScope,
       (scope?: ILocalButtonScope) => {
         const buttonTemplate = o('<button>', scope?.elementAttributes);

@@ -193,87 +193,77 @@ class BaseElement<Target extends HTMLElement> {
     this.eventHandlerClosers.forEach((currentEventHandlerCloser) => {
       currentEventHandlerCloser();
     });
+    /* todo: add UN-registerOnChangeCallback */
   }
 
   async initElement(
     scope?: UnwrapAsyncAndPromiseNested<IComponentScope['attributes']>
   ): Promise<void> {
-    if (this.mainScope.helpers.isFunctionOrAsyncFunction(scope)) {
-      scope = await (scope as unknown as CallableFunction)();
+    if (this.mainScope.helpers.validationsProto.isAsyncOrFunction(scope)) {
+      scope =
+        await this.mainScope.helpers.reducersFunctions.valueFromAsyncOrFunction(
+          scope
+        );
     }
-    const { staticObject, reactiveObject } = (scope &&
-      Object.keys(scope).reduce(
-        (reduced, key) => {
-          if (
-            this.mainScope.helpers.isFunction(
-              scope?.[key as keyof typeof scope]
-            )
-          ) {
-            reduced.reactiveObject[key as keyof typeof scope] = scope?.[
-              key as keyof typeof scope
-            ] as never;
-          } else {
-            reduced.staticObject[key as keyof typeof scope] = scope?.[
-              key as keyof typeof scope
-            ] as never;
-          }
-          return reduced;
-        },
-        { staticObject: {}, reactiveObject: {} } as {
-          staticObject: Record<keyof typeof scope, unknown>;
-          reactiveObject: Record<keyof typeof scope, CallableFunction>;
-        }
-      )) || { undefined };
-    if (reactiveObject && Object.values(reactiveObject).length) {
-      const render = () => {
-        const reactiveResultsObject = Object.keys(reactiveObject).reduce(
+
+    if (scope) {
+      const { staticObject, reactiveObject } =
+        Object.keys(scope).reduce(
           (reduced, key) => {
-            reduced[key as keyof typeof reduced] = (
-              reactiveObject[
-                key as keyof typeof reactiveObject
-              ] as CallableFunction
-            )();
+            if (scope && key !== 'handlers') {
+              if (
+                this.mainScope.helpers.validationsProto.isAsyncOrFunction(
+                  scope[key as never]
+                )
+              ) {
+                reduced.reactiveObject[key as never] = scope[key as never];
+              } else {
+                reduced.staticObject[key as never] = scope[key as never];
+              }
+            }
             return reduced;
           },
-          {} as Record<keyof typeof reactiveObject, unknown>
-        );
-        Object.assign(
-          this.target,
-          Object.assign(reactiveResultsObject, { handlers: undefined })
-        );
-      };
-      this.mainScope.store.registerOnChangeCallback(
-        [...Object.values(reactiveObject)],
-        render
-      );
-      render();
-    }
-
-    if (staticObject && Object.values(staticObject).length) {
-      Object.assign(
-        this.target,
-        Object.assign(staticObject, { handlers: undefined })
-      );
-    }
-
-    if (scope?.handlers) {
-      Object.keys(scope.handlers).forEach((key) => {
-        if (scope) {
-          const handlers = scope.handlers?.[key as keyof typeof scope.handlers];
-          if (handlers && handlers.length) {
-            handlers.forEach((currentHandler) => {
-              this.eventHandlerClosers.push(
-                this.mainScope.registerEventListener(
-                  this.target,
-                  key as keyof GlobalEventHandlersEventMap,
-                  currentHandler.callback
-                )
-              );
-            });
+          { staticObject: {}, reactiveObject: {} } as {
+            staticObject: Record<string, unknown>;
+            reactiveObject: Record<string, CallableFunction>;
           }
+        ) || undefined;
+      if (reactiveObject) {
+        for (const key in reactiveObject) {
+          const render = () => {
+            this.target[key as keyof typeof this.target] =
+              reactiveObject[key]();
+          };
+          this.mainScope.store.registerOnChangeCallback(
+            [reactiveObject[key]],
+            render
+          );
+          render();
         }
-      });
-      scope.handlers.click;
+      }
+
+      if (staticObject && Object.values(staticObject).length) {
+        Object.assign(this.target, Object.assign(staticObject));
+      }
+
+      if (scope.handlers) {
+        Object.keys(scope.handlers).forEach((key) => {
+          if (scope?.handlers) {
+            const handlers = scope.handlers[key as keyof typeof scope.handlers];
+            if (handlers && handlers.length) {
+              handlers.forEach((currentHandler) => {
+                this.eventHandlerClosers.push(
+                  this.mainScope.registerEventListener(
+                    this.target,
+                    key as keyof GlobalEventHandlersEventMap,
+                    currentHandler.callback
+                  )
+                );
+              });
+            }
+          }
+        });
+      }
     }
   }
 }
@@ -331,11 +321,28 @@ class HTMLElementsScope {
 
   asyncHydrationCallbackIndex = 0;
 
-  helpers = this.asyncStaticModule(
-    () => import('/remoteModules/utils/helpers/shared/utils.js')
-  ) as unknown as Awaited<
-    typeof import('/remoteModules/utils/helpers/shared/utils.js')
-  >;
+  helpers = {
+    validationsProto: this.asyncStaticModule(
+      () =>
+        import(
+          '/remoteModules/utils/helpers/shared/transformations/validations.proto.js'
+        )
+    ) as unknown as Awaited<
+      typeof import('/remoteModules/utils/helpers/shared/transformations/validations.proto.js')
+    >,
+    reducersFunctions: this.asyncStaticModule(
+      () =>
+        import(
+          '/remoteModules/utils/helpers/shared/transformations/reducers.functions.js'
+        )
+    ).then(({ default: getter }) => getter(this)) as unknown as Awaited<
+      ReturnType<
+        Awaited<
+          typeof import('/remoteModules/utils/helpers/shared/transformations/reducers.functions.js')
+        >['default']
+      >
+    >
+  };
 
   registerEventListener = <
     T extends Element | Window,
@@ -411,21 +418,21 @@ class HTMLElementsScope {
     return fetch(parsedPath).then((res) => res.text());
   }
 
-  asyncComponent = async <S = object | undefined>(
+  asyncComponent = async <S>(
     importer: () => Promise<HTMLComponentModule<S>>
   ) => {
     const module = await this.asyncStaticModule(importer);
     return module.default(this);
   };
 
-  asyncComponentScopeGetter = async <S = object | undefined>(
+  asyncComponentScopeGetter = async <S>(
     importer: () => Promise<HTMLComponentModule<S>>
   ) => {
     const module = await this.asyncComponent(importer);
     return module.getScope;
   };
 
-  asyncComponentScope = async <S = object | undefined>(
+  asyncComponentScope = async <S>(
     importer: () => Promise<HTMLComponentModule<S>>,
     scope?: S
   ) => {
@@ -484,7 +491,7 @@ class HTMLElementsScope {
       >['getScope'];
     };
 
-    /* refactor so that we only get the module and extract the component name from that. no need to define them twice */
+    /* TODO: refactor so that we only get the module and extract the component name from that. no need to define them twice */
     for (const key in components) {
       const newComponent = this.asyncComponentScopeGetter(
         components[key] as () => Promise<HTMLComponentModule<unknown>>
@@ -621,11 +628,8 @@ class HTMLElementsScope {
           }
         }
 
-        let scopeGetter;
-        if (components) {
-          scopeGetter = (components[tag] ||
-            (() => scope)) as (typeof components)[typeof tag];
-        }
+        const scopeGetter = components[tag] || (() => scope);
+
         return {
           scopeGetter,
           scope,
@@ -646,7 +650,7 @@ class HTMLElementsScope {
         if (component) {
           void this.asyncHydrationCallback(async () => {
             component = await component;
-            if (this.helpers.isFunctionOrAsyncFunction(component)) {
+            if (this.helpers.validationsProto.isAsyncOrFunction(component)) {
               component = await (component as CallableFunction)();
             }
 
@@ -707,112 +711,156 @@ class HTMLElementsScope {
 
   oElementParser = async (
     target: IHTMLElementComponentTemplate['target'],
-    child: NestedElement,
+    nestedElement: NestedElement,
     index: number
-  ) => {
-    if (this.helpers.isFunctionOrAsyncFunction(child)) {
-      child = await (child as unknown as CallableFunction)();
+  ): Promise<HTMLElement | void> => {
+    nestedElement = await nestedElement;
+
+    if (this.helpers.validationsProto.isAsyncOrFunction(nestedElement)) {
+      nestedElement =
+        await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+          nestedElement
+        );
     }
 
-    const shouldAddProps = !!child.tagName.match(/^<(.*)<>$/gis);
+    const shouldAddProps = !!nestedElement.tagName.match(/^<(.*)<>$/gis);
     const shouldInstantiate =
-      !shouldAddProps && !child.tagName.match(/^<(.*)\/>$/gis);
-    const element = (await child.element) as
+      !shouldAddProps && !nestedElement.tagName.match(/^<(.*)\/>$/gis);
+    const element = (await nestedElement.element) as
       | (BaseElement<HTMLElement> & HTMLElement)
       | BaseHtmlElement;
 
     if (element) {
-      if (child) {
+      if (nestedElement) {
         if (shouldAddProps || shouldInstantiate) {
           if (
-            child.scope &&
-            (!child.children || this.helpers.isObject(child.scope))
+            nestedElement.scope &&
+            !nestedElement.children &&
+            !this.helpers.validationsProto.isArray(nestedElement.scope)
           ) {
-            if (this.helpers.isFunctionOrAsyncFunction(child.scope)) {
-              child.scope = await (child.scope as CallableFunction)();
-            }
-
-            if (child.scopeGetter) {
-              if (
-                this.helpers.isFunctionOrAsyncFunction(await child.scopeGetter)
-              ) {
-                child.scope = await (
-                  (await child.scopeGetter) as CallableFunction
-                )(await child.scope);
-              } else {
-                throw new Error('Scope getter should be a method');
-              }
-            }
-          }
-        }
-
-        if (shouldAddProps) {
-          if (child.isCustomElement) {
             if (
-              this.helpers.isFunctionOrAsyncFunction(child.scope?.attributes)
-            ) {
-              child.scope.attributes = await (
-                (await child.scope.attributes) as CallableFunction
-              )();
-            }
-
-            child.scope.attributes = await Promise.all(
-              Object.keys(child.scope.attributes).reduce(
-                async (reduced, key) => {
-                  if (this.helpers.isFunction(reduced[key])) {
-                    reduced[key] = await (
-                      child.scope.attributes[key] as CallableFunction
-                    )(await element);
-                  } else {
-                    reduced[key] = await child.scope.attributes[key];
-                  }
-                  return reduced;
-                },
-                {} as typeof child.scope.attributes
+              this.helpers.validationsProto.isAsyncOrFunction(
+                nestedElement.scope
               )
-            );
-
-            Object.assign(element, child.scope);
-          } else {
-            if (this.helpers.isFunctionOrAsyncFunction(child.scope)) {
-              child.scope = await ((await child.scope) as CallableFunction)();
+            ) {
+              nestedElement.scope =
+                await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                  nestedElement.scope
+                );
             }
 
-            child.scope = await Promise.all(
-              Object.keys(child.scope).reduce(async (reduced, key) => {
-                if (this.helpers.isFunctionOrAsyncFunction(child.scope[key])) {
-                  reduced[key] = await (
-                    (await child.scope[key]) as CallableFunction
-                  )(await element);
-                } else {
-                  reduced[key] = await child.scope[key];
-                }
-                return reduced;
-              }, {} as typeof child.scope)
-            );
+            if (
+              this.helpers.validationsProto.isSyncFunction(
+                nestedElement.scopeGetter
+              )
+            ) {
+              nestedElement.scope = nestedElement.scopeGetter();
+            } else {
+              if (
+                this.helpers.validationsProto.isPromise(
+                  nestedElement.scopeGetter
+                )
+              ) {
+                nestedElement.scopeGetter = await nestedElement.scopeGetter;
+              }
+              nestedElement.scope = await nestedElement.scopeGetter(
+                nestedElement.scope
+              );
+            }
+          }
 
-            Object.assign(element, child.scope);
+          if (shouldAddProps) {
+            if (nestedElement.isCustomElement) {
+              if (
+                this.helpers.validationsProto.isAsyncOrFunction(
+                  await nestedElement.scope.attributes
+                )
+              ) {
+                nestedElement.scope.attributes =
+                  await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                    nestedElement.scope.attributes
+                  );
+              }
+
+              nestedElement.scope.attributes = await Promise.all(
+                Object.keys(nestedElement.scope.attributes).reduce(
+                  async (reduced, key) => {
+                    if (
+                      this.helpers.validationsProto.isAsyncOrFunction(
+                        reduced[key]
+                      )
+                    ) {
+                      reduced[key] =
+                        await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                          (nestedElement as NestedElement).scope.attributes[key]
+                        );
+                    } else {
+                      reduced[key] = await (nestedElement as NestedElement)
+                        .scope.attributes[key];
+                    }
+                    return reduced;
+                  },
+                  {} as typeof nestedElement.scope.attributes
+                )
+              );
+
+              Object.assign(element, nestedElement.scope);
+            } else {
+              nestedElement.scope = await Promise.all(
+                Object.keys(nestedElement.scope).reduce(
+                  async (reduced, key) => {
+                    if (
+                      this.helpers.validationsProto.isAsyncOrFunction(
+                        (nestedElement as NestedElement).scope[key]
+                      )
+                    ) {
+                      await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                        (nestedElement as NestedElement).scope[key]
+                      );
+                    } else {
+                      reduced[key] = (nestedElement as NestedElement).scope[
+                        key
+                      ];
+                    }
+                    return reduced;
+                  },
+                  {} as typeof nestedElement.scope
+                )
+              );
+
+              Object.assign(element, nestedElement.scope);
+            }
           }
         }
 
-        if (child.children) {
-          if (this.helpers.isFunctionOrAsyncFunction(child.children)) {
-            child.children = await (child.children as CallableFunction)();
+        if (nestedElement.children) {
+          if (
+            this.helpers.validationsProto.isAsyncOrFunction(
+              nestedElement.children
+            )
+          ) {
+            nestedElement.children =
+              await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                nestedElement.children
+              );
           }
 
-          child.children = await Promise.all(
-            (child.children as NestedElement[]).map(async (_child) => {
+          nestedElement.children = await Promise.all(
+            (nestedElement.children as NestedElement[]).map(async (_child) => {
               _child = await _child;
-              if (this.helpers.isFunctionOrAsyncFunction(_child)) {
-                _child = await (_child as unknown as CallableFunction)();
+              if (this.helpers.validationsProto.isAsyncOrFunction(_child)) {
+                _child =
+                  await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                    _child
+                  );
               }
-
               return _child;
             }, [])
           );
 
           for (const [_index, _child] of (
-            (child.children as []) || (child.scope as unknown as [])
+            (nestedElement.children as []) ||
+            (nestedElement.scope as unknown as [])
           ).entries()) {
             void this.oElementParser(element, _child as NestedElement, _index);
           }
@@ -831,20 +879,20 @@ class HTMLElementsScope {
         }
 
         if (shouldInstantiate) {
-          if (child.isCustomElement) {
+          if (nestedElement.isCustomElement) {
             void (
               element as BaseElement<HTMLElement> & HTMLElement
-            ).initElement(child.scope);
+            ).initElement(nestedElement.scope);
           } else {
             void (element as BaseHtmlElement).component?.initElement(
-              child.scope
+              nestedElement.scope
             );
           }
         }
       }
-    }
 
-    return element as HTMLElement;
+      return element as HTMLElement;
+    }
   };
 
   getIndexPositionInParent(index: number, children: HTMLElement[]): number {
@@ -1105,7 +1153,10 @@ export const initComponent = (mainScope: HTMLElementsScope) => {
     }
 
     async init() {
-      mainScope.helpers = await mainScope.helpers;
+      mainScope.helpers = {
+        validationsProto: await mainScope.helpers.validationsProto,
+        reducersFunctions: await mainScope.helpers.reducersFunctions
+      };
 
       await mainScope
         .asyncStaticModule(
