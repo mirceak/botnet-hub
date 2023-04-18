@@ -34,6 +34,7 @@ module.exports = {
         curly: 'off',
         'no-async-promise-executor': 'off',
         'brace-style': 'off',
+        // '@typescript-eslint/no-explicit-any': 'error',
         indent: 'off',
         'import/prefer-default-export': 'off',
         'prettier/prettier': [

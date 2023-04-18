@@ -1,15 +1,15 @@
 import type {
-  IComponentStaticScope,
-  IComponentScope,
-  IHTMLElementComponent,
+  IWCStaticScope,
+  IBaseWCScope,
+  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IComponentScope {
+interface ILocalScope extends IBaseWCScope {
   children: {
-    _Header: Promise<IComponentStaticScope>;
-    _Footer: Promise<IComponentStaticScope>;
-    _Nav: Promise<IComponentStaticScope>;
+    _Header: Promise<IWCStaticScope>;
+    _Footer: Promise<IWCStaticScope>;
+    _Nav: Promise<IWCStaticScope>;
   };
 }
 
@@ -25,10 +25,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Element
-    extends mainScope.BaseHtmlElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.BaseHtmlElement implements IWCElement {
     /* *Required here and not in the "LayoutScope" because we might want to have layouts without props */
     initElement = this.useInitElement(mainScope, (scope: ILocalScope) => {
       const { _Nav, _Footer, _Header } = scope.children;
@@ -44,7 +41,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
                 attributes: {
                   className: 'col'
                 }
-              })
+              } satisfies (typeof o)['router-view-component'])
             ])
           ]),
           async () => o((await _Footer).tagName as never),
@@ -55,7 +52,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  const instance = new mainScope.BaseComponent<ILocalScope>(
+  const instance = new mainScope.BaseWebComponent<ILocalScope>(
     tagName || 'layout-main-component',
     Element
   );

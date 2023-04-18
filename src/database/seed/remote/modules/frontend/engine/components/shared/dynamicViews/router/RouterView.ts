@@ -1,11 +1,11 @@
 import type {
-  IComponentScope,
-  IHTMLElementComponent,
+  IBaseWCScope,
+  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 import type { Route } from '/remoteModules/frontend/engine/router.js';
 
-interface ILocalScope extends IComponentScope {
+interface ILocalScope extends IBaseWCScope {
   reloading?: boolean;
 }
 
@@ -13,10 +13,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject();
   const routerViewRegister = new Set();
 
-  class Element
-    extends mainScope.BaseHtmlElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.BaseHtmlElement implements IWCElement {
     private _index?: number;
 
     initElement = this.useInitElement(
@@ -79,7 +76,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
   }
 
-  return new mainScope.BaseComponent<ILocalScope>(
+  return new mainScope.BaseWebComponent<ILocalScope>(
     tagName || 'router-view-component',
     Element
   );

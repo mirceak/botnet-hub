@@ -1,13 +1,10 @@
 import type {
-  IHTMLElementComponent,
+  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope, tagName?: string) => {
-  class Element
-    extends mainScope.BaseHtmlElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.BaseHtmlElement implements IWCElement {
     initElement = this.useInitElement(mainScope, () => {
       const { builder: o } = mainScope.useComponentsObject();
 
@@ -22,7 +19,10 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  return new mainScope.BaseComponent(tagName || 'not-found-component', Element);
+  return new mainScope.BaseWebComponent(
+    tagName || 'not-found-component',
+    Element
+  );
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;

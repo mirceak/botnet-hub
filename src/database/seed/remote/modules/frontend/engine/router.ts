@@ -1,7 +1,7 @@
 import type { initModel } from '/remoteModules/services/models/User/model.User.js';
 import type {
-  IComponentStaticScope,
-  IHTMLElementComponent,
+  IWCStaticScope,
+  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
@@ -17,7 +17,7 @@ export interface Route {
   name?: string;
   params?: object;
   redirect?: string;
-  component?: () => Promise<IComponentStaticScope>;
+  component?: () => Promise<IWCStaticScope>;
   middleware?: Record<'beforeEnter', Middleware[]>;
   children?: Route[];
   parent?: Route;
@@ -150,7 +150,7 @@ const getRouter = (mainScope: IMainScope): Router => {
             `rv-id-${firstMatchingRouteIndex}`
           );
           if (firstRouterView) {
-            void (firstRouterView as IHTMLElementComponent)?.initElement();
+            void (firstRouterView as IWCElement)?.initElement();
           }
         }
       } else {

@@ -1,5 +1,5 @@
 import type {
-  IHTMLElementComponent,
+  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
@@ -13,10 +13,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       )
   );
 
-  class Element
-    extends mainScope.BaseHtmlElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.BaseHtmlElement implements IWCElement {
     initElement = this.useInitElement(mainScope, () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
@@ -32,7 +29,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  const instance = new mainScope.BaseComponent(
+  const instance = new mainScope.BaseWebComponent(
     tagName || 'nav-left-main-component',
     Element
   );

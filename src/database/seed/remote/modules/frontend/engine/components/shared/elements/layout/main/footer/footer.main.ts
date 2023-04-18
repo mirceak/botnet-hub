@@ -1,5 +1,5 @@
 import type {
-  IHTMLElementComponent,
+  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
@@ -13,17 +13,14 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       )
   );
 
-  class Element
-    extends mainScope.BaseHtmlElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.BaseHtmlElement implements IWCElement {
     initElement = this.useInitElement(mainScope, async () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
         components: [
-          o('<h1>', {
+          o('<h1>', () => ({
             innerText: 'Footer'
-          }),
+          })),
           async () => {
             return instance.getScopedCss(await scopedCss);
           }
@@ -32,7 +29,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  const instance = new mainScope.BaseComponent(
+  const instance = new mainScope.BaseWebComponent(
     tagName || 'footer-main-component',
     Element
   );

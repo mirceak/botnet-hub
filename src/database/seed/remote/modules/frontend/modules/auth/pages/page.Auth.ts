@@ -1,5 +1,5 @@
 import type {
-  IHTMLElementComponent,
+  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 import type { initModel } from '/remoteModules/services/models/User/model.User.js';
@@ -23,10 +23,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Element
-    extends mainScope.BaseHtmlElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.BaseHtmlElement implements IWCElement {
     initElement = this.useInitElement(mainScope, async () => {
       mainScope.asyncLoadComponentTemplate({
         target: this,
@@ -118,7 +115,7 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     });
   }
 
-  const instance = new mainScope.BaseComponent(
+  const instance = new mainScope.BaseWebComponent(
     tagName || 'auth-component',
     Element
   );

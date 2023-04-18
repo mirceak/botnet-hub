@@ -1,18 +1,15 @@
 import type {
-  IComponentExtendingElementScope,
-  IHTMLElementComponent,
+  IWCExtendingBaseElementScope,
+  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-type ILocalButtonScope = IComponentExtendingElementScope<HTMLButtonElement>;
+type ILocalButtonScope = IWCExtendingBaseElementScope<HTMLButtonElement>;
 
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject();
 
-  class Element
-    extends mainScope.BaseHtmlElement
-    implements IHTMLElementComponent
-  {
+  class Element extends mainScope.BaseHtmlElement implements IWCElement {
     initElement = this.useInitElement(
       /* TODO: add wc-if directives */
       mainScope,
@@ -26,7 +23,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     );
   }
 
-  return new mainScope.BaseComponent<ILocalButtonScope>(
+  return new mainScope.BaseWebComponent<ILocalButtonScope>(
     tagName || 'button-component',
     Element
   );
