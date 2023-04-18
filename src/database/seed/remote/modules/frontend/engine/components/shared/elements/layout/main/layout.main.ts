@@ -37,11 +37,11 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
           o('<div>', { className: 'layout--content' }, [
             o('<div>', { className: 'row full-height full-width' }, [
               async () => o((await _Nav).tagName as never),
-              o('<router-view-component>', {
+              o('<router-view-component>', async () => ({
                 attributes: {
                   className: 'col'
                 }
-              } satisfies (typeof o)['router-view-component'])
+              }))
             ])
           ]),
           async () => o((await _Footer).tagName as never),

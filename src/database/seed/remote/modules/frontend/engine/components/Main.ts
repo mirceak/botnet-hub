@@ -23,12 +23,6 @@ type RequiredFieldsOnly<T> = {
 
 type HasRequired<Type> = object extends RequiredFieldsOnly<Type> ? false : true;
 
-type RequiredNested<T> = T extends object
-  ? {
-      [P in keyof T]-?: RequiredNested<T[P]>;
-    }
-  : T;
-
 type IsReadonly<O, P extends keyof O> = Not<
   Equals<{ [_ in P]: O[P] }, { -readonly [_ in P]: O[P] }>
 >;
@@ -578,35 +572,20 @@ class MainScope {
         ? [
             tag: Tag,
             scope?: UnwrapAsyncAndPromiseNested<ElementScope> extends object
-              ? RequiredNested<
-                  UnwrapAsyncAndPromiseNested<DefaultElementScope>
-                > extends UnwrapAsyncAndPromiseNested<ElementScope>
-                ? AsyncAndPromiseStrongTyped<ElementScope>
-                : `Error: No extra properties allowed! Please use 'satisfies (typeof builder)['${TagName &
-                    string}']' to properly validate the scope.`
+              ? AsyncAndPromiseStrongTyped<ElementScope>
               : AsyncAndPromise<AsyncAndPromise<oElement>[]>,
             children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
           ]
         : HasRequired<InferredScope> extends true
         ? [
             tag: Tag,
-            scope: RequiredNested<
-              UnwrapAsyncAndPromiseNested<InferredScope>
-            > extends UnwrapAsyncAndPromiseNested<Scope>
-              ? AsyncAndPromiseStrongTyped<Scope>
-              : `Error: No extra properties allowed! Please use 'satisfies (typeof builder)['${TagName &
-                  string}']' to properly validate the scope.`,
+            scope: AsyncAndPromiseStrongTyped<Scope>,
             children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
           ]
         : [
             tag: Tag,
             scope?: UnwrapAsyncAndPromiseNested<Scope> extends object
-              ? RequiredNested<
-                  UnwrapAsyncAndPromiseNested<InferredScope>
-                > extends UnwrapAsyncAndPromiseNested<Scope>
-                ? AsyncAndPromiseStrongTyped<Scope>
-                : `Error: No extra properties allowed! Please use 'satisfies (typeof builder)['${TagName &
-                    string}']' to properly validate the scope.`
+              ? AsyncAndPromiseStrongTyped<Scope>
               : AsyncAndPromise<AsyncAndPromise<oElement>[]>,
             children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
           ]
