@@ -11,6 +11,10 @@ type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y
 
 type Not<T extends boolean> = T extends true ? false : true;
 
+type ReplaceBoolean<T> = T extends object
+  ? { [K in keyof T]: T[K] extends boolean ? boolean : ReplaceBoolean<T[K]> }
+  : T;
+
 type EventListenerCallbackEvent<E> = E extends keyof GlobalEventHandlersEventMap
   ? GlobalEventHandlersEventMap[E]
   : E extends keyof WindowEventHandlersEventMap
@@ -22,6 +26,12 @@ type RequiredFieldsOnly<T> = {
 };
 
 type HasRequired<Type> = object extends RequiredFieldsOnly<Type> ? false : true;
+
+type RequiredNested<T> = NonNullable<T> extends object
+  ? {
+      [P in keyof T]-?: NonNullable<RequiredNested<NonNullable<T[P]>>>;
+    }
+  : NonNullable<T>;
 
 type IsReadonly<O, P extends keyof O> = Not<
   Equals<{ [_ in P]: O[P] }, { -readonly [_ in P]: O[P] }>
@@ -509,9 +519,9 @@ class MainScope {
     return {
       components,
       builder: builder as typeof builder & {
-        [K in keyof typeof pulledComponents]: Parameters<
-          (typeof pulledComponents)[K]
-        >[0];
+        [K in keyof typeof pulledComponents]: NonNullable<
+          Parameters<(typeof pulledComponents)[K]>[0]
+        >;
       },
       useComponentsObject: <
         _Components =
@@ -572,20 +582,39 @@ class MainScope {
         ? [
             tag: Tag,
             scope?: UnwrapAsyncAndPromiseNested<ElementScope> extends object
-              ? AsyncAndPromiseStrongTyped<ElementScope>
+              ? RequiredNested<
+                  UnwrapAsyncAndPromiseNested<DefaultElementScope>
+                > extends UnwrapAsyncAndPromiseNested<
+                  ReplaceBoolean<ElementScope>
+                >
+                ? AsyncAndPromiseStrongTyped<ElementScope>
+                : `Error: No extra properties allowed! Please use 'satisfies (typeof builder)['${TagName &
+                    string}']' to properly validate the scope.`
               : AsyncAndPromise<AsyncAndPromise<oElement>[]>,
             children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
           ]
         : HasRequired<InferredScope> extends true
         ? [
             tag: Tag,
-            scope: AsyncAndPromiseStrongTyped<Scope>,
+            scope: RequiredNested<
+              ReplaceBoolean<UnwrapAsyncAndPromiseNested<InferredScope>>
+            > extends UnwrapAsyncAndPromiseNested<ReplaceBoolean<Scope>>
+              ? AsyncAndPromiseStrongTyped<Scope>
+              : `Error: No extra properties allowed! Please use 'satisfies (typeof builder)['${TagName &
+                  string}']' to properly validate the scope.`,
             children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
           ]
         : [
             tag: Tag,
             scope?: UnwrapAsyncAndPromiseNested<Scope> extends object
-              ? AsyncAndPromiseStrongTyped<Scope>
+              ? RequiredNested<
+                  ReplaceBoolean<
+                    UnwrapAsyncAndPromiseNested<NonNullable<InferredScope>>
+                  >
+                > extends ReplaceBoolean<UnwrapAsyncAndPromiseNested<Scope>>
+                ? AsyncAndPromiseStrongTyped<Scope>
+                : `Error: No extra properties allowed! Please use 'satisfies (typeof builder)['${TagName &
+                    string}']' to properly validate the scope.`
               : AsyncAndPromise<AsyncAndPromise<oElement>[]>,
             children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
           ]

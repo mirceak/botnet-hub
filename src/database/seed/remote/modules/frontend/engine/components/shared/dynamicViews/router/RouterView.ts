@@ -5,6 +5,10 @@ import type {
 } from '/remoteModules/frontend/engine/components/Main.js';
 import type { Route } from '/remoteModules/frontend/engine/router.js';
 
+export type ILocalScope = IBaseWCScope & {
+  someProp?: boolean;
+};
+
 const getComponent = async (mainScope: IMainScope, tagName?: string) => {
   const { builder: o } = mainScope.useComponentsObject();
   const routerViewRegister = new Set();
@@ -14,7 +18,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
 
     initElement = this.useInitElement(
       mainScope,
-      async (scope?: IBaseWCScope) => {
+      async (scope?: ILocalScope) => {
         const matchedRoutesLength = mainScope.router?.matchedRoutes
           ?.length as number;
         if (Object.keys(routerViewRegister).length === matchedRoutesLength) {
@@ -72,7 +76,7 @@ const getComponent = async (mainScope: IMainScope, tagName?: string) => {
     }
   }
 
-  return new mainScope.BaseWebComponent(
+  return new mainScope.BaseWebComponent<ILocalScope>(
     tagName || 'router-view-component',
     Element
   );
