@@ -1,4 +1,7 @@
-import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
+import type {
+  IMainScope,
+  IWCExtendingBaseElementScope
+} from '/remoteModules/frontend/engine/components/Main.js';
 
 const getComponent = (mainScope: IMainScope) => {
   const { o } = mainScope.useComponentsObject({
@@ -8,12 +11,16 @@ const getComponent = (mainScope: IMainScope) => {
       )
   });
 
-  return mainScope.useComponentRegister(
+  return mainScope.useComponentRegister<IWCExtendingBaseElementScope>(
     'proxy-router-view-component',
     (options) => {
-      options.useInitElement(() => {
+      options.useInitElement((scope) => {
         options.asyncLoadComponentTemplate({
-          components: [o('<router-view-component>')]
+          components: [
+            o('<router-view-component>', {
+              attributes: scope?.elementAttributes
+            })
+          ]
         });
       });
     }

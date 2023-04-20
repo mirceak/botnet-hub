@@ -14,7 +14,7 @@ const getComponent = async (mainScope: IMainScope) => {
       }
     });
 
-    options.useInitElement(async (scope) => {
+    options.useInitElement(async () => {
       const matchedRoutesLength = mainScope.router?.matchedRoutes
         ?.length as number;
       if (Object.keys(routerViewRegister).length === matchedRoutesLength) {
@@ -25,17 +25,6 @@ const getComponent = async (mainScope: IMainScope) => {
         _index = routerViewRegister.size;
         options.el.setAttribute('id', `rv-id-${_index}`);
         routerViewRegister.add(_index);
-      }
-
-      if (scope?.attributes) {
-        Object.keys(scope.attributes).forEach((key) => {
-          options.el.setAttribute(
-            key,
-            scope.attributes
-              ? `${scope.attributes[key as keyof typeof scope.attributes]}`
-              : ''
-          );
-        });
       }
 
       const route = mainScope.router?.matchedRoutes?.[

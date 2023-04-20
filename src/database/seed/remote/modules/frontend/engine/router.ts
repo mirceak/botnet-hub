@@ -401,13 +401,6 @@ export const useRoutes = (mainScope: IMainScope): Route[] => [
             component() {
               return PageHomeComponent(mainScope);
             }
-          },
-          {
-            path: ':userId(\\d+)',
-            name: 'homeUser',
-            component() {
-              return PageHomeComponent(mainScope);
-            }
           }
         ]
       },

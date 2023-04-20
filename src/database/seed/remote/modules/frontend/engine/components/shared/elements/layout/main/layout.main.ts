@@ -32,10 +32,16 @@ const getComponent = (mainScope: IMainScope) => {
 
         options.asyncLoadComponentTemplate({
           components: [
-            async () => o((await _Header).tagName as never),
+            async () => {
+              const Header = await _Header;
+              return o(Header.tagName as never, Header as never);
+            },
             o('<div>', { className: 'layout--content' }, [
               o('<div>', { className: 'row full-height full-width' }, [
-                async () => o((await _Nav).tagName as never),
+                async () => {
+                  const Nav = await _Nav;
+                  return o(Nav.tagName as never, Nav as never);
+                },
                 o('<router-view-component>', {
                   attributes: {
                     className: 'col'
@@ -43,7 +49,10 @@ const getComponent = (mainScope: IMainScope) => {
                 })
               ])
             ]),
-            async () => o((await _Footer).tagName as never),
+            async () => {
+              const Footer = await _Footer;
+              return o(Footer.tagName as never, Footer as never);
+            },
             async () =>
               options.getScopedCss(mainScope.applyBreakpoints(await scopedCss))
           ]
