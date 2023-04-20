@@ -10,7 +10,7 @@ import { GuardModel } from '#database/entities/GuardModel.js';
 @Entity()
 export class UserModel {
   @PrimaryGeneratedColumn()
-  id: number;
+  id?: number;
 
   @Column()
   name: string;
@@ -23,5 +23,5 @@ export class UserModel {
 
   @ManyToOne(() => GuardModel, { cascade: true, eager: true })
   @JoinColumn()
-  guard: GuardModel;
+  guard?: GuardModel;
 }

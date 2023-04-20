@@ -163,7 +163,7 @@ export const init: IKernelModuleInit = async (context) => {
 
   await loadSeederModule(
     context,
-    () => import('/remoteModules/services/models/User/model.User.js')
+    () => import('/remoteModules/frontend/services/models/User/model.User.js')
   );
 
   await loadSeederModule(

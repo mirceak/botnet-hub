@@ -64,23 +64,22 @@ const startComputing = (
 
 export const useProxyState = <Modules>(
   ProxyObject: typeof IProxyObject,
-  mainScope: IMainScope,
+  helpers: IMainScope['helpers'],
   modules?: Modules
 ) => {
-  return ProxyObject(useMainModule<Modules>(modules), mainScope);
+  return ProxyObject(useMainModule<Modules>(modules), helpers);
 };
 
 export const useStore = async (
-  mainScope: IMainScope,
+  helpers: IMainScope['helpers'],
+  asyncStaticModule: IMainScope['asyncStaticModule'],
   ProxyObject: typeof IProxyObject
 ) => {
-  const userModel = await mainScope
-    .asyncStaticModule(
-      () => import('/remoteModules/services/models/User/model.User.js')
-    )
-    .then(async ({ getModel }) => {
-      return getModel();
-    });
+  const userModel = await asyncStaticModule(
+    () => import('/remoteModules/frontend/services/models/User/model.User.js')
+  ).then(async ({ getModel }) => {
+    return getModel();
+  });
 
   const modules = {
     [userModel.name]: new StoreModule(userModel.data)
@@ -88,7 +87,7 @@ export const useStore = async (
 
   const proxyObject = await useProxyState<typeof modules>(
     ProxyObject,
-    mainScope,
+    helpers,
     modules
   );
 

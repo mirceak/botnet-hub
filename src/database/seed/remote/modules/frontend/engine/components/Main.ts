@@ -173,27 +173,17 @@ class MainScope {
 
   asyncHydrationCallbackIndex = 0;
 
-  helpers = {
-    validationsProto: this.asyncStaticModule(
-      () =>
-        import(
-          '/remoteModules/utils/helpers/shared/transformations/validations.proto.js'
-        )
-    ) as unknown as Awaited<
+  helpers: {
+    validationsProto: Awaited<
       typeof import('/remoteModules/utils/helpers/shared/transformations/validations.proto.js')
-    >,
-    reducersFunctions: this.asyncStaticModule(
-      () =>
-        import(
-          '/remoteModules/utils/helpers/shared/transformations/reducers.functions.js'
-        )
-    ).then(({ default: getter }) => getter(this)) as unknown as Awaited<
+    >;
+    reducersFunctions: Awaited<
       ReturnType<
         Awaited<
           typeof import('/remoteModules/utils/helpers/shared/transformations/reducers.functions.js')
         >['default']
       >
-    >
+    >;
   };
 
   elementRegister = new WeakMap();
@@ -424,10 +414,10 @@ class MainScope {
       );
   };
 
-  asyncStaticModule<Module, S extends Promise<Module>>(
+  asyncStaticModule = <Module, S extends Promise<Module>>(
     importer: () => S,
     type = 'text/javascript'
-  ) {
+  ) => {
     const parsedPath = importer
       .toString()
       .match(/import\('.*'\)/g)?.[0]
@@ -453,7 +443,7 @@ class MainScope {
     }
 
     return import(parsedPath) as S;
-  }
+  };
 
   async asyncStaticFile<Import>(importer: () => Import): Promise<string> {
     const parsedPath = importer
@@ -1223,8 +1213,30 @@ export const initComponent = (mainScope: MainScope) => {
 
     async init() {
       mainScope.helpers = {
-        validationsProto: await mainScope.helpers.validationsProto,
-        reducersFunctions: await mainScope.helpers.reducersFunctions
+        validationsProto: (await mainScope.asyncStaticModule(
+          () =>
+            import(
+              '/remoteModules/utils/helpers/shared/transformations/validations.proto.js'
+            )
+        )) as unknown as Awaited<
+          typeof import('/remoteModules/utils/helpers/shared/transformations/validations.proto.js')
+        >,
+        reducersFunctions: (await mainScope
+          .asyncStaticModule(
+            () =>
+              import(
+                '/remoteModules/utils/helpers/shared/transformations/reducers.functions.js'
+              )
+          )
+          .then(({ default: getter }) =>
+            getter(mainScope)
+          )) as unknown as Awaited<
+          ReturnType<
+            Awaited<
+              typeof import('/remoteModules/utils/helpers/shared/transformations/reducers.functions.js')
+            >['default']
+          >
+        >
       };
 
       const ProxyObjectPromise = mainScope.asyncStaticModule(
@@ -1243,7 +1255,8 @@ export const initComponent = (mainScope: MainScope) => {
         )
         .then(async ({ useStore }) => {
           mainScope.store = await useStore(
-            mainScope,
+            mainScope.helpers,
+            mainScope.asyncStaticModule,
             (
               await ProxyObjectPromise
             ).ProxyObject

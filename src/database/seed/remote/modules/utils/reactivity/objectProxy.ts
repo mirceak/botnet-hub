@@ -1,7 +1,7 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
 type IOptions<T = InstanceType<typeof WeakMap>> = {
-  mainScope: IMainScope;
+  helpers: IMainScope['helpers'];
   watchedProxiesMap: T;
   registeringNestedOnChangeCallback: boolean;
   reRegisteringOnChangeCallback: boolean;
@@ -145,7 +145,7 @@ const handler = <ObjectType>(
     prop: string,
     receiver: ProxyInternalProps<ObjectType>
   ) {
-    if (options.mainScope.helpers.validationsProto.isObjectOrArray(obj[prop])) {
+    if (options.helpers.validationsProto.isObjectOrArray(obj[prop])) {
       if (!this._proxySet.has(prop)) {
         Reflect.set(
           obj,
@@ -199,7 +199,7 @@ const handler = <ObjectType>(
     value: unknown,
     receiver: ProxyInternalProps<ObjectType>
   ) {
-    if (options.mainScope.helpers.validationsProto.isObjectOrArray(value)) {
+    if (options.helpers.validationsProto.isObjectOrArray(value)) {
       /* keep all previous references alive. removing this would replace references to existing variables invalidating existing watchers using external variables to reference the tree */
       if (this._proxySet.has(prop)) {
         if (obj[prop] != null) {
@@ -266,9 +266,12 @@ const handler = <ObjectType>(
 /*Whenever a branch of the tree is reassigned (a nested property that is an object) the Proxy will keep it's old branch and just update the values to reflect the changes. This is done to prevent references to the tree being lost.*/
 /*Whenever a branch of the tree is removed (a nested property that is an object) the Proxy's branch will still exist because we still have references that watch the old branch instance. If the branch gets reassigned a new value, a new ProxyInternalProps branch will get created but the old one will still exist as ghost branches.*/
 /*Ghost branches (duplicated branches) can be removed by unregistering the watchers that referenced them*/
-export const ProxyObject = async <T>(obj: T, mainScope: IMainScope) => {
+export const ProxyObject = async <T>(
+  obj: T,
+  helpers: IMainScope['helpers']
+) => {
   const options = {
-    mainScope,
+    helpers,
     watchedProxiesMap: new WeakMap(),
     registeringNestedOnChangeCallback: false,
     unRegisteringOnChangeCallback: false,

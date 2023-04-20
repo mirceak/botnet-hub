@@ -145,7 +145,9 @@ app.get('/(.*)', (...[req, res]) => {
     }
     if (route.useStore) {
       result.requests.push('#remoteModules/frontend/engine/store.js');
-      result.requests.push('#remoteModules/services/models/User/model.User.js');
+      result.requests.push(
+        '#remoteModules/frontend/services/models/User/model.User.js'
+      );
       result.requests.push('#remoteModules/utils/reactivity/objectProxy.js');
     }
     route.children?.reduce(routeReducer, result);
