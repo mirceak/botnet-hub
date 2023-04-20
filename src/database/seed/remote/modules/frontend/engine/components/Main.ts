@@ -169,11 +169,7 @@ class MainScope {
   store!: IStore;
   router!: Router;
 
-  preloadedRequests: Record<'code' | 'path', string | Promise<unknown>>[] = [];
-
-  asyncHydrationCallbackIndex = 0;
-
-  helpers: {
+  helpers!: {
     validationsProto: Awaited<
       typeof import('/remoteModules/utils/helpers/shared/transformations/validations.proto.js')
     >;
@@ -187,6 +183,8 @@ class MainScope {
   };
 
   elementRegister = new WeakMap();
+  asyncHydrationCallbackIndex = 0;
+  preloadedRequests: Record<'code' | 'path', string | Promise<unknown>>[] = [];
 
   readonly BaseElement = class BaseElement<Target extends HTMLElement> {
     public target: Target;
