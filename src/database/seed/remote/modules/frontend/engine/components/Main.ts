@@ -154,25 +154,16 @@ export interface IWCTemplate {
   target?: InstanceType<typeof Element | typeof DocumentFragment>;
 }
 
-interface oElement {
-  scopeGetter?: any /* TODO: remove any */;
-  scope?: any;
+interface oElement<Scope extends IWCBaseScope = IWCBaseScope> {
+  scopeGetter?: AsyncAndPromise<
+    <_Scope extends IWCBaseScope = IWCBaseScope>(scope?: _Scope) => any
+  >;
+  scope?: AsyncAndPromise<Scope>;
   children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>;
   element: Promise<HTMLElement>;
   tagName: string;
   isCustomElement: boolean;
 }
-
-// interface oElement<Scope extends IWCBaseScope = IWCBaseScope> {
-//   scopeGetter?:
-//     | (() => Scope)
-//     | AsyncAndPromise<(scope?: Scope) => Scope & IWCStaticScope>;
-//   scope?: AsyncAndPromise<Scope>;
-//   children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>;
-//   element: Promise<HTMLElement>;
-//   tagName: string;
-//   isCustomElement: boolean;
-// }
 
 class MainScope {
   store!: IStore;
@@ -232,11 +223,7 @@ class MainScope {
         );
       });
       if (this.mainScope.elementRegister.has(this.target)) {
-        console.log(
-          33,
-          this.target.tagName,
-          this.mainScope.elementRegister.delete(this.target)
-        );
+        this.mainScope.elementRegister.delete(this.target);
       }
     };
 
@@ -824,68 +811,85 @@ class MainScope {
             nestedElement.scopeGetter
           )
         ) {
-          nestedElement.scope = nestedElement.scopeGetter();
+          nestedElement.scope = nestedElement.scopeGetter() as IWCBaseScope;
         } else {
           nestedElement.scope = await (
             await nestedElement.scopeGetter
-          )(nestedElement.scope);
+          )?.(nestedElement.scope as IWCBaseScope);
         }
       }
 
-      if (shouldAddProps) {
+      if (shouldAddProps && nestedElement.scope) {
         if (nestedElement.isCustomElement) {
+          const nestedScope = nestedElement.scope as IWCBaseScope;
           if (
             this.helpers.validationsProto.isAsyncOrFunction(
-              await nestedElement.scope.attributes
+              await nestedScope.attributes
             )
           ) {
-            nestedElement.scope.attributes =
+            nestedScope.attributes =
               await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                nestedElement.scope.attributes
+                nestedScope.attributes
               );
           }
+          const nestedScopeUnwrapped = nestedElement.scope as {
+            attributes: IWCBaseScope['attributes'];
+          };
 
-          if (nestedElement.scope.attributes) {
-            nestedElement.scope.attributes = await Object.keys(
-              nestedElement.scope.attributes
+          if (nestedScopeUnwrapped.attributes) {
+            const newAttributes = await Object.keys(
+              nestedScopeUnwrapped.attributes
             ).reduce(async (reduced, key) => {
-              if (
-                this.helpers.validationsProto.isAsyncOrFunction(reduced[key])
-              ) {
-                reduced[key] =
-                  await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                    (nestedElement as oElement).scope.attributes[key]
-                  );
-              } else {
-                reduced[key] = await (nestedElement as oElement).scope
-                  .attributes[key];
+              if (nestedScopeUnwrapped.attributes) {
+                if (
+                  this.helpers.validationsProto.isAsyncOrFunction(
+                    reduced[key as keyof typeof reduced]
+                  )
+                ) {
+                  reduced[key as keyof typeof reduced & string] =
+                    await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                      nestedScopeUnwrapped.attributes[
+                        key as keyof typeof nestedScopeUnwrapped.attributes
+                      ]
+                    );
+                } else {
+                  reduced[key as keyof typeof reduced & string] =
+                    await nestedScopeUnwrapped.attributes[
+                      key as keyof typeof nestedScopeUnwrapped.attributes
+                    ];
+                }
               }
               return reduced;
-            }, {} as typeof nestedElement.scope.attributes);
+            }, Promise.resolve({} as typeof nestedScopeUnwrapped));
 
-            Object.assign(element, nestedElement.scope.attributes);
+            Object.assign(element, newAttributes);
           }
         } else {
-          nestedElement.scope = await Object.keys(nestedElement.scope).reduce(
+          const newScope = await Object.keys(nestedElement.scope).reduce(
             async (reduced, key) => {
               if (
                 this.helpers.validationsProto.isAsyncOrFunction(
-                  (nestedElement as oElement).scope[key]
+                  nestedElement.scope?.[key as keyof typeof nestedElement.scope]
                 )
               ) {
-                reduced[key] =
-                  await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                    (nestedElement as oElement).scope[key]
-                  );
+                reduced[key as keyof typeof reduced & string] =
+                  (await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                    nestedElement.scope?.[
+                      key as keyof typeof nestedElement.scope
+                    ]
+                  )) as never;
               } else {
-                reduced[key] = (nestedElement as oElement).scope[key];
+                reduced[key as keyof typeof reduced & string] = nestedElement
+                  .scope?.[key as keyof typeof nestedElement.scope] as never;
               }
               return reduced;
             },
-            {} as typeof nestedElement.scope
+            Promise.resolve(
+              {} as UnwrapAsyncAndPromiseNested<typeof nestedElement.scope>
+            )
           );
 
-          Object.assign(element, nestedElement.scope);
+          Object.assign(element, newScope);
         }
       }
     }
@@ -1231,9 +1235,6 @@ export const initComponent = (mainScope: MainScope) => {
         .then(async ({ useStore }) => {
           mainScope.store = await useStore(mainScope);
         });
-      setInterval(() => {
-        console.log(mainScope.elementRegister);
-      }, 1000);
 
       return mainScope
         .asyncStaticModule(
