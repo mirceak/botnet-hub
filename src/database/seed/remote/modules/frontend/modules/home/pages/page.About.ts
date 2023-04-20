@@ -1,10 +1,7 @@
-import type {
-  IMainScope,
-  IWCElement
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = (mainScope: IMainScope, tagName?: string) => {
-  const { builder: o } = mainScope.useComponentsObject({
+const getComponent = (mainScope: IMainScope) => {
+  const { o } = mainScope.useComponentsObject({
     ['button-component']: () =>
       import(
         '/remoteModules/frontend/engine/components/shared/elements/form/element.form.button.js'
@@ -15,10 +12,9 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/frontend/modules/home/pages/page.About.scss')
   );
 
-  class Element extends mainScope.BaseHtmlElement implements IWCElement {
-    initElement = this.useInitElement(mainScope, () => {
-      mainScope.asyncLoadComponentTemplate({
-        target: this,
+  return mainScope.useComponentRegister('about-component', (options) => {
+    options.useInitElement(() => {
+      options.asyncLoadComponentTemplate({
         components: [
           o('<div>', { className: 'card m-t-64 fit-content' }, [
             o('<h1>', { innerText: 'About Page' }),
@@ -44,20 +40,14 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
             ])
           ]),
           async () => {
-            return instance.getScopedCss(await scopedCss);
+            return options.getScopedCss(await scopedCss);
           }
         ]
       });
     });
-  }
-
-  const instance = new mainScope.BaseWebComponent(
-    tagName || 'about-component',
-    Element
-  );
-  return instance;
+  });
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope, tagName?: string) =>
-  singleton ? singleton : (singleton = getComponent(mainScope, tagName));
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

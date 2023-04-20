@@ -1,10 +1,7 @@
-import type {
-  IWCElement,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-const getComponent = (mainScope: IMainScope, tagName?: string) => {
-  const { builder: o } = mainScope.useComponentsObject();
+const getComponent = (mainScope: IMainScope) => {
+  const { o } = mainScope.useComponentsObject();
 
   const scopedCss = mainScope.asyncStaticFile(
     () =>
@@ -13,29 +10,22 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
       )
   );
 
-  class Element extends mainScope.BaseHtmlElement implements IWCElement {
-    initElement = this.useInitElement(mainScope, async () => {
-      mainScope.asyncLoadComponentTemplate({
-        target: this,
+  return mainScope.useComponentRegister('footer-main-component', (options) => {
+    options.useInitElement(async () => {
+      options.asyncLoadComponentTemplate({
         components: [
           o('<h1>', () => ({
             innerText: 'Footer'
           })),
           async () => {
-            return instance.getScopedCss(await scopedCss);
+            return options.getScopedCss(await scopedCss);
           }
         ]
       });
     });
-  }
-
-  const instance = new mainScope.BaseWebComponent(
-    tagName || 'footer-main-component',
-    Element
-  );
-  return instance;
+  });
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope, tagName?: string) =>
-  singleton ? singleton : (singleton = getComponent(mainScope, tagName));
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

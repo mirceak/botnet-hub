@@ -1,7 +1,6 @@
 import type { initModel } from '/remoteModules/services/models/User/model.User.js';
 import type {
   IWCStaticScope,
-  IWCElement,
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
@@ -150,7 +149,7 @@ const getRouter = (mainScope: IMainScope): Router => {
             `rv-id-${firstMatchingRouteIndex}`
           );
           if (firstRouterView) {
-            void (firstRouterView as IWCElement)?.initElement();
+            void mainScope.elementRegister.get(firstRouterView).initElement();
           }
         }
       } else {

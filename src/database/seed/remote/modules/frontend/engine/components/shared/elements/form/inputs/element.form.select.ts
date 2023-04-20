@@ -1,31 +1,27 @@
 import type {
   IMainScope,
-  IWCExtendingBaseElementScope,
-  IWCElement
+  IWCExtendingBaseElementScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
 type ILocalScope = IWCExtendingBaseElementScope<HTMLInputElement>;
 
-const getComponent = async (mainScope: IMainScope, tagName?: string) => {
-  const { builder: o } = mainScope.useComponentsObject();
+const getComponent = async (mainScope: IMainScope) => {
+  const { o } = mainScope.useComponentsObject();
 
-  class Element extends mainScope.BaseHtmlElement implements IWCElement {
-    initElement = this.useInitElement(mainScope, (scope: ILocalScope) => {
-      const selectTemplate = o('<input>', scope?.elementAttributes);
+  return mainScope.useComponentRegister<ILocalScope, HTMLInputElement>(
+    'select-input-component',
+    (options) => {
+      options.useInitElement((scope) => {
+        const selectTemplate = o('<input>', scope?.elementAttributes);
 
-      mainScope.asyncLoadComponentTemplate({
-        target: this,
-        components: [selectTemplate]
+        options.asyncLoadComponentTemplate({
+          components: [selectTemplate]
+        });
       });
-    });
-  }
-
-  return new mainScope.BaseWebComponent<ILocalScope>(
-    tagName || 'select-input-component',
-    Element
+    }
   );
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope, tagName?: string) =>
-  singleton ? singleton : (singleton = getComponent(mainScope, tagName));
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

@@ -1,11 +1,8 @@
-import type {
-  IWCElement,
-  IMainScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 import type { initModel } from '/remoteModules/services/models/User/model.User.js';
 
-const getComponent = (mainScope: IMainScope, tagName?: string) => {
-  const { builder: o } = mainScope.useComponentsObject({
+const getComponent = (mainScope: IMainScope) => {
+  const { o } = mainScope.useComponentsObject({
     ['button-component']: () =>
       import(
         '/remoteModules/frontend/engine/components/shared/elements/form/element.form.button.js'
@@ -23,10 +20,9 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  class Element extends mainScope.BaseHtmlElement implements IWCElement {
-    initElement = this.useInitElement(mainScope, async () => {
-      mainScope.asyncLoadComponentTemplate({
-        target: this,
+  return mainScope.useComponentRegister('auth-component', (options) => {
+    options.useInitElement(async () => {
+      options.asyncLoadComponentTemplate({
         components: [
           o('<div>', { className: 'card glow flex justify-center-xs-min' }, [
             o('<div>', { className: 'm-b-16' }, [
@@ -104,8 +100,8 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
 
           async () => {
             return (
-              instance.getScopedCss(await scopedCss) +
-              instance.getScopedCss(
+              options.getScopedCss(await scopedCss) +
+              options.getScopedCss(
                 mainScope.applyBreakpoints(await scssMainTheme)
               )
             );
@@ -113,15 +109,9 @@ const getComponent = (mainScope: IMainScope, tagName?: string) => {
         ]
       });
     });
-  }
-
-  const instance = new mainScope.BaseWebComponent(
-    tagName || 'auth-component',
-    Element
-  );
-  return instance;
+  });
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
-export default async (mainScope: IMainScope, tagName?: string) =>
-  singleton ? singleton : (singleton = getComponent(mainScope, tagName));
+export default async (mainScope: IMainScope) =>
+  singleton ? singleton : (singleton = getComponent(mainScope));

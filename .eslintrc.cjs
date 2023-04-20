@@ -32,11 +32,12 @@ module.exports = {
       ],
       rules: {
         curly: 'off',
+        indent: 'off',
         'no-async-promise-executor': 'off',
         'brace-style': 'off',
-        // '@typescript-eslint/no-explicit-any': 'error',
-        indent: 'off',
+        '@typescript-eslint/no-this-alias': 'off',
         'import/prefer-default-export': 'off',
+        // '@typescript-eslint/no-explicit-any': 'error',
         'prettier/prettier': [
           'error',
           { rules: JSON.stringify(prettierConfig) }
