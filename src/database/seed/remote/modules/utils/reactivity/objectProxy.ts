@@ -298,7 +298,7 @@ export const ProxyObject = async <T>(obj: T, mainScope: IMainScope) => {
   };
   return {
     /*need to make this entire object a proxy and protect mainModule from deletion as well as make sure new entries */
-    state: new Proxy(obj as never, handler(options, undefined, 'root')) as T,
+    root: new Proxy(obj as never, handler(options, undefined, 'root')) as T,
     registerOnChangeCallback: options.registerOnChangeCallback.bind(options),
     unRegisterOnChangeCallback:
       options.unRegisterOnChangeCallback.bind(options),

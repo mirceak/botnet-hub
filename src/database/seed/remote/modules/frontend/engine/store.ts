@@ -1,16 +1,15 @@
 import type { ProxyObject as IProxyObject } from '/remoteModules/utils/reactivity/objectProxy.js';
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
 
-class StoreModule<State, ParentState> {
+class StoreModule<State, Modules> {
   __deleteKey?: 'DELETE TO REMOVE THE ENTIRE TREE AND REMOVES ALL PREVIOUS WATCHERS AND SERVED PROXY OBJECTS';
-  modules: Record<symbol | string | number, StoreModule<unknown, State>> =
-    {} as Record<symbol | string | number, StoreModule<unknown, State>>;
-  parent?: StoreModule<ParentState, undefined>;
+  modules?: Modules;
 
-  data: State;
+  state: State;
 
-  constructor(state: State) {
-    this.data = state;
+  constructor(state: State, modules?: Modules) {
+    this.state = state;
+    this.modules = modules;
   }
 
   onDestroy = (): void => {
@@ -30,17 +29,21 @@ class State {
   };
 }
 
-const useMainModule = () => {
+const useMainModule = <Modules>(modules?: Modules) => {
   const state = new State();
-  return new StoreModule(state);
+  return new StoreModule<State, Modules>(state, modules) as InstanceType<
+    typeof StoreModule<State, Modules>
+  > & {
+    modules: Modules;
+  };
 };
 
 const startComputing = (
   storeProxyState: Awaited<ReturnType<typeof useProxyState>>
 ) => {
-  const homeModule = () => storeProxyState.state.data?.home;
+  const homeModule = () => storeProxyState.root.state.home;
   const titleWithNameCompute = {
-    props: [() => storeProxyState.state.data?.home?.nameInput],
+    props: [() => storeProxyState.root.state.home.nameInput],
     computed() {
       const home = homeModule();
       if (home) {
@@ -59,82 +62,45 @@ const startComputing = (
   titleWithNameCompute.computed();
 };
 
-export const useProxyState = (
+export const useProxyState = <Modules>(
   ProxyObject: typeof IProxyObject,
-  mainScope: IMainScope
-): ReturnType<typeof IProxyObject<ReturnType<typeof useMainModule>>> => {
-  return ProxyObject(useMainModule(), mainScope);
+  mainScope: IMainScope,
+  modules?: Modules
+) => {
+  return ProxyObject(useMainModule<Modules>(modules), mainScope);
 };
 
 export const useStore = async (mainScope: IMainScope) => {
   const { ProxyObject } = await mainScope.asyncStaticModule(
     () => import('/remoteModules/utils/reactivity/objectProxy.js')
   );
-  const proxyObject = await useProxyState(ProxyObject, mainScope);
-  const { state, registerOnChangeCallback, unRegisterOnChangeCallback } =
+
+  const userModel = await mainScope
+    .asyncStaticModule(
+      () => import('/remoteModules/services/models/User/model.User.js')
+    )
+    .then(async ({ getModel }) => {
+      return getModel();
+    });
+
+  const modules = {
+    [userModel.name]: new StoreModule(userModel.data)
+  } as const;
+
+  const proxyObject = await useProxyState<typeof modules>(
+    ProxyObject,
+    mainScope,
+    modules
+  );
+
+  const { root, registerOnChangeCallback, unRegisterOnChangeCallback } =
     proxyObject;
   startComputing(proxyObject);
 
-  const _registerDynamicModule = async <ModuleState, ParentState>(
-    moduleState: ModuleState,
-    key?: symbol | string | number,
-    parent?: ParentState
-  ) => {
-    key =
-      typeof key === 'string'
-        ? key
-        : typeof key === 'number'
-        ? key
-        : Symbol('');
-
-    const newModuleComposer = {
-      ...new StoreModule(moduleState),
-      key,
-      parent,
-      registerDynamicModule<_ModuleState, _ParentState>(
-        _moduleState: _ModuleState,
-        _key?: symbol | string | number
-      ) {
-        return _registerDynamicModule<_ModuleState, _ParentState>(
-          _moduleState,
-          _key,
-          parent as _ParentState
-        );
-      },
-      registerOnChangeCallback: registerOnChangeCallback,
-      unRegisterOnChangeCallback: unRegisterOnChangeCallback
-    };
-
-    if (parent) {
-      const parentModules = (
-        parent as Partial<
-          InstanceType<typeof StoreModule<ParentState, unknown>>
-        >
-      ).modules;
-      if (parentModules && newModuleComposer) {
-        parentModules[key] = newModuleComposer as InstanceType<
-          typeof StoreModule<ModuleState, unknown>
-        >;
-      }
-    }
-
-    return newModuleComposer;
-  };
-
   return {
-    ...state,
+    ...root,
     registerOnChangeCallback: registerOnChangeCallback,
-    unRegisterOnChangeCallback: unRegisterOnChangeCallback,
-    registerDynamicModule<__ModuleState>(
-      moduleState: __ModuleState,
-      key?: symbol | string | number
-    ) {
-      return _registerDynamicModule<__ModuleState, typeof state>(
-        moduleState,
-        key,
-        state
-      );
-    }
+    unRegisterOnChangeCallback: unRegisterOnChangeCallback
   };
 };
 

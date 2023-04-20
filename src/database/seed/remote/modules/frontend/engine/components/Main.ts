@@ -163,6 +163,17 @@ interface oElement {
   isCustomElement: boolean;
 }
 
+// interface oElement<Scope extends IWCBaseScope = IWCBaseScope> {
+//   scopeGetter?:
+//     | (() => Scope)
+//     | AsyncAndPromise<(scope?: Scope) => Scope & IWCStaticScope>;
+//   scope?: AsyncAndPromise<Scope>;
+//   children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>;
+//   element: Promise<HTMLElement>;
+//   tagName: string;
+//   isCustomElement: boolean;
+// }
+
 class MainScope {
   public store!: IStore;
   public router!: Router;
@@ -864,6 +875,8 @@ class MainScope {
       if (nestedElement.isCustomElement) {
         void this.elementRegister.get(element).initElement(nestedElement.scope);
       } else {
+        /* TODO: make base elements register themselves as well and only instantiate through the register */
+        /* TODO: move everything component related on the weak map and stop exposing logic on the element */
         void (
           element as InstanceType<typeof this.BaseHtmlElement>
         ).component?.initElement(nestedElement.scope);
@@ -1206,13 +1219,6 @@ export const initComponent = (mainScope: MainScope) => {
         )
         .then(async ({ useStore }) => {
           mainScope.store = await useStore(mainScope);
-          await mainScope
-            .asyncStaticModule(
-              () => import('/remoteModules/services/models/User/model.User.js')
-            )
-            .then(async ({ initModel }) => {
-              await initModel(mainScope);
-            });
         });
 
       return mainScope

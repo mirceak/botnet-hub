@@ -1,6 +1,9 @@
-import { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
+interface ModuleUser {
+  readonly name: 'user';
+  data: Data;
+}
 
-interface User {
+interface Data {
   auth?: {
     token: string;
   };
@@ -10,14 +13,14 @@ interface User {
   };
 }
 
-export const initModel = (mainScope: IMainScope) => {
-  return mainScope.store.registerDynamicModule<User>(
-    {
+export const getModel = (): ModuleUser => {
+  return {
+    name: 'user',
+    data: {
       info: {
         name: 'asd',
         age: 34
       }
-    },
-    'user'
-  );
+    }
+  };
 };

@@ -1,4 +1,3 @@
-import type { initModel } from '/remoteModules/services/models/User/model.User.js';
 import type {
   IWCStaticScope,
   IMainScope
@@ -370,9 +369,7 @@ const matchedRouteNameCondition = (
 };
 
 const middlewareGuardAuth: Middleware = ({ store, router }) => {
-  const condition = !!(
-    store.modules['user'].data as Awaited<ReturnType<typeof initModel>>['data']
-  ).auth?.token;
+  const condition = !!store.modules.user.state.auth?.token;
 
   if (!condition) {
     void router.push({ name: 'auth' });

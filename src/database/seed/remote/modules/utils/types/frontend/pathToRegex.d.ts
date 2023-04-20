@@ -51,7 +51,7 @@ declare module '/node_modules/path-to-regexp/dist.es2015/index.js' {
     decode?: (value: string, token: Key) => string;
   }
   /**
-   * A match result contains data about the path match.
+   * A match result contains state about the path match.
    */
   export interface MatchResult<P extends object = object> {
     path: string;

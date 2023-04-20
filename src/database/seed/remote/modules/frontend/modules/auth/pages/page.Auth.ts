@@ -1,5 +1,4 @@
 import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
-import type { initModel } from '/remoteModules/services/models/User/model.User.js';
 
 const getComponent = (mainScope: IMainScope) => {
   const { o } = mainScope.useComponentsObject({
@@ -27,7 +26,7 @@ const getComponent = (mainScope: IMainScope) => {
           o('<div>', { className: 'card glow flex justify-center-xs-min' }, [
             o('<div>', { className: 'm-b-16' }, [
               o('<h1>', {
-                innerText: () => mainScope.store.data.home.titleWithName
+                innerText: () => mainScope.store.state.home.titleWithName
               })
             ]),
             o('<div>', { className: 'content' }, [
@@ -39,7 +38,7 @@ const getComponent = (mainScope: IMainScope) => {
                       {
                         callback: async (e) => {
                           e.preventDefault();
-                          mainScope.store.data.home.nameInput = (
+                          mainScope.store.state.home.nameInput = (
                             e.target as HTMLInputElement
                           ).value;
                         }
@@ -78,12 +77,10 @@ const getComponent = (mainScope: IMainScope) => {
                       {
                         callback: async (e) => {
                           e.preventDefault();
-                          const userStoreData = mainScope.store.modules.user
-                            .data as Awaited<
-                            ReturnType<typeof initModel>
-                          >['data'];
 
-                          userStoreData.auth = { token: 'token' };
+                          mainScope.store.modules.user.state.auth = {
+                            token: 'token'
+                          };
 
                           void mainScope.router.push({
                             path: 'home'

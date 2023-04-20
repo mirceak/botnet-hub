@@ -31,10 +31,9 @@ const getComponent = (mainScope: IMainScope) => {
                         {
                           callback: (e) => {
                             e.preventDefault();
-                            if (mainScope.store.data)
-                              mainScope.store.data.home.nameInput = (
-                                e.target as HTMLInputElement
-                              ).value;
+                            mainScope.store.state.home.nameInput = (
+                              e.target as HTMLInputElement
+                            ).value;
                           }
                         }
                       ]

@@ -17,7 +17,7 @@ const getComponent = (mainScope: IMainScope) => {
         options.asyncLoadComponentTemplate({
           components: [
             o('<h1>', {
-              innerText: () => mainScope.store.data?.home.titleWithName
+              innerText: () => mainScope.store.state.home.titleWithName
             }),
             async () => {
               return options.getScopedCss(await scopedCss);
