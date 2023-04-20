@@ -216,82 +216,78 @@ const getMiddlewareResults = async (
   return true;
 };
 
-export const useRouter = async (mainScope: IMainScope): Promise<Router> => {
+export const useRouter = async (mainScope: IMainScope) => {
   const router = getRouter(mainScope);
-  if (!pathToRegexp) {
-    /*TODO: Replace with own implementation of path interpreter*/
-    await mainScope
-      .asyncStaticModule(
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        () => import('/node_modules/path-to-regexp/dist.es2015/index.js')
-      )
-      .then((module) => {
-        pathToRegexp = module.pathToRegexp;
-        compile = module.compile;
-        match = module.match;
-      });
-  }
 
-  router.routes.push(...(useRoutes(mainScope) as Route[]).map(routeMapper));
+  const init = async (
+    _pathToRegexp: Promise<typeof import('path-to-regexp/dist/index.js')>
+  ) => {
+    const awaitedPathToRegexp = await _pathToRegexp;
 
-  router.matchedRoutes = router.routes.reduce(
-    generalReducer.bind({
-      searchVal: window.location.pathname,
-      condition: matchedRoutePathCondition
-    }),
-    [] as Route[]
-  );
+    pathToRegexp = awaitedPathToRegexp.pathToRegexp;
+    compile = awaitedPathToRegexp.compile;
+    match = awaitedPathToRegexp.match;
 
-  if (router.matchedRoutes.length) {
-    router.currentRoute = router.matchedRoutes[0];
-  } else {
-    throw new Error('No route matched path');
-  }
+    router.routes.push(...(useRoutes(mainScope) as Route[]).map(routeMapper));
 
-  if (router.currentRoute && router.currentRoute.redirect) {
-    await router.push({ ...router.currentRoute }, true);
-  }
+    router.matchedRoutes = router.routes.reduce(
+      generalReducer.bind({
+        searchVal: window.location.pathname,
+        condition: matchedRoutePathCondition
+      }),
+      [] as Route[]
+    );
 
-  getMiddlewareResults(
-    mainScope,
-    {
-      from: undefined,
-      to: { ...router.currentRoute }
-    },
-    router.matchedRoutes,
-    'beforeEnter'
-  ).then((condition) => {
-    if (condition && router.currentRoute) {
-      const realComputedPath = match(
-        (router.currentRoute.computedPath as string).replace(/^\//g, ''),
-        {
-          decode: decodeURIComponent
-        }
-      )(window.location.pathname.replace(/^\//g, ''));
-
-      window.history.replaceState(
-        {
-          name: router.currentRoute.name,
-          params: realComputedPath && realComputedPath.params
-        },
-        '',
-        `/${(realComputedPath && realComputedPath.path) || ''}${
-          window.location.search || ''
-        }`
-      );
+    if (router.matchedRoutes.length) {
+      router.currentRoute = router.matchedRoutes[0];
+    } else {
+      throw new Error('No route matched path');
     }
-  });
 
-  router.removePopstateListener = mainScope.registerEventListener(
-    window,
-    'popstate',
-    router.onPopState.bind(router)
-  );
+    if (router.currentRoute && router.currentRoute.redirect) {
+      await router.push({ ...router.currentRoute }, true);
+    }
 
-  router.ready = true;
+    getMiddlewareResults(
+      mainScope,
+      {
+        from: undefined,
+        to: { ...router.currentRoute }
+      },
+      router.matchedRoutes,
+      'beforeEnter'
+    ).then((condition) => {
+      if (condition && router.currentRoute) {
+        const realComputedPath = match(
+          (router.currentRoute.computedPath as string).replace(/^\//g, ''),
+          {
+            decode: decodeURIComponent
+          }
+        )(window.location.pathname.replace(/^\//g, ''));
 
-  return router;
+        window.history.replaceState(
+          {
+            name: router.currentRoute.name,
+            params: realComputedPath && realComputedPath.params
+          },
+          '',
+          `/${(realComputedPath && realComputedPath.path) || ''}${
+            window.location.search || ''
+          }`
+        );
+      }
+    });
+
+    router.removePopstateListener = mainScope.registerEventListener(
+      window,
+      'popstate',
+      router.onPopState.bind(router)
+    );
+
+    router.ready = true;
+  };
+
+  return { router, init };
 };
 
 const routeMapper = (currentRoute: Route): Route => {

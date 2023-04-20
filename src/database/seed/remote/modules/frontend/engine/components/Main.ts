@@ -1227,21 +1227,38 @@ export const initComponent = (mainScope: MainScope) => {
         reducersFunctions: await mainScope.helpers.reducersFunctions
       };
 
-      await mainScope
+      const ProxyObjectPromise = mainScope.asyncStaticModule(
+        () => import('/remoteModules/utils/reactivity/objectProxy.js')
+      );
+
+      const pathToRegexpPromise = mainScope.asyncStaticModule(
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        () => import('/node_modules/path-to-regexp/dist.es2015/index.js')
+      );
+
+      const storePromise = mainScope
         .asyncStaticModule(
           () => import('/remoteModules/frontend/engine/store.js')
         )
         .then(async ({ useStore }) => {
-          mainScope.store = await useStore(mainScope);
+          mainScope.store = await useStore(
+            mainScope,
+            (
+              await ProxyObjectPromise
+            ).ProxyObject
+          );
         });
 
       return mainScope
         .asyncStaticModule(
           () => import('/remoteModules/frontend/engine/router.js')
         )
-        .then(async ({ useRouter }) =>
-          useRouter(mainScope).then(async (router) => {
+        .then(async ({ useRouter }) => {
+          return useRouter(mainScope).then(async ({ router, init }) => {
             mainScope.router = router;
+            await storePromise;
+            await init(pathToRegexpPromise);
 
             const { o } = mainScope.useComponentsObject({
               ['router-view-component']: () =>
@@ -1254,8 +1271,8 @@ export const initComponent = (mainScope: MainScope) => {
               target: this,
               components: [o('<router-view-component>')]
             });
-          })
-        );
+          });
+        });
     }
 
     disconnectedCallback() {

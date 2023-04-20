@@ -70,11 +70,10 @@ export const useProxyState = <Modules>(
   return ProxyObject(useMainModule<Modules>(modules), mainScope);
 };
 
-export const useStore = async (mainScope: IMainScope) => {
-  const { ProxyObject } = await mainScope.asyncStaticModule(
-    () => import('/remoteModules/utils/reactivity/objectProxy.js')
-  );
-
+export const useStore = async (
+  mainScope: IMainScope,
+  ProxyObject: typeof IProxyObject
+) => {
   const userModel = await mainScope
     .asyncStaticModule(
       () => import('/remoteModules/services/models/User/model.User.js')
