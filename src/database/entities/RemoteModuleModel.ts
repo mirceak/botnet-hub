@@ -10,7 +10,7 @@ import { ScriptModel } from '#database/entities/ScriptModel.js';
 @Entity()
 export class RemoteModuleModel {
   @PrimaryGeneratedColumn()
-  id: number;
+  id?: number;
 
   @Column()
   name: string;

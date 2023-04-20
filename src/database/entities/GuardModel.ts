@@ -4,7 +4,7 @@ import { ArrayTransformer } from '#database/helpers/transformers.js';
 @Entity()
 export class GuardModel {
   @PrimaryGeneratedColumn()
-  id: number;
+  id?: number;
 
   @Column()
   name: string;
