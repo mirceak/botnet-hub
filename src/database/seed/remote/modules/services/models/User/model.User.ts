@@ -22,5 +22,5 @@ export const getModel = (): ModuleUser => {
         age: 34
       }
     }
-  };
+  } satisfies ModuleUser;
 };

@@ -155,7 +155,7 @@ export interface IWCTemplate {
 }
 
 interface oElement {
-  scopeGetter?: any;
+  scopeGetter?: any /* TODO: remove any */;
   scope?: any;
   children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>;
   element: Promise<HTMLElement>;
@@ -175,8 +175,37 @@ interface oElement {
 // }
 
 class MainScope {
-  public store!: IStore;
-  public router!: Router;
+  store!: IStore;
+  router!: Router;
+
+  preloadedRequests: Record<'code' | 'path', string | Promise<unknown>>[] = [];
+
+  asyncHydrationCallbackIndex = 0;
+
+  helpers = {
+    validationsProto: this.asyncStaticModule(
+      () =>
+        import(
+          '/remoteModules/utils/helpers/shared/transformations/validations.proto.js'
+        )
+    ) as unknown as Awaited<
+      typeof import('/remoteModules/utils/helpers/shared/transformations/validations.proto.js')
+    >,
+    reducersFunctions: this.asyncStaticModule(
+      () =>
+        import(
+          '/remoteModules/utils/helpers/shared/transformations/reducers.functions.js'
+        )
+    ).then(({ default: getter }) => getter(this)) as unknown as Awaited<
+      ReturnType<
+        Awaited<
+          typeof import('/remoteModules/utils/helpers/shared/transformations/reducers.functions.js')
+        >['default']
+      >
+    >
+  };
+
+  elementRegister = new WeakMap();
 
   readonly BaseElement = class BaseElement<Target extends HTMLElement> {
     public target: Target;
@@ -280,105 +309,100 @@ class MainScope {
       }
     };
   };
-  readonly BaseWebComponent = class BaseWC<ILocalScope = IWCBaseScope>
-    implements IWC<ILocalScope>
-  {
-    tagName: string;
 
-    private scopedCssIdIndex = 0;
+  useComponentRegister = <
+    Scope extends IWCBaseScope,
+    Target extends HTMLElement = HTMLElement
+  >(
+    tagName: string,
+    setup: (options: IWCBaseRegisterScope<Scope>) => Promise<void> | void
+  ) => {
+    const mainScope = this;
+    let scopedCssIdIndex = 0;
 
-    constructor(
-      tagName: (() => string) | string,
-      constructor: CustomElementConstructor,
-      options?: ElementDefinitionOptions
-    ) {
-      this.tagName = typeof tagName === 'string' ? tagName : tagName();
-      this.init(constructor, this, options);
-    }
+    const useComponentSetup = <_Target extends HTMLElement = Target>(
+      target: _Target
+    ) => {
+      const component: InstanceType<typeof mainScope.BaseElement<_Target>> =
+        new mainScope.BaseElement<_Target>(this, target);
 
-    public getScopedCss = (css: string) => {
-      /* language=HTML */
-      return `
-        <style staticScope=${this.scopedCssIdIndex++}>${css}</style>
-      `;
+      let initElement: CallableFunction;
+      let disconnectedCallback: CallableFunction;
+      const useInitElement = (callback: CallableFunction) => {
+        initElement = (
+          scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope & IWCStaticScope>
+        ): void => {
+          void component.initElement(scope?.attributes);
+          return callback(scope);
+        };
+      };
+      const asyncLoadComponentTemplate = (template: IWCTemplate) => {
+        template.target = component.target;
+        mainScope.asyncLoadComponentTemplate(template as Required<IWCTemplate>);
+      };
+      const useOnDisconnectedCallback = (callback: CallableFunction) => {
+        disconnectedCallback = () => {
+          component.disconnectedCallback();
+          callback();
+        };
+      };
+      Promise.resolve(
+        setup({
+          useInitElement,
+          asyncLoadComponentTemplate,
+          useOnDisconnectedCallback,
+          getScopedCss,
+          el: component.target
+        })
+      ).then(() => {
+        mainScope.elementRegister.set(component.target, {
+          initElement,
+          disconnectedCallback
+        });
+      });
     };
 
-    public getScope = async (scope?: ILocalScope) => {
+    const onDisconnectedCallback = (target: HTMLElement) => {
+      if (mainScope.elementRegister.has(target)) {
+        mainScope.elementRegister.get(target).disconnectedCallback?.();
+        mainScope.elementRegister.delete(target);
+      }
+    };
+
+    const elClass = class Element extends window.HTMLElement {
+      constructor() {
+        super();
+        useComponentSetup(this);
+      }
+
+      disconnectedCallback() {
+        onDisconnectedCallback(this);
+      }
+    };
+
+    if (!window.customElements.get(tagName)) {
+      window.customElements.define(tagName, elClass);
+    }
+
+    const getScope = async (scope?: Scope) => {
       return Object.assign(
         {
-          tagName: this.tagName
+          tagName: tagName
         },
         scope
       );
     };
 
-    private init(
-      constructor: CustomElementConstructor,
-      target: BaseWC<ILocalScope>,
-      options?: ElementDefinitionOptions
-    ) {
-      if (!window.customElements.get(target.tagName)) {
-        window.customElements.define(target.tagName, constructor, options);
-      }
-    }
-  };
-  BaseHtmlElement = class BaseHtmlElement<
-    Target extends HTMLElement = HTMLElement
-  > extends window.HTMLElement {
-    public component: InstanceType<IMainScope['BaseElement']>;
-    mainScope: IMainScope;
+    const getScopedCss = (css: string) => {
+      /* language=HTML */
+      return `
+        <style staticScope=${scopedCssIdIndex++}>${css}</style>
+      `;
+    };
 
-    public constructor(mainScope: IMainScope) {
-      super();
-      this.mainScope = mainScope;
-      this.component = new mainScope.BaseElement<Target>(
-        mainScope,
-        this as unknown as Target
-      );
-    }
-
-    useInitElement(callback: CallableFunction) {
-      return (
-        scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope & IWCStaticScope>
-      ): void => {
-        void this.component.initElement(scope?.attributes);
-        return callback(scope);
-      };
-    }
-
-    disconnectedCallback() {
-      this.component.disconnectedCallback();
-      if (this.mainScope.elementRegister.has(this)) {
-        void this.mainScope.elementRegister.get(this).disconnectedCallback?.();
-      }
-    }
-  };
-
-  preloadedRequests: Record<'code' | 'path', string | Promise<unknown>>[] = [];
-
-  asyncHydrationCallbackIndex = 0;
-
-  helpers = {
-    validationsProto: this.asyncStaticModule(
-      () =>
-        import(
-          '/remoteModules/utils/helpers/shared/transformations/validations.proto.js'
-        )
-    ) as unknown as Awaited<
-      typeof import('/remoteModules/utils/helpers/shared/transformations/validations.proto.js')
-    >,
-    reducersFunctions: this.asyncStaticModule(
-      () =>
-        import(
-          '/remoteModules/utils/helpers/shared/transformations/reducers.functions.js'
-        )
-    ).then(({ default: getter }) => getter(this)) as unknown as Awaited<
-      ReturnType<
-        Awaited<
-          typeof import('/remoteModules/utils/helpers/shared/transformations/reducers.functions.js')
-        >['default']
-      >
-    >
+    return {
+      getScope
+    };
   };
 
   registerEventListener = <
@@ -494,59 +518,6 @@ class MainScope {
         this.addCssHelpers();
       }
     }
-  };
-
-  elementRegister = new WeakMap();
-
-  useComponentRegister = <
-    Scope extends IWCBaseScope,
-    Target extends HTMLElement = HTMLElement
-  >(
-    tagName: string,
-    setup: (options: IWCBaseRegisterScope<Scope>) => Promise<void> | void
-  ) => {
-    const mainScope = this;
-
-    const elClass = class Element extends this.BaseHtmlElement<Target> {
-      constructor() {
-        super(mainScope);
-        let initElement: CallableFunction;
-        let disconnectedCallback: CallableFunction;
-        const useInitElement = (callback: CallableFunction) => {
-          initElement = this.useInitElement(callback);
-        };
-        const asyncLoadComponentTemplate = (template: IWCTemplate) => {
-          template.target = this;
-          mainScope.asyncLoadComponentTemplate(
-            template as Required<IWCTemplate>
-          );
-        };
-        const useOnDisconnectedCallback = (callback: CallableFunction) => {
-          disconnectedCallback = callback;
-        };
-        Promise.resolve(
-          setup({
-            useInitElement,
-            asyncLoadComponentTemplate,
-            useOnDisconnectedCallback,
-            getScopedCss: webComponent.getScopedCss,
-            el: this
-          })
-        ).then(() => {
-          mainScope.elementRegister.set(this, {
-            initElement,
-            disconnectedCallback
-          });
-        });
-      }
-    };
-
-    const webComponent = new mainScope.BaseWebComponent<Scope>(
-      tagName,
-      elClass
-    );
-
-    return webComponent;
   };
 
   useComponentsObject = <
@@ -697,9 +668,7 @@ class MainScope {
         Object.keys(components || {}).indexOf(tag) !== -1 || !!constructor;
       let element: Promise<HTMLElement>;
       if (!isCustomElement) {
-        const temp = document.createElement(tag) as InstanceType<
-          typeof this.BaseHtmlElement
-        >;
+        const temp = document.createElement(tag);
         const component = new this.BaseElement(this, temp);
         this.elementRegister.set(temp, {
           initElement: component.initElement
@@ -750,8 +719,7 @@ class MainScope {
     const shouldInstantiate =
       !shouldAddProps && !nestedElement.tagName.match(/^<(.*)\/>$/gis);
     const element = (await nestedElement.element) as
-      | (InstanceType<typeof this.BaseElement> & HTMLElement)
-      | InstanceType<typeof this.BaseHtmlElement>;
+      | InstanceType<typeof this.BaseElement> & HTMLElement;
 
     element.setAttribute('wcY', index.toString());
     const indexPosition = this.getIndexPositionInParent(index, target.children);
@@ -833,23 +801,26 @@ class MainScope {
               );
           }
 
-          nestedElement.scope.attributes = await Object.keys(
-            nestedElement.scope.attributes
-          ).reduce(async (reduced, key) => {
-            if (this.helpers.validationsProto.isAsyncOrFunction(reduced[key])) {
-              reduced[key] =
-                await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                  (nestedElement as oElement).scope.attributes[key]
-                );
-            } else {
-              reduced[key] = await (nestedElement as oElement).scope.attributes[
-                key
-              ];
-            }
-            return reduced;
-          }, {} as typeof nestedElement.scope.attributes);
+          if (nestedElement.scope.attributes) {
+            nestedElement.scope.attributes = await Object.keys(
+              nestedElement.scope.attributes
+            ).reduce(async (reduced, key) => {
+              if (
+                this.helpers.validationsProto.isAsyncOrFunction(reduced[key])
+              ) {
+                reduced[key] =
+                  await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                    (nestedElement as oElement).scope.attributes[key]
+                  );
+              } else {
+                reduced[key] = await (nestedElement as oElement).scope
+                  .attributes[key];
+              }
+              return reduced;
+            }, {} as typeof nestedElement.scope.attributes);
 
-          Object.assign(element, nestedElement.scope.attributes);
+            Object.assign(element, nestedElement.scope.attributes);
+          }
         } else {
           nestedElement.scope = await Object.keys(nestedElement.scope).reduce(
             async (reduced, key) => {
