@@ -540,7 +540,6 @@ class MainScope {
       >['getScope'];
     };
 
-    /* TODO: refactor so that we only get the module and extract the component name from that. no need to define them twice */
     for (const key in components) {
       const newComponent = this.asyncComponentScopeGetter(
         components[key] as <S>() => Promise<IWCModule<S>>
@@ -1275,5 +1274,3 @@ export const registerMainComponent = () => {
 (() => {
   registerMainComponent();
 })();
-
-/* TODO: Rule of thumb: scope separation between framework scopes and component/element scopes. Framework scopes should not be freely accessible through dom querying */
