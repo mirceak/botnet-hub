@@ -221,7 +221,7 @@ class MainScope {
       this.mainScope = mainScope;
     }
 
-    disconnectedCallback() {
+    disconnectedCallback = () => {
       this.eventHandlerClosers.forEach((currentEventHandlerCloser) => {
         currentEventHandlerCloser();
       });
@@ -231,7 +231,14 @@ class MainScope {
           currentEventHandlerCloser.callback
         );
       });
-    }
+      if (this.mainScope.elementRegister.has(this.target)) {
+        console.log(
+          33,
+          this.target.tagName,
+          this.mainScope.elementRegister.delete(this.target)
+        );
+      }
+    };
 
     initElement = async (
       scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope['attributes']>
@@ -357,15 +364,15 @@ class MainScope {
       ).then(() => {
         mainScope.elementRegister.set(component.target, {
           initElement,
-          disconnectedCallback
+          disconnectedCallback:
+            disconnectedCallback || component.disconnectedCallback
         });
       });
     };
 
     const onDisconnectedCallback = (target: HTMLElement) => {
       if (mainScope.elementRegister.has(target)) {
-        mainScope.elementRegister.get(target).disconnectedCallback?.();
-        mainScope.elementRegister.delete(target);
+        mainScope.elementRegister.get(target).disconnectedCallback();
       }
     };
 
@@ -668,11 +675,48 @@ class MainScope {
         Object.keys(components || {}).indexOf(tag) !== -1 || !!constructor;
       let element: Promise<HTMLElement>;
       if (!isCustomElement) {
-        const temp = document.createElement(tag);
-        const component = new this.BaseElement(this, temp);
-        this.elementRegister.set(temp, {
-          initElement: component.initElement
-        });
+        const mainScope = this;
+
+        if (!window.customElements.get(`${tag}-wc`)) {
+          const tempEl = document.createElement(tag);
+          tempEl.remove();
+
+          const registerElement = (target: HTMLElement) => {
+            const baseElement = new mainScope.BaseElement(mainScope, target);
+            mainScope.elementRegister.set(target, {
+              initElement: baseElement.initElement,
+              disconnectedCallback: baseElement.disconnectedCallback
+            });
+          };
+
+          const disconnectedCallback = (target: HTMLElement) => {
+            if (mainScope.elementRegister.has(target)) {
+              mainScope.elementRegister.get(target).disconnectedCallback();
+            }
+          };
+
+          window.customElements.define(
+            `${tag}-wc`,
+            class DomComponent extends (tempEl.constructor as CustomElementConstructor) {
+              constructor() {
+                super();
+                registerElement(this);
+              }
+
+              disconnectedCallback() {
+                disconnectedCallback(this);
+              }
+            },
+            { extends: tag }
+          );
+        }
+
+        const domElementConstructor = window.customElements.get(
+          `${tag}-wc`
+        ) as CustomElementConstructor;
+
+        const temp = new domElementConstructor();
+
         element = new Promise((resolve) => resolve(temp));
       } else {
         if (constructor) {
@@ -1187,6 +1231,9 @@ export const initComponent = (mainScope: MainScope) => {
         .then(async ({ useStore }) => {
           mainScope.store = await useStore(mainScope);
         });
+      setInterval(() => {
+        console.log(mainScope.elementRegister);
+      }, 1000);
 
       return mainScope
         .asyncStaticModule(
