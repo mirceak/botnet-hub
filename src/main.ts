@@ -1,5 +1,4 @@
 (async () => {
-  import('reflect-metadata');
   /**
    * General app description goes here
    *
@@ -13,6 +12,7 @@
         await kernel.start();
       });
 
+    /*TODO: add separate tsconfig files for each env -> entities / frontend / rest*/
     /*TODO: add and test guards*/
     /*TODO: table component*/
     /*TODO: form component and elements implementation*/

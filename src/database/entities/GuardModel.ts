@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { ArrayTransformer } from '#database/helpers/transformers.js';
 
 @Entity()
 export class GuardModel {
@@ -8,22 +9,10 @@ export class GuardModel {
   @Column()
   name: string;
 
-  @Column({
-    type: 'text',
-    transformer: {
-      from: (value: string) => value.split(','),
-      to: (value: string[]) => value.join(',')
-    }
-  })
+  @Column(ArrayTransformer())
   roles: Roles[];
 
-  @Column({
-    type: 'text',
-    transformer: {
-      from: (value: string) => value.split(','),
-      to: (value: string[]) => value.join(',')
-    }
-  })
+  @Column(ArrayTransformer())
   permissions: Permissions[];
 }
 
