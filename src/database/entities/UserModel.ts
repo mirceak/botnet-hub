@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn
+} from 'typeorm';
+import { GuardModel } from '#database/entities/GuardModel.js';
 
 @Entity()
 export class UserModel {
@@ -13,4 +20,8 @@ export class UserModel {
 
   @Column()
   password: string;
+
+  @ManyToOne(() => GuardModel, { cascade: true, eager: true })
+  @JoinColumn()
+  guard: GuardModel;
 }

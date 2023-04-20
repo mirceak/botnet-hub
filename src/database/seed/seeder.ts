@@ -1,6 +1,7 @@
 import { RemoteModuleModel } from '#database/entities/RemoteModuleModel.js';
 import { ScriptModel } from '#database/entities/ScriptModel.js';
 import { UserModel } from '#database/entities/UserModel.js';
+import { GuardModel } from '#database/entities/GuardModel.js';
 import type { IKernel, IKernelModuleInit } from '#src/kernel/Kernel.js';
 import { getFileContentsSync } from '#helpers/imports/io.js';
 import cluster from 'cluster';
@@ -86,37 +87,27 @@ const loadSeederFile = async <T>(
 };
 
 export const init: IKernelModuleInit = async (context) => {
+  const user1Guard = new GuardModel();
+  user1Guard.name = 'kernel/admin';
+  user1Guard.permissions = [0, 1, 2, 3];
+  user1Guard.roles = [0, 1];
+
   const user1 = new UserModel();
   user1.name = 'Mircea Bereveanu';
   user1.email = 'mircea.bereveanu.office@gmail.com';
   user1.password = 'qwer1234';
+  user1.guard = user1Guard;
+
+  const user2Guard = new GuardModel();
+  user2Guard.name = 'web/guest';
+  user2Guard.permissions = [1];
+  user2Guard.roles = [1];
 
   const user2 = new UserModel();
   user2.name = 'Mircea Bereveanu Guest';
   user2.email = 'mircea.bereveanu@gmail.com';
   user2.password = 'qwer1234';
-
-  // await User.create({
-  //   name: 'Mircea Bereveanu',
-  //   email: 'mircea.bereveanu.office@gmail.com'
-  // }).then(async (user) => {
-  //   await user.guardEntities?.createEntity({
-  //     name: 'kernel/admin',
-  //     permissions: [0, 1, 2, 3],
-  //     roles: [0, 1]
-  //   });
-  // });
-  //
-  // await User.create({
-  //   name: 'Mircea Bereveanu Guest',
-  //   email: 'mircea.bereveanu@gmail.com'
-  // }).then(async (user) => {
-  //   await user.guardEntities?.createEntity({
-  //     name: 'web/guest',
-  //     permissions: [1],
-  //     roles: [1]
-  //   });
-  // });
+  user2.guard = user2Guard;
 
   await context.kernelGlobals.dataSource?.manager.save([user1, user2]);
 

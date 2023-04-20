@@ -8,11 +8,23 @@ export class GuardModel {
   @Column()
   name: string;
 
-  @Column()
-  roles: Roles;
+  @Column({
+    type: 'text',
+    transformer: {
+      from: (value: string) => value.split(','),
+      to: (value: string[]) => value.join(',')
+    }
+  })
+  roles: Roles[];
 
-  @Column()
-  permissions: Permissions;
+  @Column({
+    type: 'text',
+    transformer: {
+      from: (value: string) => value.split(','),
+      to: (value: string[]) => value.join(',')
+    }
+  })
+  permissions: Permissions[];
 }
 
 export enum Permissions {
