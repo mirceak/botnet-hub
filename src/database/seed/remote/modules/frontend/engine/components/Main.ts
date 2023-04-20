@@ -204,9 +204,9 @@ class MainScope {
       });
     }
 
-    async initElement(
+    initElement = async (
       scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope['attributes']>
-    ): Promise<void> {
+    ): Promise<void> => {
       if (this.mainScope.helpers.validationsProto.isAsyncOrFunction(scope)) {
         scope =
           await this.mainScope.helpers.reducersFunctions.valueFromAsyncOrFunction(
@@ -278,7 +278,7 @@ class MainScope {
           });
         }
       }
-    }
+    };
   };
   readonly BaseWebComponent = class BaseWC<ILocalScope = IWCBaseScope>
     implements IWC<ILocalScope>
@@ -697,9 +697,13 @@ class MainScope {
         Object.keys(components || {}).indexOf(tag) !== -1 || !!constructor;
       let element: Promise<HTMLElement>;
       if (!isCustomElement) {
-        const temp = document.createElement(tag);
-        (temp as InstanceType<typeof this.BaseHtmlElement>).component =
-          new this.BaseElement(this, temp);
+        const temp = document.createElement(tag) as InstanceType<
+          typeof this.BaseHtmlElement
+        >;
+        const component = new this.BaseElement(this, temp);
+        this.elementRegister.set(temp, {
+          initElement: component.initElement
+        });
         element = new Promise((resolve) => resolve(temp));
       } else {
         if (constructor) {
@@ -872,15 +876,7 @@ class MainScope {
     }
 
     if (shouldInstantiate) {
-      if (nestedElement.isCustomElement) {
-        void this.elementRegister.get(element).initElement(nestedElement.scope);
-      } else {
-        /* TODO: make base elements register themselves as well and only instantiate through the register */
-        /* TODO: move everything component related on the weak map and stop exposing logic on the element */
-        void (
-          element as InstanceType<typeof this.BaseHtmlElement>
-        ).component?.initElement(nestedElement.scope);
-      }
+      void this.elementRegister.get(element).initElement(nestedElement.scope);
     }
 
     return element as HTMLElement;
