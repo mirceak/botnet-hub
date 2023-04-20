@@ -1,4 +1,4 @@
-import { type Script as ScriptModel } from '#database/entities/Script.js';
+import { type ScriptModel } from '#database/entities/ScriptModel.js';
 import { createContext, SourceTextModule } from 'node:vm';
 import { type IKernelGlobals } from '#src/kernel/Kernel.js';
 

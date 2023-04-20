@@ -1,24 +1,34 @@
-import { Sequelize } from 'sequelize';
 import { type IKernelModuleInit } from '#kernel/Kernel.js';
+import { DataSource } from 'typeorm';
+import { EntityModel } from '#database/entities/EntityModel.js';
+import { GuardModel } from '#database/entities/GuardModel.js';
+import { RemoteModuleModel } from '#database/entities/RemoteModuleModel.js';
+import { RouteModel } from '#database/entities/RouteModel.js';
+import { ScriptModel } from '#database/entities/ScriptModel.js';
+import { UserModel } from '#database/entities/UserModel.js';
+import { WebComponentModel } from '#database/entities/WebComponentModel.js';
+import { WebRouteModel } from '#database/entities/WebRouteModel.js';
 
 export const init: IKernelModuleInit = async (context) => {
-  context.kernelGlobals.sequelize = new Sequelize('sqlite::memory:', {
-    typeValidation: true
+  const dataSource = new DataSource({
+    type: 'sqlite',
+    database: ':memory:',
+    entities: [
+      EntityModel,
+      GuardModel,
+      RemoteModuleModel,
+      RouteModel,
+      ScriptModel,
+      UserModel,
+      WebComponentModel,
+      WebRouteModel
+    ],
+    synchronize: true,
+    subscribers: [],
+    migrations: []
   });
-  await context.runImports([
-    import('#database/entities/Script.js'),
-    import('#database/entities/User.js'),
-    import('#database/entities/RemoteModule.js'),
-    import('#database/entities/Guard.js'),
-    import('#database/entities/WebComponent.js'),
-    import('#database/entities/Entity.js')
-  ]);
+
+  await dataSource.initialize();
+
+  context.kernelGlobals.dataSource = dataSource;
 };
-
-//add webComponent entity
-//add webModule entity
-//add webStyle entity
-
-//add routes for express static
-//add routes for front-end
-//add routes for api
