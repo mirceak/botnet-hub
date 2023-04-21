@@ -21,6 +21,7 @@
     "skipLibCheck": true,
     "paths": {
       "/src/*": ["./src/*"],
+      "#kernel/*": ["./src/kernel/*"],
       "/remoteModules/*": ["./src/database/seed/remote/modules/*"],
       "/node_modules/*": ["./node_modules/*"]
     }
