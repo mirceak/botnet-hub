@@ -5,7 +5,6 @@
     "strictPropertyInitialization": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "esModuleInterop": true,
     "paths": {
       "/src/*": ["./src/*"],
       "/remoteModules/*": ["./src/database/seed/remote/modules/*"],
