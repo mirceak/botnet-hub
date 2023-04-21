@@ -29,48 +29,63 @@ const getComponent = (mainScope: IMainScope) => {
                 innerText: () => mainScope.store.state.home.titleWithName
               })
             ]),
-            o('<div>', { className: 'content' }, [
-              o('<input-component>', () => ({
-                elementAttributes: {
-                  placeholder: 'Username',
-                  handlers: {
-                    input: [
-                      {
-                        callback: async (e) => {
-                          e.preventDefault();
-                          mainScope.store.state.home.nameInput = (
-                            e.target as HTMLInputElement
-                          ).value;
-                        }
+            o('<div>', { className: 'content', title: 'ases' }, (x99) => {
+              console.log(-12, x99);
+              return [
+                async (x0) => {
+                  console.log(0, x0);
+                  return o('<input-component>', (x1) => {
+                    console.log(1, x1);
+                    return {
+                      attributes: async (x22) => {
+                        console.log(22, x22);
+                        return {
+                          className: 'bg-default m-b-8'
+                        };
+                      },
+                      elementAttributes: async (x2) => {
+                        console.log(2, x2);
+                        return {
+                          placeholder: 'Username',
+                          handlers: {
+                            input: [
+                              {
+                                callback: async (e) => {
+                                  e.preventDefault();
+                                  mainScope.store.state.home.nameInput = (
+                                    e.target as HTMLInputElement
+                                  ).value;
+                                }
+                              }
+                            ]
+                          }
+                        };
                       }
-                    ]
-                  }
+                    };
+                  });
                 },
-                attributes: {
-                  className: 'bg-default m-b-8'
-                }
-              })),
-              o('<input-component>', {
-                elementAttributes: {
-                  placeholder: 'Password',
-                  type: 'password',
-                  handlers: {
-                    input: [
-                      {
-                        callback: async (e) => {
-                          e.preventDefault();
-                          console.log((e.target as HTMLInputElement).value);
+                o('<input-component>', {
+                  elementAttributes: {
+                    placeholder: 'Password',
+                    type: 'password',
+                    handlers: {
+                      input: [
+                        {
+                          callback: async (e) => {
+                            e.preventDefault();
+                            console.log((e.target as HTMLInputElement).value);
+                          }
                         }
-                      }
-                    ]
-                  }
-                },
-                attributes: { className: 'bg-default' }
-              })
-            ]),
+                      ]
+                    }
+                  },
+                  attributes: { className: 'bg-default' }
+                })
+              ];
+            }),
             o('<div>', { className: 'actions' }, [
-              o('<button-component>', {
-                elementAttributes: {
+              o('<button-component>', () => ({
+                elementAttributes: () => ({
                   innerText: 'Log In',
                   handlers: {
                     click: [
@@ -89,9 +104,9 @@ const getComponent = (mainScope: IMainScope) => {
                       }
                     ]
                   }
-                },
+                }),
                 attributes: { className: 'bg-primary' }
-              })
+              }))
             ])
           ]),
 

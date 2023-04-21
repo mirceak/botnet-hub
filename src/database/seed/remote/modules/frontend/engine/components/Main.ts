@@ -57,7 +57,7 @@ export type UnwrapAsyncAndPromiseNested<T> = T extends AsyncAndPromise<infer _T>
           UnwrapAsyncAndPromise<_T[P]>
         >;
       }
-    : UnwrapAsyncAndPromise<T>
+    : UnwrapAsyncAndPromise<_T>
   : UnwrapAsyncAndPromise<T>;
 
 type ValueOrFunction<K> = K extends object
@@ -149,13 +149,17 @@ export interface IWCTemplate {
   target?: InstanceType<typeof Element | typeof DocumentFragment>;
 }
 
-interface oElement<Scope extends IWCBaseScope = IWCBaseScope> {
-  scopeGetter?: AsyncAndPromise<
-    <_Scope extends IWCBaseScope = IWCBaseScope>(scope?: _Scope) => any
-  >;
-  scope?: AsyncAndPromise<Scope>;
-  children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>;
-  element: Promise<HTMLElement>;
+interface oElement<
+  Scope = object,
+  ElementType extends HTMLElement = HTMLElement,
+  Children = unknown
+> {
+  scopeGetter?: AsyncAndPromise<IWC<Scope>['getScope']>;
+  scope?: Scope;
+  children?: Children extends AsyncAndPromise<AsyncAndPromise<infer Elements>[]>
+    ? AsyncAndPromise<AsyncAndPromise<Elements>[]>
+    : AsyncAndPromise<AsyncAndPromise<oElement>[]>;
+  element: Promise<ElementType>;
   tagName: string;
   isCustomElement: boolean;
 }
@@ -211,12 +215,14 @@ class MainScope {
     };
 
     initElement = async (
-      scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope['attributes']>
+      scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope['attributes']>,
+      oElement?: oElement
     ): Promise<void> => {
       if (this.mainScope.helpers.validationsProto.isAsyncOrFunction(scope)) {
         scope =
           await this.mainScope.helpers.reducersFunctions.valueFromAsyncOrFunction(
-            scope
+            scope,
+            [oElement]
           );
       }
 
@@ -297,19 +303,20 @@ class MainScope {
     const mainScope = this;
     let scopedCssIdIndex = 0;
 
-    const useComponentSetup = <_Target extends HTMLElement = Target>(
-      target: _Target
-    ) => {
-      const component: InstanceType<typeof mainScope.BaseElement<_Target>> =
-        new mainScope.BaseElement<_Target>(this, target);
+    const useComponentSetup = (target: Target) => {
+      const component = new mainScope.BaseElement<Target>(
+        this,
+        target
+      ) satisfies InstanceType<typeof mainScope.BaseElement<Target>>;
 
       let initElement: CallableFunction;
       let disconnectedCallback: CallableFunction;
       const useInitElement = (callback: CallableFunction) => {
         initElement = (
-          scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope & IWCStaticScope>
+          scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope & IWCStaticScope>,
+          oElement?: oElement
         ): void => {
-          void component.initElement(scope?.attributes);
+          void component.initElement(scope?.attributes, oElement);
           return callback(scope);
         };
       };
@@ -349,7 +356,7 @@ class MainScope {
     const elClass = class Element extends window.HTMLElement {
       constructor() {
         super();
-        useComponentSetup(this);
+        useComponentSetup(this as unknown as Target);
       }
 
       disconnectedCallback() {
@@ -731,8 +738,7 @@ class MainScope {
     const shouldAddProps = !!nestedElement.tagName.match(/^<(.*)<>$/gis);
     const shouldInstantiate =
       !shouldAddProps && !nestedElement.tagName.match(/^<(.*)\/>$/gis);
-    const element = (await nestedElement.element) as
-      | InstanceType<typeof this.BaseElement> & HTMLElement;
+    const element = await nestedElement.element;
 
     element.setAttribute('wcY', index.toString());
     const indexPosition = this.getIndexPositionInParent(index, target.children);
@@ -742,14 +748,57 @@ class MainScope {
     } else {
       target.insertBefore(element, target.children[indexPosition]);
     }
+    if (
+      nestedElement.scope &&
+      !nestedElement.children &&
+      !this.helpers.validationsProto.isArray(nestedElement.scope)
+    ) {
+      if (
+        this.helpers.validationsProto.isSyncFunction(nestedElement.scopeGetter)
+      ) {
+        nestedElement.scope = nestedElement.scopeGetter() as IWCBaseScope;
+        if (
+          this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
+        ) {
+          nestedElement.scope =
+            await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+              nestedElement.scope,
+              [nestedElement]
+            );
+        }
+      } else {
+        if (
+          this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
+        ) {
+          nestedElement.scope =
+            await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+              nestedElement.scope,
+              [nestedElement]
+            );
+        }
+        nestedElement.scope = await (
+          await nestedElement.scopeGetter
+        )?.(nestedElement.scope as IWCBaseScope);
+      }
+    }
+
+    if (
+      !nestedElement.children &&
+      this.helpers.validationsProto.isArray(nestedElement.scope)
+    ) {
+      nestedElement.children =
+        nestedElement.scope as unknown as typeof nestedElement.children;
+    }
 
     if (nestedElement.children) {
       if (
+        nestedElement.children != nestedElement.scope &&
         this.helpers.validationsProto.isAsyncOrFunction(nestedElement.children)
       ) {
         nestedElement.children =
           await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-            nestedElement.children
+            nestedElement.children,
+            [nestedElement]
           );
       }
 
@@ -759,7 +808,8 @@ class MainScope {
           if (this.helpers.validationsProto.isAsyncOrFunction(_child)) {
             _child =
               await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                _child
+                _child,
+                [nestedElement]
               );
           }
           return _child;
@@ -774,33 +824,6 @@ class MainScope {
     }
 
     if (shouldAddProps || shouldInstantiate) {
-      if (
-        nestedElement.scope &&
-        !nestedElement.children &&
-        !this.helpers.validationsProto.isArray(nestedElement.scope)
-      ) {
-        if (
-          this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
-        ) {
-          nestedElement.scope =
-            await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-              nestedElement.scope
-            );
-        }
-
-        if (
-          this.helpers.validationsProto.isSyncFunction(
-            nestedElement.scopeGetter
-          )
-        ) {
-          nestedElement.scope = nestedElement.scopeGetter() as IWCBaseScope;
-        } else {
-          nestedElement.scope = await (
-            await nestedElement.scopeGetter
-          )?.(nestedElement.scope as IWCBaseScope);
-        }
-      }
-
       if (shouldAddProps && nestedElement.scope) {
         if (nestedElement.isCustomElement) {
           const nestedScope = nestedElement.scope as IWCBaseScope;
@@ -811,7 +834,8 @@ class MainScope {
           ) {
             nestedScope.attributes =
               await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                nestedScope.attributes
+                nestedScope.attributes,
+                [nestedElement]
               );
           }
           const nestedScopeUnwrapped = nestedElement.scope as {
@@ -835,7 +859,8 @@ class MainScope {
                     await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
                       nestedScopeUnwrapped.attributes[
                         key as keyof typeof nestedScopeUnwrapped.attributes
-                      ]
+                      ],
+                      [nestedElement]
                     );
                 } else {
                   returned[key as keyof typeof returned] =
@@ -862,7 +887,8 @@ class MainScope {
                   (await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
                     nestedElement.scope?.[
                       key as keyof typeof nestedElement.scope
-                    ]
+                    ],
+                    [nestedElement]
                   )) as never;
               } else {
                 returned[key as keyof typeof returned] = nestedElement.scope?.[
@@ -879,10 +905,12 @@ class MainScope {
           Object.assign(element, newScope);
         }
       }
-    }
 
-    if (shouldInstantiate) {
-      void this.elementRegister.get(element).initElement(nestedElement.scope);
+      if (shouldInstantiate) {
+        void this.elementRegister
+          .get(element)
+          .initElement(nestedElement.scope, nestedElement);
+      }
     }
 
     return element as HTMLElement;

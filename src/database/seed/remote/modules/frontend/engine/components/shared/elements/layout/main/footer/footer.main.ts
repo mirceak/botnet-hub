@@ -14,9 +14,9 @@ const getComponent = (mainScope: IMainScope) => {
     options.useInitElement(async () => {
       options.asyncLoadComponentTemplate({
         components: [
-          o('<h1>', () => ({
+          o('<h1>', {
             innerText: 'Footer'
-          })),
+          }),
           async () => {
             return options.getScopedCss(await scopedCss);
           }

@@ -25,7 +25,7 @@ const getComponent = (mainScope: IMainScope) => {
         components: [
           o('<div>', { className: 'card gap-8 m-t-64 fit-content' }, [
             o('<div>', { className: 'header row items-center' }, [
-              o('<button-component>', {
+              o('<button-component>', () => ({
                 elementAttributes: {
                   innerText: 'Back',
                   handlers: {
@@ -44,7 +44,7 @@ const getComponent = (mainScope: IMainScope) => {
                 attributes: {
                   className: 'bg-primary m-r-16'
                 }
-              }),
+              })),
               o('<h1>', { innerText: 'Components' })
             ]),
             o('<div>', { className: 'card' }, [
