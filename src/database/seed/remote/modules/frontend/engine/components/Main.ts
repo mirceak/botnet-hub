@@ -829,26 +829,29 @@ class MainScope {
             const newAttributes = await Object.keys(
               nestedScopeUnwrapped.attributes
             ).reduce(async (reduced, key) => {
+              const returned = await reduced;
               if (nestedScopeUnwrapped.attributes) {
                 if (
                   this.helpers.validationsProto.isAsyncOrFunction(
-                    reduced[key as keyof typeof reduced]
+                    nestedScopeUnwrapped.attributes?.[
+                      key as keyof typeof nestedScopeUnwrapped.attributes
+                    ]
                   )
                 ) {
-                  reduced[key as keyof typeof reduced & string] =
+                  returned[key as keyof typeof returned] =
                     await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
                       nestedScopeUnwrapped.attributes[
                         key as keyof typeof nestedScopeUnwrapped.attributes
                       ]
                     );
                 } else {
-                  reduced[key as keyof typeof reduced & string] =
+                  returned[key as keyof typeof returned] =
                     await nestedScopeUnwrapped.attributes[
                       key as keyof typeof nestedScopeUnwrapped.attributes
                     ];
                 }
               }
-              return reduced;
+              return returned;
             }, Promise.resolve({} as typeof nestedScopeUnwrapped));
 
             Object.assign(element, newAttributes);
@@ -856,22 +859,24 @@ class MainScope {
         } else {
           const newScope = await Object.keys(nestedElement.scope).reduce(
             async (reduced, key) => {
+              const returned = await reduced;
               if (
                 this.helpers.validationsProto.isAsyncOrFunction(
                   nestedElement.scope?.[key as keyof typeof nestedElement.scope]
                 )
               ) {
-                reduced[key as keyof typeof reduced & string] =
+                returned[key as keyof typeof returned] =
                   (await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
                     nestedElement.scope?.[
                       key as keyof typeof nestedElement.scope
                     ]
                   )) as never;
               } else {
-                reduced[key as keyof typeof reduced & string] = nestedElement
-                  .scope?.[key as keyof typeof nestedElement.scope] as never;
+                returned[key as keyof typeof returned] = nestedElement.scope?.[
+                  key as keyof typeof nestedElement.scope
+                ] as never;
               }
-              return reduced;
+              return returned;
             },
             Promise.resolve(
               {} as UnwrapAsyncAndPromiseNested<typeof nestedElement.scope>
