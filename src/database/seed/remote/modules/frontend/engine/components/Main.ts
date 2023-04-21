@@ -126,11 +126,6 @@ export interface IWCExtendingBaseElementScope<
   elementAttributes?: IWCBaseScope<ElementType>['attributes'];
 }
 
-export interface IWCElement<Scope extends IWCStaticScope = IWCStaticScope>
-  extends InstanceType<typeof window.HTMLElement> {
-  initElement: (scope?: Scope) => Promise<void> | void;
-}
-
 export interface IWCModule<S> {
   default: (mainScope: MainScope) => Promise<IWC<S>> | IWC<S>;
 }
@@ -140,7 +135,7 @@ interface IWC<S> {
 }
 
 export interface IWCStaticScope {
-  tagName: string;
+  readonly tagName: string;
 }
 
 export interface IWCTemplate {
@@ -531,11 +526,11 @@ class MainScope {
     };
 
     for (const key in components) {
-      const newComponent = this.asyncComponentScopeGetter(
+      const componentScopeGetter = this.asyncComponentScopeGetter(
         components[key] as <S>() => Promise<IWCModule<S>>
       );
       pulledComponents[key as keyof Components] =
-        newComponent as unknown as Awaited<typeof newComponent>;
+        componentScopeGetter as unknown as Awaited<typeof componentScopeGetter>;
     }
 
     const { o } = this.useComponents(pulledComponents);
