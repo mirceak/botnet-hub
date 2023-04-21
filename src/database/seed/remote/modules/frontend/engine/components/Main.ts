@@ -173,7 +173,7 @@ class MainScope {
 
   asyncHydrationCallbackIndex = 0;
 
-  helpers: {
+  helpers!: {
     validationsProto: Awaited<
       typeof import('/remoteModules/utils/helpers/shared/transformations/validations.proto.js')
     >;
@@ -932,7 +932,7 @@ class MainScope {
     const result = [] as Element[];
     const temp = document.createElement('div');
     temp.innerHTML += innerHtml;
-    const children = [...temp.children];
+    const children = [...(temp.children as unknown as HTMLElement[])];
     temp.innerHTML = '';
     temp.remove();
     for (const child of children) {

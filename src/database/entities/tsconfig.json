@@ -10,5 +10,6 @@
     "experimentalDecorators": true,
     "composite": true
   },
+  "files": [],
   "include": ["**/*.ts"]
 }

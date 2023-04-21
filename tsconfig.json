@@ -25,12 +25,13 @@
       "/node_modules/*": ["./node_modules/*"]
     }
   },
+  "files": [],
   "references": [
     {
       "path": "src/database/entities/tsconfig.json"
     },
     {
-      "path": "src/database/seed/remote/modules/frontend/tsconfig.json"
+      "path": "src/database/seed/remote/modules/tsconfig.json"
     }
   ],
   "typedocOptions": {

@@ -6,7 +6,7 @@ describe('greeter function', () => {
 
   beforeAll(async () => {
     consoleLogSpy = spyOn(global.console, 'log');
-    jestGlobals.unstable_mockModule('#kernel/Kernel.js', () => ({
+    jestGlobals.unstable_mockModule('/src/kernel/Kernel.js', () => ({
       getKernel() {
         return {
           async runImports() {
@@ -17,9 +17,9 @@ describe('greeter function', () => {
         };
       }
     }));
-    import('#kernel/Kernel.js');
+    import('/src/kernel/Kernel.js');
 
-    await import('#src/main.js');
+    await import('/src/main.js');
   });
   afterAll(() => {
     consoleLogSpy.mockRestore();

@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { ArrayTransformer } from '#database/helpers/transformers.js';
+import { ArrayTransformer } from '#database/entities/helpers/transformers.js';
 
 @Entity()
 export class GuardModel {
