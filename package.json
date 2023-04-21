@@ -4,7 +4,7 @@
   "bin": "build/main.js",
   "name": "app",
   "scripts": {
-    "docs": "typedoc --entryPointStrategy expand ./ --exclude \"**/*+(.+(test|d)).ts\" --exclude \"node_modules/**\" --exclude \"docs/**\" --exclude \"build/**\" --exclude \"src/exampleTest/**\" --exclude \"coverage/**\" --exclude \"./jest.config.mjs\"",
+    "docs": "npm run tsc-build && typedoc --entryPointStrategy expand ./ --exclude \"**/*+(.+(test|d)).ts\" --exclude \"node_modules/**\" --exclude \"docs/**\" --exclude \"build/**\" --exclude \"src/exampleTest/**\" --exclude \"coverage/**\" --exclude \"./jest.config.mjs\"",
     "dev": "nodemon -e * --watch src --exec \"yarn tsc-build && node --experimental-vm-modules build/main.js\"",
     "tsc-build": "set NODE_OPTIONS=es-module-specifier-resolution=node && tsc --build --force tsconfig.json",
     "build:release": "set NODE_OPTIONS=es-module-specifier-resolution=node && tsc -p tsconfig.release.json && tsc-alias ",
