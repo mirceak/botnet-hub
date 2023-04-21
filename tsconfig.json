@@ -30,7 +30,7 @@
       "path": "src/database/entities/tsconfig.json"
     },
     {
-      "path": "src/database/seed/remote/modules/tsconfig.json"
+      "path": "src/database/seed/remote/modules/frontend/tsconfig.json"
     }
   ],
   "typedocOptions": {

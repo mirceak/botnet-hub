@@ -1,0 +1,21 @@
+{
+  "extends": "../../../../../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "dom"],
+    "baseUrl": ".",
+    "rootDir": "../../../../../",
+    "outDir": "../../../../../../build",
+    "paths": {
+      "/src/*": ["../../../../../*"],
+      "/remoteModules/*": ["../*"],
+      "/node_modules/*": ["../../../../../../node_modules/*"]
+    },
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../../../../entities/tsconfig.json"
+    }
+  ],
+  "include": ["../utils/**/*.ts", "**/*.ts"]
+}
