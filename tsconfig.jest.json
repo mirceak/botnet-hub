@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "dom"],
+    "strictPropertyInitialization": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "paths": {
+      "/src/*": ["./src/*"],
+      "/remoteModules/*": ["./src/database/seed/remote/modules/*"],
+      "#kernel/*": ["./src/kernel/*"],
+      "/node_modules/*": ["./node_modules/*"]
+    }
+  },
+  "references": []
+}
