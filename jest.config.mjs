@@ -1,5 +1,5 @@
 import { pathsToModuleNameMapper } from 'ts-jest';
-import tsconfigJson from './tsconfig.json' assert { type: 'json' };
+import tsconfigJson from './tsconfig.jest.json' assert { type: 'json' };
 
 function manageKey(key) {
   return key.includes('(.*)') ? key.slice(0, -1) + '\\.js$' : key;
@@ -9,19 +9,28 @@ function manageMapper(mapper) {
   for (const key in mapper) {
     newMapper[manageKey(key)] = mapper[key];
   }
-  newMapper['^(.*).js$'] = '$1';
+  newMapper['^./(.*)\\.js$'] = './$1';
   return newMapper;
 }
 
 export default {
   testEnvironment: 'node',
-  preset: 'ts-jest/presets/default-esm',
+  extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: manageMapper(
     pathsToModuleNameMapper(tsconfigJson.compilerOptions.paths, {
-      prefix: '<rootDir>/',
-      useESM: true
+      prefix: '<rootDir>/'
     })
-  ),
+  ), 
+  transform: {
+    "^.+\\.(ts|tsx)$": [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.jest.json', 
+        useESM: true
+      },
+    ],
+  },
+  transformIgnorePatterns: ['<rootDir>/node_modules/'],
   testRegex: '.*(test|spec).(m)?ts$',
   coverageDirectory: 'coverage',
   collectCoverageFrom: [

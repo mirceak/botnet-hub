@@ -19,8 +19,8 @@ const getComponent = (mainScope: IMainScope) => {
           o('<div>', { className: 'card m-t-64 fit-content' }, [
             o('<h1>', { innerText: 'About Page' }),
             o('<div>', { className: 'row full-width justify-center' }, [
-              o('<button-component>', () => ({
-                elementAttributes: () => ({
+              o('<button-component>', {
+                elementAttributes: {
                   className: 'bg-primary p-x-16',
                   innerText: 'Home',
                   handlers: {
@@ -35,8 +35,8 @@ const getComponent = (mainScope: IMainScope) => {
                       }
                     ]
                   }
-                })
-              }))
+                }
+              })
             ])
           ]),
           async () => {

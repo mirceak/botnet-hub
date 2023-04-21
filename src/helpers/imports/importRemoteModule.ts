@@ -1,8 +1,7 @@
 import { type ScriptModel } from '#database/entities/ScriptModel.js';
-import { createContext, SourceTextModule } from 'node:vm';
+import { createContext } from 'node:vm';
 import { type IKernelGlobals } from '#src/kernel/Kernel.js';
-
-export type linker = (specifier: string) => Promise<void>;
+import { ModuleLinker, SourceTextModuleOptions, SourceTextModule } from 'vm';
 
 export interface Exports {
   nextImportContext?: Record<string, unknown>;
@@ -10,7 +9,7 @@ export interface Exports {
 }
 
 export interface Module extends SourceTextModule {
-  link: (linker: linker) => Promise<void>;
+  link: (linker: ModuleLinker) => Promise<void>;
   evaluate: () => Promise<void>;
   exports?: Exports;
 }
@@ -41,7 +40,7 @@ export const importRemoteModule = async (
     const compiled = new SourceTextModule(moduleInstance.code, {
       identifier: `Remote Module: "${moduleInstance.name}"`,
       context: createContext(Object.assign(context, globalContext)),
-      async importModuleDynamically(specifier) {
+      importModuleDynamically: ((specifier: string) => {
         if (specifier.indexOf('./') !== -1) {
           const importContext = context.exports?.nextImportContext ?? context;
           delete context.exports?.nextImportContext;
@@ -53,13 +52,13 @@ export const importRemoteModule = async (
         }
         // naked imports for backend
         return import(specifier);
-      }
+      }) as unknown as SourceTextModuleOptions['importModuleDynamically']
     });
     await compiled.link(defaultLinker);
     await compiled.evaluate();
     if (context.kernelGlobals) {
       context.kernelGlobals.remoteModules[moduleInstance.name] = returnModule
-        ? compiled
+        ? (compiled as never)
         : ({
             exports: context.exports
           } as Module);
@@ -68,9 +67,9 @@ export const importRemoteModule = async (
   } else {
     if (context.kernelGlobals) {
       return returnModule
-        ? context.kernelGlobals.remoteModules[moduleInstance.name]
+        ? (context.kernelGlobals.remoteModules[moduleInstance.name] as never)
         : (context.kernelGlobals.remoteModules[moduleInstance.name]
-            .exports as Exports);
+            .exports as never);
     }
     throw new Error('kernel globals object is missing');
   }

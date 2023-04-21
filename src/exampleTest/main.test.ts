@@ -17,9 +17,9 @@ describe('greeter function', () => {
         };
       }
     }));
-    import('#kernel/Kernel.js');
+    import('/src/kernel/Kernel.js');
 
-    await import('#src/main.js');
+    await import('/src/main.js');
   });
   afterAll(() => {
     consoleLogSpy.mockRestore();

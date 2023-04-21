@@ -7,6 +7,9 @@
     "baseUrl": ".",
     "rootDir": "src",
     "outDir": "build",
+    "declarationDir": "build.d",
+    "composite": true,
+    "removeComments": true,
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
     "allowJs": true,
@@ -42,6 +45,6 @@
     ],
     "out": "docs"
   },
-  "exclude": ["node_modules/*"],
+  "exclude": ["node_modules/*", "build/*"],
   "include": ["src/**/*.ts"]
 }
