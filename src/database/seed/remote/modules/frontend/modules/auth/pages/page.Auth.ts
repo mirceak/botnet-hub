@@ -105,7 +105,9 @@ const getComponent = (mainScope: IMainScope) => {
                     ]
                   }
                 }),
-                attributes: { className: 'bg-primary' }
+                attributes: {
+                  className: 'bg-primary'
+                }
               }))
             ])
           ]),

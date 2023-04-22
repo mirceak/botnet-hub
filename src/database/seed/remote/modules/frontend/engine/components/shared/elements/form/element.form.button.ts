@@ -13,7 +13,6 @@ const getComponent = async (mainScope: IMainScope) => {
     (options) => {
       options.useInitElement((scope) => {
         /* TODO: add wc-if directives */
-        /* TODO: add element as prop to asyncorpromises where it is available */
         const buttonTemplate = o('<button>', scope?.elementAttributes);
         options.asyncLoadComponentTemplate({
           components: [buttonTemplate]
