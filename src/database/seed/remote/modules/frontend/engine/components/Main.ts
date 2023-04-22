@@ -86,11 +86,6 @@ type FilteredElementTypeProperties<ElementType> = ValueOrFunction<
   Partial<OnlyWritableAttributes<OnlyEditableAttributes<ElementType>>>
 >;
 
-type ElementOrDefault<
-  ElementType,
-  Fallback extends HTMLElement = HTMLElement
-> = ElementType extends Fallback ? ElementType : Fallback;
-
 interface IWCBaseScopeAttributesListeners<
   Element extends HTMLElement,
   E extends keyof GlobalEventHandlersEventMap = keyof GlobalEventHandlersEventMap
@@ -113,17 +108,17 @@ interface IWCBaseRegisterScope<Scope, ElementType> {
       : (scope: Scope) => Promise<void> | void
   ) => void;
   useOnDisconnectedCallback: (callback: CallableFunction) => void;
-  asyncLoadComponentTemplate: <_ElementType>(
+  asyncLoadComponentTemplate: <ElementType extends HTMLElement>(
     template: IWCTemplate<ElementType>
   ) => void;
   getScopedCss: (css: string) => string;
   el: ElementType;
 }
 
-export interface IWCBaseScope<ElementType> {
+export interface IWCBaseScope<ElementType extends HTMLElement> {
   attributes?: AsyncAndPromise<
-    FilteredElementTypeProperties<ElementOrDefault<ElementType>> &
-      IWCBaseScopeAttributesListeners<ElementOrDefault<ElementType>>
+    FilteredElementTypeProperties<ElementType> &
+      IWCBaseScopeAttributesListeners<ElementType>
   >;
 }
 
@@ -144,26 +139,21 @@ export interface IWCStaticScope {
   readonly tagName: string;
 }
 
-export interface IWCTemplate<ElementType> {
-  components: AsyncAndPromise<OElement | string>[];
+export interface IWCTemplate<ElementType extends HTMLElement> {
+  components: AsyncAndPromise<OElement<ElementType | HTMLElement> | string>[];
   target?: ElementType;
 }
 
 interface OElement<
-  ElementType extends HTMLElement = HTMLElement,
-  Scope extends IWCBaseScope<ElementType> = IWCBaseScope<ElementType>,
-  Children = unknown
+  ElementType extends HTMLElement,
+  Scope extends IWCBaseScope<ElementType> = IWCBaseScope<ElementType>
 > {
   scopeGetter?: AsyncAndPromise<IWC<Scope>['getScope']>;
   scope?: Scope;
-  children?: Children extends AsyncAndPromise<
-    AsyncAndPromise<infer OElements>[]
-  >
-    ? AsyncAndPromise<AsyncAndPromise<OElements>[]>
-    : AsyncAndPromise<AsyncAndPromise<OElement>[]>;
+  children?: AsyncAndPromise<AsyncAndPromise<OElement<HTMLElement>>[]>;
   element: Promise<ElementType>;
-  tagName: string;
-  isCustomElement: boolean;
+  readonly tagName: string;
+  readonly isCustomElement: boolean;
 }
 
 class MainScope {
@@ -193,8 +183,8 @@ class MainScope {
   asyncHydrationCallbackIndex = 0;
   preloadedRequests: Record<'code' | 'path', string | Promise<unknown>>[] = [];
 
-  readonly BaseElement = class BaseElement<ElementType> {
-    public target: ElementOrDefault<ElementType>;
+  readonly BaseElement = class BaseElement<ElementType extends HTMLElement> {
+    public target: ElementType;
     mainScope: IMainScope;
     eventHandlerClosers: CallableFunction[] = [];
     reactiveValuesClosers: {
@@ -202,7 +192,7 @@ class MainScope {
       callback: CallableFunction;
     }[] = [];
 
-    constructor(mainScope: IMainScope, element: ElementOrDefault<ElementType>) {
+    constructor(mainScope: IMainScope, element: ElementType) {
       this.target = element;
       this.mainScope = mainScope;
     }
@@ -222,10 +212,10 @@ class MainScope {
       }
     };
 
-    initElement = async <ElementType extends HTMLElement>(
+    initElement = async (
       oElement?: OElement<ElementType>,
       scope?: UnwrapAsyncAndPromiseNested<
-        NonNullable<OElement['scope']>['attributes']
+        NonNullable<OElement<HTMLElement>['scope']>['attributes']
       >
     ): Promise<void> => {
       if (this.mainScope.helpers.validationsProto.isAsyncOrFunction(scope)) {
@@ -305,22 +295,24 @@ class MainScope {
 
   useComponentRegister = <
     ElementType extends HTMLElement,
-    Scope extends IWCBaseScope<ElementOrDefault<ElementType>>
+    Scope extends IWCBaseScope<ElementType>
   >(
     tagName: string,
     setup: (
-      options: IWCBaseRegisterScope<Scope, ElementOrDefault<ElementType>>
+      options: IWCBaseRegisterScope<Scope, ElementType>
     ) => Promise<void> | void
   ) => {
     const mainScope = this;
     let scopedCssIdIndex = 0;
 
-    const useComponentSetup = (target: ElementOrDefault<ElementType>) => {
-      const component = new mainScope.BaseElement<ElementType>(this, target);
+    const useComponentSetup = (target: ElementType) => {
+      const component = new mainScope.BaseElement(this, target);
 
       let initElement: (
         oElement?: OElement<ElementType>,
-        scope?: UnwrapAsyncAndPromiseNested<NonNullable<OElement['scope']>>
+        scope?: UnwrapAsyncAndPromiseNested<
+          NonNullable<OElement<HTMLElement>>['scope']
+        >
       ) => Promise<void>;
       let disconnectedCallback: CallableFunction;
       const useInitElement = (callback: CallableFunction) => {
@@ -329,8 +321,8 @@ class MainScope {
           return callback(scope);
         };
       };
-      const asyncLoadComponentTemplate = <_ElementType>(
-        template: IWCTemplate<ElementOrDefault<_ElementType | ElementType>>
+      const asyncLoadComponentTemplate = (
+        template: IWCTemplate<ElementType | HTMLElement>
       ) => {
         template.target = component.target;
         mainScope.asyncLoadComponentTemplate(
@@ -349,7 +341,7 @@ class MainScope {
           asyncLoadComponentTemplate,
           useOnDisconnectedCallback,
           getScopedCss,
-          el: component.target as ElementOrDefault<ElementType>
+          el: component.target
         })
       ).then(() => {
         mainScope.elementRegister.set(component.target, {
@@ -427,8 +419,8 @@ class MainScope {
       );
   };
 
-  asyncStaticModule = <Module, S extends Promise<Module>>(
-    importer: () => S,
+  asyncStaticModule = <ModuleImport, Module extends Promise<ModuleImport>>(
+    importer: () => Module,
     type = 'text/javascript'
   ) => {
     const parsedPath = importer
@@ -446,19 +438,21 @@ class MainScope {
             type
           });
           const url = URL.createObjectURL(blob);
-          module.code = import(url) as S;
+          module.code = import(url) as Module;
           URL.revokeObjectURL(url);
-          return module.code as S;
+          return module.code as Module;
         } else {
-          return module.code as S;
+          return module.code as Module;
         }
       }
     }
 
-    return import(parsedPath) as S;
+    return import(parsedPath) as Module;
   };
 
-  async asyncStaticFile<Import>(importer: () => Import): Promise<string> {
+  async asyncStaticFile<ModuleImport, Module extends Promise<ModuleImport>>(
+    importer: () => Module
+  ): Promise<string> {
     const parsedPath = importer
       .toString()
       .match(/import\('.*'\)/g)?.[0]
@@ -476,29 +470,29 @@ class MainScope {
     return fetch(parsedPath).then((res) => res.text());
   }
 
-  asyncComponent = async <S>(importer: () => Promise<IWCModule<S>>) => {
+  asyncComponent = async <Scope>(importer: () => Promise<IWCModule<Scope>>) => {
     const module = await this.asyncStaticModule(importer);
     return module.default(this);
   };
 
-  asyncComponentScopeGetter = async <S>(
-    importer: () => Promise<IWCModule<S>>
+  asyncComponentScopeGetter = async <Scope>(
+    importer: () => Promise<IWCModule<Scope>>
   ) => {
     const module = await this.asyncComponent(importer);
     return module.getScope;
   };
 
-  asyncComponentScope = async <S>(
-    importer: () => Promise<IWCModule<S>>,
-    scope?: S
+  asyncComponentScope = async <Scope>(
+    importer: () => Promise<IWCModule<Scope>>,
+    scope?: Scope
   ) => {
     const getScope = await this.asyncComponentScopeGetter(importer);
     return (getScope as CallableFunction)(scope);
   };
 
   /* we add blocking logic after everything finished loading and rendering */
-  asyncHydrationCallback = async <T>(
-    callback: () => Promise<T>
+  asyncHydrationCallback = async (
+    callback: () => Promise<void>
   ): Promise<void> => {
     if (this.asyncHydrationCallbackIndex !== -1) {
       this.asyncHydrationCallbackIndex++;
@@ -605,12 +599,17 @@ class MainScope {
       ...e: IsClosedTag extends true
         ? [
             tag: Tag,
-            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
+            children?: AsyncAndPromise<AsyncAndPromise<OElement<HTMLElement>>[]>
           ] extends [
             tag: Tag,
-            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
+            children?: AsyncAndPromise<AsyncAndPromise<OElement<HTMLElement>>[]>
           ]
-          ? [tag: Tag, children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>]
+          ? [
+              tag: Tag,
+              children?: AsyncAndPromise<
+                AsyncAndPromise<OElement<HTMLElement>>[]
+              >
+            ]
           : [
               tag: Tag,
               error?: "Error: Closing tag '/>' detected. This component will not initialize, so it can only receive a children's array!"
@@ -629,8 +628,8 @@ class MainScope {
                 ? AsyncAndPromise<ElementScope>
                 : `Error: No extra properties allowed! Please use 'satisfies (typeof o)['${TagName &
                     string}']' to properly validate the scope.`
-              : AsyncAndPromise<AsyncAndPromise<OElement>[]>,
-            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
+              : AsyncAndPromise<AsyncAndPromise<OElement<HTMLElement>>[]>,
+            children?: AsyncAndPromise<AsyncAndPromise<OElement<HTMLElement>>[]>
           ]
         : HasRequired<InferredScope> extends true
         ? [
@@ -641,7 +640,7 @@ class MainScope {
               ? AsyncAndPromise<Scope>
               : `Error: No extra properties allowed! Please use 'satisfies (typeof o)['${TagName &
                   string}']' to properly validate the scope.`,
-            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
+            children?: AsyncAndPromise<AsyncAndPromise<OElement<HTMLElement>>[]>
           ]
         : [
             tag: Tag,
@@ -652,8 +651,8 @@ class MainScope {
                 ? AsyncAndPromise<Scope>
                 : `Error: No extra properties allowed! Please use 'satisfies (typeof o)['${TagName &
                     string}']' to properly validate the scope.`
-              : AsyncAndPromise<AsyncAndPromise<OElement>[]>,
-            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
+              : AsyncAndPromise<AsyncAndPromise<OElement<HTMLElement>>[]>,
+            children?: AsyncAndPromise<AsyncAndPromise<OElement<HTMLElement>>[]>
           ]
     ) => {
       const [tagName, scope, children] = e as [Tag, never, never];
@@ -675,7 +674,7 @@ class MainScope {
           ) => {
             const baseElement = new mainScope.BaseElement<ElementType>(
               mainScope,
-              target as ElementOrDefault<ElementType>
+              target
             );
             mainScope.elementRegister.set(target, {
               initElement: baseElement.initElement,
@@ -739,215 +738,245 @@ class MainScope {
     };
   };
 
-  oElementParser = async <ElementType, Target>(
-    target: Target extends HTMLElement ? Target : HTMLElement,
-    nestedElement: OElement<ElementOrDefault<ElementType>>,
-    index: number
+  oElementParser = async <
+    ElementType extends HTMLElement,
+    Target extends HTMLElement
+  >(
+    target: Target,
+    nestedElement?: OElement<ElementType>,
+    index?: number
   ): Promise<ElementType | void> => {
     nestedElement = await nestedElement;
 
     if (this.helpers.validationsProto.isAsyncOrFunction(nestedElement)) {
       nestedElement =
-        await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+        (await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
           nestedElement
-        );
-    }
+        )) as typeof nestedElement;
 
-    const shouldAddProps = !!nestedElement.tagName.match(/^<(.*)<>$/gis);
-    const shouldInstantiate =
-      !shouldAddProps && !nestedElement.tagName.match(/^<(.*)\/>$/gis);
-    const element = await nestedElement.element;
-
-    element.setAttribute('wcY', index.toString());
-    const indexPosition = this.getIndexPositionInParent(
-      index,
-      target?.children
-    );
-
-    if (indexPosition < 0) {
-      target?.appendChild(element);
-    } else {
-      target?.insertBefore(element, target.children[indexPosition]);
-    }
-    if (
-      nestedElement.scope &&
-      !nestedElement.children &&
-      !this.helpers.validationsProto.isArray(nestedElement.scope)
-    ) {
-      if (
-        this.helpers.validationsProto.isSyncFunction(nestedElement.scopeGetter)
-      ) {
-        nestedElement.scope = nestedElement.scopeGetter() as IWCBaseScope<
-          ElementOrDefault<ElementType>
-        >;
-        if (
-          this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
-        ) {
-          nestedElement.scope =
-            await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-              nestedElement.scope,
-              [nestedElement]
-            );
-        }
-      } else {
-        if (
-          this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
-        ) {
-          nestedElement.scope =
-            await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-              nestedElement.scope,
-              [nestedElement]
-            );
-        }
-        nestedElement.scope = await (
-          await nestedElement.scopeGetter
-        )?.(nestedElement.scope);
-      }
-    }
-
-    if (
-      !nestedElement.children &&
-      this.helpers.validationsProto.isArray(nestedElement.scope)
-    ) {
-      nestedElement.children =
-        nestedElement.scope as unknown as typeof nestedElement.children;
-    }
-
-    if (nestedElement.children) {
-      if (
-        nestedElement.children != nestedElement.scope &&
-        this.helpers.validationsProto.isAsyncOrFunction(nestedElement.children)
-      ) {
-        nestedElement.children =
-          await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-            nestedElement.children,
-            [nestedElement]
-          );
-      }
-
-      nestedElement.children = await Promise.all(
-        (nestedElement.children as OElement[]).map(async (_child) => {
-          _child = await _child;
-          if (this.helpers.validationsProto.isAsyncOrFunction(_child)) {
-            _child =
-              await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                _child,
-                [nestedElement]
-              );
-          }
-          return _child;
-        }, [])
+      const shouldAddProps = !!nestedElement.tagName.match(/^<(.*)<>$/gis);
+      const shouldInstantiate =
+        !shouldAddProps && !nestedElement.tagName.match(/^<(.*)\/>$/gis);
+      const element = await nestedElement.element;
+      element.setAttribute('wcY', (index || '').toString());
+      const indexPosition = this.getIndexPositionInParent(
+        index || Number.MIN_SAFE_INTEGER,
+        target?.children
       );
 
-      for (const [_index, _child] of (
-        nestedElement.children || nestedElement.scope
-      ).entries()) {
-        void this.oElementParser(element, _child as OElement, _index);
+      if (indexPosition < 0) {
+        target?.appendChild(element);
+      } else {
+        target?.insertBefore(element, target.children[indexPosition]);
       }
-    }
-
-    if (shouldAddProps || shouldInstantiate) {
-      if (shouldAddProps && nestedElement.scope) {
-        if (nestedElement.isCustomElement) {
-          const nestedScope = nestedElement.scope as IWCBaseScope<
-            ElementOrDefault<ElementType>
-          >;
+      if (
+        nestedElement.scope &&
+        !nestedElement.children &&
+        !this.helpers.validationsProto.isArray(nestedElement.scope)
+      ) {
+        if (
+          this.helpers.validationsProto.isSyncFunction(
+            nestedElement.scopeGetter
+          )
+        ) {
+          nestedElement.scope =
+            nestedElement.scopeGetter() as IWCBaseScope<ElementType>;
           if (
-            this.helpers.validationsProto.isAsyncOrFunction(
-              await nestedScope.attributes
-            )
+            this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
           ) {
-            nestedScope.attributes =
+            nestedElement.scope =
               await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                nestedScope.attributes,
+                nestedElement.scope,
                 [nestedElement]
               );
           }
-          const nestedScopeUnwrapped = nestedElement.scope;
+        } else {
+          if (
+            this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
+          ) {
+            nestedElement.scope =
+              await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                nestedElement.scope,
+                [nestedElement]
+              );
+          }
+          nestedElement.scope = await (
+            await nestedElement.scopeGetter
+          )?.(nestedElement.scope);
+        }
+      }
 
-          if (nestedScopeUnwrapped.attributes) {
-            const newAttributes = await Object.keys(
-              nestedScopeUnwrapped.attributes
-            ).reduce(async (reduced, key) => {
-              const returned = await reduced;
-              if (nestedScopeUnwrapped.attributes) {
+      if (
+        !nestedElement.children &&
+        this.helpers.validationsProto.isArray(nestedElement.scope)
+      ) {
+        nestedElement.children =
+          nestedElement.scope as unknown as typeof nestedElement.children;
+      }
+
+      if (nestedElement.children) {
+        if (
+          nestedElement.children != nestedElement.scope &&
+          this.helpers.validationsProto.isAsyncOrFunction(
+            nestedElement.children
+          )
+        ) {
+          nestedElement.children =
+            await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+              nestedElement.children,
+              [nestedElement]
+            );
+        }
+
+        if (nestedElement.children) {
+          nestedElement.children = await Promise.all(
+            (
+              (await nestedElement.children) as UnwrapAsyncAndPromise<
+                UnwrapAsyncAndPromise<typeof nestedElement.children>
+              >
+            ).map(async (_child) => {
+              _child = await _child;
+              if (this.helpers.validationsProto.isAsyncOrFunction(_child)) {
+                _child =
+                  await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                    _child,
+                    [nestedElement]
+                  );
+              }
+              return _child;
+            }, [])
+          );
+        }
+
+        const hasChildren = nestedElement.children || nestedElement.scope;
+        if (hasChildren) {
+          for (const [_index, _child] of hasChildren.entries()) {
+            void this.oElementParser<
+              UnwrapAsyncAndPromise<
+                UnwrapAsyncAndPromise<
+                  UnwrapAsyncAndPromise<Awaited<NonNullable<typeof _child>>>
+                >['element']
+              >,
+              ElementType
+            >(
+              element,
+              (await _child) as unknown as UnwrapAsyncAndPromise<
+                UnwrapAsyncAndPromise<
+                  UnwrapAsyncAndPromise<
+                    (typeof nestedElement.children)[typeof _index]
+                  >
+                >
+              >,
+              _index
+            );
+          }
+        }
+      }
+
+      if (shouldAddProps || shouldInstantiate) {
+        if (shouldAddProps && nestedElement.scope) {
+          if (nestedElement.isCustomElement) {
+            const nestedScope =
+              nestedElement.scope as IWCBaseScope<ElementType>;
+            if (
+              this.helpers.validationsProto.isAsyncOrFunction(
+                await nestedScope.attributes
+              )
+            ) {
+              nestedScope.attributes =
+                await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                  nestedScope.attributes,
+                  [nestedElement]
+                );
+            }
+            const nestedScopeUnwrapped = nestedElement.scope;
+
+            if (nestedScopeUnwrapped.attributes) {
+              const newAttributes = await Object.keys(
+                nestedScopeUnwrapped.attributes
+              ).reduce(async (reduced, key) => {
+                const returned = await reduced;
+                if (nestedScopeUnwrapped.attributes) {
+                  if (
+                    this.helpers.validationsProto.isAsyncOrFunction(
+                      nestedScopeUnwrapped.attributes?.[
+                        key as keyof typeof nestedScopeUnwrapped.attributes
+                      ]
+                    )
+                  ) {
+                    returned[key as keyof typeof returned] =
+                      await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                        nestedScopeUnwrapped.attributes[
+                          key as keyof typeof nestedScopeUnwrapped.attributes
+                        ],
+                        [nestedElement]
+                      );
+                  } else {
+                    returned[key as keyof typeof returned] =
+                      await nestedScopeUnwrapped.attributes[
+                        key as keyof typeof nestedScopeUnwrapped.attributes
+                      ];
+                  }
+                }
+                return returned;
+              }, Promise.resolve({} as typeof nestedScopeUnwrapped));
+
+              Object.assign(element, newAttributes);
+            }
+          }
+          {
+            const newScope = await Object.keys(nestedElement.scope).reduce(
+              async (reduced, key) => {
+                const returned = await reduced;
                 if (
                   this.helpers.validationsProto.isAsyncOrFunction(
-                    nestedScopeUnwrapped.attributes?.[
-                      key as keyof typeof nestedScopeUnwrapped.attributes
+                    nestedElement?.scope?.[
+                      key as keyof typeof nestedElement.scope
                     ]
                   )
                 ) {
                   returned[key as keyof typeof returned] =
-                    await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                      nestedScopeUnwrapped.attributes[
-                        key as keyof typeof nestedScopeUnwrapped.attributes
+                    (await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
+                      nestedElement?.scope?.[
+                        key as keyof typeof nestedElement.scope
                       ],
                       [nestedElement]
-                    );
+                    )) as never;
                 } else {
-                  returned[key as keyof typeof returned] =
-                    await nestedScopeUnwrapped.attributes[
-                      key as keyof typeof nestedScopeUnwrapped.attributes
-                    ];
+                  returned[key as keyof typeof returned] = nestedElement
+                    ?.scope?.[key as keyof typeof nestedElement.scope] as never;
                 }
-              }
-              return returned;
-            }, Promise.resolve({} as typeof nestedScopeUnwrapped));
+                return returned;
+              },
+              Promise.resolve(
+                {} as UnwrapAsyncAndPromiseNested<typeof nestedElement.scope>
+              )
+            );
 
-            Object.assign(element, newAttributes);
+            Object.assign(element, newScope);
           }
-        } else {
-          const newScope = await Object.keys(nestedElement.scope).reduce(
-            async (reduced, key) => {
-              const returned = await reduced;
-              if (
-                this.helpers.validationsProto.isAsyncOrFunction(
-                  nestedElement.scope?.[key as keyof typeof nestedElement.scope]
-                )
-              ) {
-                returned[key as keyof typeof returned] =
-                  (await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
-                    nestedElement.scope?.[
-                      key as keyof typeof nestedElement.scope
-                    ],
-                    [nestedElement]
-                  )) as never;
-              } else {
-                returned[key as keyof typeof returned] = nestedElement.scope?.[
-                  key as keyof typeof nestedElement.scope
-                ] as never;
-              }
-              return returned;
-            },
-            Promise.resolve(
-              {} as UnwrapAsyncAndPromiseNested<typeof nestedElement.scope>
-            )
-          );
+        }
 
-          Object.assign(element, newScope);
+        if (shouldInstantiate) {
+          void this.elementRegister
+            .get(element)
+            ?.initElement(nestedElement, nestedElement.scope);
         }
       }
 
-      if (shouldInstantiate) {
-        void this.elementRegister
-          .get(element)
-          ?.initElement(nestedElement, nestedElement.scope);
-      }
+      return element as ElementType;
     }
-
-    return element as ElementType;
   };
 
   /*lazy loads components*/
-  asyncLoadComponentTemplate = <ElementType>(
+  asyncLoadComponentTemplate = <ElementType extends HTMLElement>(
     template: Required<IWCTemplate<ElementType>>
   ) => {
     for (let i = 0; i < template.components.length; i++) {
       if (template.components[i]) {
         let component = template.components[i];
         if (component) {
-          void this.asyncHydrationCallback(async () => {
+          void this.asyncHydrationCallback(async (): Promise<void> => {
             component = await component;
             if (this.helpers.validationsProto.isAsyncOrFunction(component)) {
               component = await (component as CallableFunction)();
@@ -957,14 +986,14 @@ class MainScope {
               const componentScope = await component;
               if (componentScope) {
                 await this.oElementParser<ElementType, typeof template.target>(
-                  template.target as ElementOrDefault<ElementType>,
-                  componentScope as OElement<ElementOrDefault<ElementType>>,
+                  template.target as ElementType,
+                  componentScope as OElement<ElementType>,
                   i
                 );
               }
             } else {
               await this.appendComponent(
-                template.target as ElementOrDefault<ElementType>,
+                template.target as ElementType,
                 component as string,
                 i
               );
@@ -975,8 +1004,8 @@ class MainScope {
     }
   };
 
-  appendComponent = async <ElementType>(
-    target: Required<IWCTemplate<ElementOrDefault<ElementType>>>['target'],
+  appendComponent = async <ElementType extends HTMLElement>(
+    target: Required<IWCTemplate<ElementType>>['target'],
     innerHtml: string,
     index: number
   ): Promise<Element[] | Element | undefined> => {
@@ -1331,7 +1360,7 @@ export const initComponent = (mainScope: MainScope) => {
                 )
             });
 
-            mainScope.asyncLoadComponentTemplate<HTMLElement>({
+            mainScope.asyncLoadComponentTemplate({
               target: this,
               components: [o('<router-view-component>')]
             });
