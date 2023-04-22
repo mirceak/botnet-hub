@@ -86,6 +86,11 @@ type FilteredElementTypeProperties<ElementType> = ValueOrFunction<
   Partial<OnlyWritableAttributes<OnlyEditableAttributes<ElementType>>>
 >;
 
+type ElementOrDefault<
+  ElementType,
+  Fallback extends HTMLElement = HTMLElement
+> = ElementType extends Fallback ? ElementType : Fallback;
+
 interface IWCBaseScopeAttributesListeners<
   Element extends HTMLElement,
   E extends keyof GlobalEventHandlersEventMap = keyof GlobalEventHandlersEventMap
@@ -108,26 +113,17 @@ interface IWCBaseRegisterScope<Scope, ElementType> {
       : (scope: Scope) => Promise<void> | void
   ) => void;
   useOnDisconnectedCallback: (callback: CallableFunction) => void;
-  asyncLoadComponentTemplate: (
-    template: IWCTemplate<
-      ElementType extends Element | DocumentFragment ? ElementType : never
-    > extends IWCTemplate<infer ElementType>
-      ? IWCTemplate<ElementType>
-      : never
+  asyncLoadComponentTemplate: <_ElementType>(
+    template: IWCTemplate<ElementType>
   ) => void;
   getScopedCss: (css: string) => string;
-  el: IWCBaseRegisterScope<
-    Scope,
-    ElementType
-  >['asyncLoadComponentTemplate'] extends IWCTemplate<infer ElementType>
-    ? ElementType
-    : HTMLElement;
+  el: ElementType;
 }
 
-export interface IWCBaseScope<ElementType extends HTMLElement> {
+export interface IWCBaseScope<ElementType> {
   attributes?: AsyncAndPromise<
-    FilteredElementTypeProperties<ElementType> &
-      IWCBaseScopeAttributesListeners<ElementType>
+    FilteredElementTypeProperties<ElementOrDefault<ElementType>> &
+      IWCBaseScopeAttributesListeners<ElementOrDefault<ElementType>>
   >;
 }
 
@@ -149,20 +145,22 @@ export interface IWCStaticScope {
 }
 
 export interface IWCTemplate<ElementType> {
-  components: AsyncAndPromise<oElement | string>[];
-  target?: ElementType extends HTMLElement ? ElementType : HTMLElement;
+  components: AsyncAndPromise<OElement | string>[];
+  target?: ElementType;
 }
 
-interface oElement<
+interface OElement<
   ElementType extends HTMLElement = HTMLElement,
   Scope extends IWCBaseScope<ElementType> = IWCBaseScope<ElementType>,
   Children = unknown
 > {
   scopeGetter?: AsyncAndPromise<IWC<Scope>['getScope']>;
   scope?: Scope;
-  children?: Children extends AsyncAndPromise<AsyncAndPromise<infer Elements>[]>
-    ? AsyncAndPromise<AsyncAndPromise<Elements>[]>
-    : AsyncAndPromise<AsyncAndPromise<oElement>[]>;
+  children?: Children extends AsyncAndPromise<
+    AsyncAndPromise<infer OElements>[]
+  >
+    ? AsyncAndPromise<AsyncAndPromise<OElements>[]>
+    : AsyncAndPromise<AsyncAndPromise<OElement>[]>;
   element: Promise<ElementType>;
   tagName: string;
   isCustomElement: boolean;
@@ -195,8 +193,8 @@ class MainScope {
   asyncHydrationCallbackIndex = 0;
   preloadedRequests: Record<'code' | 'path', string | Promise<unknown>>[] = [];
 
-  readonly BaseElement = class BaseElement<ElementType extends HTMLElement> {
-    public target: ElementType;
+  readonly BaseElement = class BaseElement<ElementType> {
+    public target: ElementOrDefault<ElementType>;
     mainScope: IMainScope;
     eventHandlerClosers: CallableFunction[] = [];
     reactiveValuesClosers: {
@@ -204,7 +202,7 @@ class MainScope {
       callback: CallableFunction;
     }[] = [];
 
-    constructor(mainScope: IMainScope, element: ElementType) {
+    constructor(mainScope: IMainScope, element: ElementOrDefault<ElementType>) {
       this.target = element;
       this.mainScope = mainScope;
     }
@@ -225,9 +223,9 @@ class MainScope {
     };
 
     initElement = async <ElementType extends HTMLElement>(
-      oElement?: oElement<ElementType>,
+      oElement?: OElement<ElementType>,
       scope?: UnwrapAsyncAndPromiseNested<
-        NonNullable<oElement['scope']>['attributes']
+        NonNullable<OElement['scope']>['attributes']
       >
     ): Promise<void> => {
       if (this.mainScope.helpers.validationsProto.isAsyncOrFunction(scope)) {
@@ -306,31 +304,23 @@ class MainScope {
   };
 
   useComponentRegister = <
-    ElementType,
-    Scope extends IWCBaseScope<
-      ElementType extends HTMLElement ? ElementType : HTMLElement
-    >
+    ElementType extends HTMLElement,
+    Scope extends IWCBaseScope<ElementOrDefault<ElementType>>
   >(
     tagName: string,
     setup: (
-      options: IWCBaseRegisterScope<Scope, ElementType>
+      options: IWCBaseRegisterScope<Scope, ElementOrDefault<ElementType>>
     ) => Promise<void> | void
   ) => {
     const mainScope = this;
     let scopedCssIdIndex = 0;
 
-    const useComponentSetup = (
-      target: ElementType extends HTMLElement ? ElementType : HTMLElement
-    ) => {
-      const component = new mainScope.BaseElement<
-        ElementType extends HTMLElement ? ElementType : HTMLElement
-      >(this, target);
+    const useComponentSetup = (target: ElementOrDefault<ElementType>) => {
+      const component = new mainScope.BaseElement<ElementType>(this, target);
 
       let initElement: (
-        oElement?: oElement<
-          ElementType extends HTMLElement ? ElementType : HTMLElement
-        >,
-        scope?: UnwrapAsyncAndPromiseNested<NonNullable<oElement['scope']>>
+        oElement?: OElement<ElementType>,
+        scope?: UnwrapAsyncAndPromiseNested<NonNullable<OElement['scope']>>
       ) => Promise<void>;
       let disconnectedCallback: CallableFunction;
       const useInitElement = (callback: CallableFunction) => {
@@ -339,14 +329,12 @@ class MainScope {
           return callback(scope);
         };
       };
-      const asyncLoadComponentTemplate = (
-        template: IWCTemplate<ElementType>
+      const asyncLoadComponentTemplate = <_ElementType>(
+        template: IWCTemplate<ElementOrDefault<_ElementType | ElementType>>
       ) => {
         template.target = component.target;
         mainScope.asyncLoadComponentTemplate(
-          template as ElementType extends HTMLElement
-            ? Required<IWCTemplate<ElementType>>
-            : Required<IWCTemplate<HTMLElement>>
+          template as Required<typeof template>
         );
       };
       const useOnDisconnectedCallback = (callback: CallableFunction) => {
@@ -361,7 +349,7 @@ class MainScope {
           asyncLoadComponentTemplate,
           useOnDisconnectedCallback,
           getScopedCss,
-          el: component.target
+          el: component.target as ElementOrDefault<ElementType>
         })
       ).then(() => {
         mainScope.elementRegister.set(component.target, {
@@ -617,12 +605,12 @@ class MainScope {
       ...e: IsClosedTag extends true
         ? [
             tag: Tag,
-            children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
+            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
           ] extends [
             tag: Tag,
-            children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
+            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
           ]
-          ? [tag: Tag, children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>]
+          ? [tag: Tag, children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>]
           : [
               tag: Tag,
               error?: "Error: Closing tag '/>' detected. This component will not initialize, so it can only receive a children's array!"
@@ -641,8 +629,8 @@ class MainScope {
                 ? AsyncAndPromise<ElementScope>
                 : `Error: No extra properties allowed! Please use 'satisfies (typeof o)['${TagName &
                     string}']' to properly validate the scope.`
-              : AsyncAndPromise<AsyncAndPromise<oElement>[]>,
-            children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
+              : AsyncAndPromise<AsyncAndPromise<OElement>[]>,
+            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
           ]
         : HasRequired<InferredScope> extends true
         ? [
@@ -653,7 +641,7 @@ class MainScope {
               ? AsyncAndPromise<Scope>
               : `Error: No extra properties allowed! Please use 'satisfies (typeof o)['${TagName &
                   string}']' to properly validate the scope.`,
-            children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
+            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
           ]
         : [
             tag: Tag,
@@ -664,8 +652,8 @@ class MainScope {
                 ? AsyncAndPromise<Scope>
                 : `Error: No extra properties allowed! Please use 'satisfies (typeof o)['${TagName &
                     string}']' to properly validate the scope.`
-              : AsyncAndPromise<AsyncAndPromise<oElement>[]>,
-            children?: AsyncAndPromise<AsyncAndPromise<oElement>[]>
+              : AsyncAndPromise<AsyncAndPromise<OElement>[]>,
+            children?: AsyncAndPromise<AsyncAndPromise<OElement>[]>
           ]
     ) => {
       const [tagName, scope, children] = e as [Tag, never, never];
@@ -687,7 +675,7 @@ class MainScope {
           ) => {
             const baseElement = new mainScope.BaseElement<ElementType>(
               mainScope,
-              target
+              target as ElementOrDefault<ElementType>
             );
             mainScope.elementRegister.set(target, {
               initElement: baseElement.initElement,
@@ -753,9 +741,7 @@ class MainScope {
 
   oElementParser = async <ElementType, Target>(
     target: Target extends HTMLElement ? Target : HTMLElement,
-    nestedElement: oElement<
-      ElementType extends HTMLElement ? ElementType : HTMLElement
-    >,
+    nestedElement: OElement<ElementOrDefault<ElementType>>,
     index: number
   ): Promise<ElementType | void> => {
     nestedElement = await nestedElement;
@@ -792,7 +778,7 @@ class MainScope {
         this.helpers.validationsProto.isSyncFunction(nestedElement.scopeGetter)
       ) {
         nestedElement.scope = nestedElement.scopeGetter() as IWCBaseScope<
-          ElementType extends HTMLElement ? ElementType : HTMLElement
+          ElementOrDefault<ElementType>
         >;
         if (
           this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
@@ -840,7 +826,7 @@ class MainScope {
       }
 
       nestedElement.children = await Promise.all(
-        (nestedElement.children as oElement[]).map(async (_child) => {
+        (nestedElement.children as OElement[]).map(async (_child) => {
           _child = await _child;
           if (this.helpers.validationsProto.isAsyncOrFunction(_child)) {
             _child =
@@ -856,7 +842,7 @@ class MainScope {
       for (const [_index, _child] of (
         nestedElement.children || nestedElement.scope
       ).entries()) {
-        void this.oElementParser(element, _child as oElement, _index);
+        void this.oElementParser(element, _child as OElement, _index);
       }
     }
 
@@ -864,7 +850,7 @@ class MainScope {
       if (shouldAddProps && nestedElement.scope) {
         if (nestedElement.isCustomElement) {
           const nestedScope = nestedElement.scope as IWCBaseScope<
-            ElementType extends HTMLElement ? ElementType : HTMLElement
+            ElementOrDefault<ElementType>
           >;
           if (
             this.helpers.validationsProto.isAsyncOrFunction(
@@ -955,9 +941,7 @@ class MainScope {
 
   /*lazy loads components*/
   asyncLoadComponentTemplate = <ElementType>(
-    template: ElementType extends HTMLElement
-      ? Required<IWCTemplate<ElementType>>
-      : Required<IWCTemplate<HTMLElement>>
+    template: Required<IWCTemplate<ElementType>>
   ) => {
     for (let i = 0; i < template.components.length; i++) {
       if (template.components[i]) {
@@ -972,15 +956,15 @@ class MainScope {
             if (typeof component !== 'string') {
               const componentScope = await component;
               if (componentScope) {
-                await this.oElementParser(
-                  template.target,
-                  componentScope as oElement,
+                await this.oElementParser<ElementType, typeof template.target>(
+                  template.target as ElementOrDefault<ElementType>,
+                  componentScope as OElement<ElementOrDefault<ElementType>>,
                   i
                 );
               }
             } else {
               await this.appendComponent(
-                template.target,
+                template.target as ElementOrDefault<ElementType>,
                 component as string,
                 i
               );
@@ -991,16 +975,8 @@ class MainScope {
     }
   };
 
-  appendComponent = async <ElementType = undefined>(
-    target: Required<
-      IWCTemplate<
-        ElementType extends InstanceType<
-          typeof Element | typeof DocumentFragment
-        >
-          ? ElementType
-          : never
-      >
-    >['target'],
+  appendComponent = async <ElementType>(
+    target: Required<IWCTemplate<ElementOrDefault<ElementType>>>['target'],
     innerHtml: string,
     index: number
   ): Promise<Element[] | Element | undefined> => {
