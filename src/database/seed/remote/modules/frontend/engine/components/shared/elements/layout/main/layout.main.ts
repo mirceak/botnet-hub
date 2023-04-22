@@ -4,7 +4,7 @@ import type {
   IMainScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-interface ILocalScope extends IWCBaseScope {
+interface ILocalScope extends IWCBaseScope<HTMLElement> {
   children: {
     _Header: Promise<IWCStaticScope>;
     _Footer: Promise<IWCStaticScope>;
@@ -24,7 +24,7 @@ const getComponent = (mainScope: IMainScope) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  return mainScope.useComponentRegister<ILocalScope>(
+  return mainScope.useComponentRegister<HTMLElement, ILocalScope>(
     'layout-main-component',
     (options) => {
       options.useInitElement((scope) => {

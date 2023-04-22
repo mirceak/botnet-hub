@@ -8,7 +8,7 @@ type ILocalButtonScope = IWCExtendingBaseElementScope<HTMLButtonElement>;
 const getComponent = async (mainScope: IMainScope) => {
   const { o } = mainScope.useComponentsObject();
 
-  return mainScope.useComponentRegister<ILocalButtonScope, HTMLButtonElement>(
+  return mainScope.useComponentRegister<HTMLButtonElement, ILocalButtonScope>(
     'button-component',
     (options) => {
       options.useInitElement((scope) => {

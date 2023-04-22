@@ -87,7 +87,7 @@ type FilteredElementTypeProperties<ElementType> = ValueOrFunction<
 >;
 
 interface IWCBaseScopeAttributesListeners<
-  Element extends HTMLElement = HTMLElement,
+  Element extends HTMLElement,
   E extends keyof GlobalEventHandlersEventMap = keyof GlobalEventHandlersEventMap
 > {
   handlers?: Partial<
@@ -105,7 +105,7 @@ interface IWCBaseRegisterScope<Scope> {
   useInitElement: (
     callback: HasRequired<Scope> extends true
       ? (scope: Scope) => Promise<void> | void
-      : (scope?: Scope) => Promise<void> | void
+      : (scope: Scope) => Promise<void> | void
   ) => void;
   useOnDisconnectedCallback: (callback: CallableFunction) => void;
   asyncLoadComponentTemplate: (template: IWCTemplate) => void;
@@ -113,16 +113,15 @@ interface IWCBaseRegisterScope<Scope> {
   el: HTMLElement;
 }
 
-export interface IWCBaseScope<ElementType extends HTMLElement = HTMLElement> {
+export interface IWCBaseScope<ElementType extends HTMLElement> {
   attributes?: AsyncAndPromise<
     FilteredElementTypeProperties<ElementType> &
       IWCBaseScopeAttributesListeners<ElementType>
   >;
 }
 
-export interface IWCExtendingBaseElementScope<
-  ElementType extends HTMLElement = HTMLElement
-> extends IWCBaseScope {
+export interface IWCExtendingBaseElementScope<ElementType extends HTMLElement>
+  extends IWCBaseScope<HTMLElement> {
   elementAttributes?: IWCBaseScope<ElementType>['attributes'];
 }
 
@@ -150,8 +149,8 @@ export interface IWCTemplate {
 }
 
 interface oElement<
-  Scope = object,
   ElementType extends HTMLElement = HTMLElement,
+  Scope extends IWCBaseScope<ElementType> = IWCBaseScope<ElementType>,
   Children = unknown
 > {
   scopeGetter?: AsyncAndPromise<IWC<Scope>['getScope']>;
@@ -181,12 +180,18 @@ class MainScope {
     >;
   };
 
-  elementRegister = new WeakMap();
+  elementRegister = new WeakMap<
+    HTMLElement,
+    {
+      initElement: CallableFunction;
+      disconnectedCallback: CallableFunction;
+    }
+  >();
   asyncHydrationCallbackIndex = 0;
   preloadedRequests: Record<'code' | 'path', string | Promise<unknown>>[] = [];
 
-  readonly BaseElement = class BaseElement<Target extends HTMLElement> {
-    public target: Target;
+  readonly BaseElement = class BaseElement<ElementType extends HTMLElement> {
+    public target: ElementType;
     mainScope: IMainScope;
     eventHandlerClosers: CallableFunction[] = [];
     reactiveValuesClosers: {
@@ -194,7 +199,7 @@ class MainScope {
       callback: CallableFunction;
     }[] = [];
 
-    constructor(mainScope: IMainScope, element: Target) {
+    constructor(mainScope: IMainScope, element: ElementType) {
       this.target = element;
       this.mainScope = mainScope;
     }
@@ -214,9 +219,11 @@ class MainScope {
       }
     };
 
-    initElement = async (
-      scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope['attributes']>,
-      oElement?: oElement
+    initElement = async <ElementType extends HTMLElement>(
+      oElement?: oElement<ElementType>,
+      scope?: UnwrapAsyncAndPromiseNested<
+        NonNullable<oElement['scope']>['attributes']
+      >
     ): Promise<void> => {
       if (this.mainScope.helpers.validationsProto.isAsyncOrFunction(scope)) {
         scope =
@@ -270,7 +277,7 @@ class MainScope {
           Object.assign(this.target, Object.assign(staticObject));
         }
 
-        if (scope.handlers) {
+        if (scope?.handlers) {
           Object.keys(scope.handlers).forEach((key) => {
             if (scope?.handlers) {
               const handlers =
@@ -294,8 +301,8 @@ class MainScope {
   };
 
   useComponentRegister = <
-    Scope extends IWCBaseScope,
-    Target extends HTMLElement = HTMLElement
+    ElementType extends HTMLElement,
+    Scope extends IWCBaseScope<ElementType>
   >(
     tagName: string,
     setup: (options: IWCBaseRegisterScope<Scope>) => Promise<void> | void
@@ -303,20 +310,20 @@ class MainScope {
     const mainScope = this;
     let scopedCssIdIndex = 0;
 
-    const useComponentSetup = (target: Target) => {
-      const component = new mainScope.BaseElement<Target>(
+    const useComponentSetup = (target: ElementType) => {
+      const component = new mainScope.BaseElement<ElementType>(
         this,
         target
-      ) satisfies InstanceType<typeof mainScope.BaseElement<Target>>;
+      ) satisfies InstanceType<typeof mainScope.BaseElement<ElementType>>;
 
-      let initElement: CallableFunction;
+      let initElement: (
+        oElement?: oElement<ElementType>,
+        scope?: UnwrapAsyncAndPromiseNested<NonNullable<oElement['scope']>>
+      ) => Promise<void>;
       let disconnectedCallback: CallableFunction;
       const useInitElement = (callback: CallableFunction) => {
-        initElement = (
-          scope?: UnwrapAsyncAndPromiseNested<IWCBaseScope & IWCStaticScope>,
-          oElement?: oElement
-        ): void => {
-          void component.initElement(scope?.attributes, oElement);
+        initElement = async (oElement, scope): Promise<void> => {
+          void component.initElement(oElement, scope?.attributes);
           return callback(scope);
         };
       };
@@ -349,14 +356,14 @@ class MainScope {
 
     const onDisconnectedCallback = (target: HTMLElement) => {
       if (mainScope.elementRegister.has(target)) {
-        mainScope.elementRegister.get(target).disconnectedCallback();
+        mainScope.elementRegister.get(target)?.disconnectedCallback();
       }
     };
 
     const elClass = class Element extends window.HTMLElement {
       constructor() {
         super();
-        useComponentSetup(this as unknown as Target);
+        useComponentSetup(this as unknown as ElementType);
       }
 
       disconnectedCallback() {
@@ -543,9 +550,9 @@ class MainScope {
     return {
       components,
       o: o as typeof o & {
-        [K in keyof typeof pulledComponents]: NonNullable<
-          Parameters<(typeof pulledComponents)[K]>[0]
-        >;
+        [K in keyof typeof pulledComponents]: Parameters<
+          (typeof pulledComponents)[K]
+        >[0];
       },
       useComponentsObject: <
         _Components =
@@ -657,8 +664,13 @@ class MainScope {
           const tempEl = document.createElement(tag);
           tempEl.remove();
 
-          const registerElement = (target: HTMLElement) => {
-            const baseElement = new mainScope.BaseElement(mainScope, target);
+          const registerElement = <ElementType extends HTMLElement>(
+            target: ElementType
+          ) => {
+            const baseElement = new mainScope.BaseElement<ElementType>(
+              mainScope,
+              target
+            );
             mainScope.elementRegister.set(target, {
               initElement: baseElement.initElement,
               disconnectedCallback: baseElement.disconnectedCallback
@@ -667,7 +679,7 @@ class MainScope {
 
           const disconnectedCallback = (target: HTMLElement) => {
             if (mainScope.elementRegister.has(target)) {
-              mainScope.elementRegister.get(target).disconnectedCallback();
+              mainScope.elementRegister.get(target)?.disconnectedCallback();
             }
           };
 
@@ -721,11 +733,11 @@ class MainScope {
     };
   };
 
-  oElementParser = async (
-    target: NonNullable<IWCTemplate['target']>,
-    nestedElement: oElement,
+  oElementParser = async <ElementType extends HTMLElement>(
+    target: IWCTemplate['target'],
+    nestedElement: oElement<ElementType>,
     index: number
-  ): Promise<HTMLElement | void> => {
+  ): Promise<ElementType | void> => {
     nestedElement = await nestedElement;
 
     if (this.helpers.validationsProto.isAsyncOrFunction(nestedElement)) {
@@ -741,12 +753,15 @@ class MainScope {
     const element = await nestedElement.element;
 
     element.setAttribute('wcY', index.toString());
-    const indexPosition = this.getIndexPositionInParent(index, target.children);
+    const indexPosition = this.getIndexPositionInParent(
+      index,
+      target?.children
+    );
 
     if (indexPosition < 0) {
-      target.appendChild(element);
+      target?.appendChild(element);
     } else {
-      target.insertBefore(element, target.children[indexPosition]);
+      target?.insertBefore(element, target.children[indexPosition]);
     }
     if (
       nestedElement.scope &&
@@ -756,7 +771,8 @@ class MainScope {
       if (
         this.helpers.validationsProto.isSyncFunction(nestedElement.scopeGetter)
       ) {
-        nestedElement.scope = nestedElement.scopeGetter() as IWCBaseScope;
+        nestedElement.scope =
+          nestedElement.scopeGetter() as IWCBaseScope<ElementType>;
         if (
           this.helpers.validationsProto.isAsyncOrFunction(nestedElement.scope)
         ) {
@@ -778,7 +794,7 @@ class MainScope {
         }
         nestedElement.scope = await (
           await nestedElement.scopeGetter
-        )?.(nestedElement.scope as IWCBaseScope);
+        )?.(nestedElement.scope);
       }
     }
 
@@ -817,7 +833,7 @@ class MainScope {
       );
 
       for (const [_index, _child] of (
-        nestedElement.children || nestedElement.scope
+        nestedElement.children || nestedElement.scope!
       ).entries()) {
         void this.oElementParser(element, _child as oElement, _index);
       }
@@ -826,7 +842,7 @@ class MainScope {
     if (shouldAddProps || shouldInstantiate) {
       if (shouldAddProps && nestedElement.scope) {
         if (nestedElement.isCustomElement) {
-          const nestedScope = nestedElement.scope as IWCBaseScope;
+          const nestedScope = nestedElement.scope as IWCBaseScope<ElementType>;
           if (
             this.helpers.validationsProto.isAsyncOrFunction(
               await nestedScope.attributes
@@ -838,9 +854,7 @@ class MainScope {
                 [nestedElement]
               );
           }
-          const nestedScopeUnwrapped = nestedElement.scope as {
-            attributes: IWCBaseScope['attributes'];
-          };
+          const nestedScopeUnwrapped = nestedElement.scope;
 
           if (nestedScopeUnwrapped.attributes) {
             const newAttributes = await Object.keys(
@@ -909,11 +923,11 @@ class MainScope {
       if (shouldInstantiate) {
         void this.elementRegister
           .get(element)
-          .initElement(nestedElement.scope, nestedElement);
+          ?.initElement(nestedElement, nestedElement.scope);
       }
     }
 
-    return element as HTMLElement;
+    return element as ElementType;
   };
 
   /*lazy loads components*/
@@ -980,11 +994,11 @@ class MainScope {
     return result;
   };
 
-  getIndexPositionInParent(index: number, children: HTMLCollection): number {
+  getIndexPositionInParent(index: number, children?: HTMLCollection): number {
     let maxIndexValue = 0;
 
-    for (let i = 0; i < children.length; i++) {
-      const attr = children[i].getAttribute('wcY') as string;
+    for (let i = 0; i < (children?.length || 0); i++) {
+      const attr = children?.[i].getAttribute('wcY') as string;
       if (+attr >= maxIndexValue) {
         if (index > +attr) {
           maxIndexValue = +attr;

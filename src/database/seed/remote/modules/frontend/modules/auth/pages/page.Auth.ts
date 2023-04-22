@@ -38,12 +38,12 @@ const getComponent = (mainScope: IMainScope) => {
                     console.log(1, x1);
                     return {
                       attributes: async (x22) => {
-                        console.log(22, x22);
+                        console.log(221, x22);
                         return {
                           className: 'bg-default m-b-8'
                         };
                       },
-                      elementAttributes: async (x2) => {
+                      elementAttributes: (x2) => {
                         console.log(2, x2);
                         return {
                           placeholder: 'Username',

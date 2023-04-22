@@ -148,7 +148,7 @@ const getRouter = (mainScope: IMainScope): Router => {
             `rv-id-${firstMatchingRouteIndex}`
           );
           if (firstRouterView) {
-            void mainScope.elementRegister.get(firstRouterView).initElement();
+            void mainScope.elementRegister.get(firstRouterView)?.initElement();
           }
         }
       } else {

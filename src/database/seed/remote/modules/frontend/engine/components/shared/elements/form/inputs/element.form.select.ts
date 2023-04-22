@@ -8,7 +8,7 @@ type ILocalScope = IWCExtendingBaseElementScope<HTMLInputElement>;
 const getComponent = async (mainScope: IMainScope) => {
   const { o } = mainScope.useComponentsObject();
 
-  return mainScope.useComponentRegister<ILocalScope, HTMLInputElement>(
+  return mainScope.useComponentRegister<HTMLInputElement, ILocalScope>(
     'select-input-component',
     (options) => {
       options.useInitElement((scope) => {

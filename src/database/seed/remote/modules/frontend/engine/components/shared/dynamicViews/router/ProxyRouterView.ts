@@ -11,20 +11,20 @@ const getComponent = (mainScope: IMainScope) => {
       )
   });
 
-  return mainScope.useComponentRegister<IWCExtendingBaseElementScope>(
-    'proxy-router-view-component',
-    (options) => {
-      options.useInitElement((scope) => {
-        options.asyncLoadComponentTemplate({
-          components: [
-            o('<router-view-component>', {
-              attributes: scope?.elementAttributes
-            })
-          ]
-        });
+  return mainScope.useComponentRegister<
+    HTMLElement,
+    IWCExtendingBaseElementScope<HTMLElement>
+  >('proxy-router-view-component', (options) => {
+    options.useInitElement((scope) => {
+      options.asyncLoadComponentTemplate({
+        components: [
+          o('<router-view-component>', {
+            attributes: scope?.elementAttributes
+          })
+        ]
       });
-    }
-  );
+    });
+  });
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;
