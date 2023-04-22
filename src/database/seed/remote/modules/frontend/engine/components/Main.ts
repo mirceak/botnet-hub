@@ -748,19 +748,24 @@ class MainScope {
   ): Promise<ElementType | void> => {
     nestedElement = await nestedElement;
 
-    if (this.helpers.validationsProto.isAsyncOrFunction(nestedElement)) {
+    index = typeof index === 'number' ? index : undefined;
+    if (
+      typeof index === 'number' &&
+      this.helpers.validationsProto.isAsyncOrFunction(nestedElement)
+    ) {
       nestedElement =
         (await this.helpers.reducersFunctions.valueFromAsyncOrFunction(
           nestedElement
         )) as typeof nestedElement;
-
+    }
+    if (typeof index === 'number' && nestedElement) {
       const shouldAddProps = !!nestedElement.tagName.match(/^<(.*)<>$/gis);
       const shouldInstantiate =
         !shouldAddProps && !nestedElement.tagName.match(/^<(.*)\/>$/gis);
       const element = await nestedElement.element;
-      element.setAttribute('wcY', (index || '').toString());
+      element.setAttribute('wcY', index.toString());
       const indexPosition = this.getIndexPositionInParent(
-        index || Number.MIN_SAFE_INTEGER,
+        index,
         target?.children
       );
 
@@ -831,7 +836,7 @@ class MainScope {
         if (nestedElement.children) {
           nestedElement.children = await Promise.all(
             (
-              (await nestedElement.children) as UnwrapAsyncAndPromise<
+              nestedElement.children as UnwrapAsyncAndPromise<
                 UnwrapAsyncAndPromise<typeof nestedElement.children>
               >
             ).map(async (_child) => {
@@ -860,7 +865,7 @@ class MainScope {
               ElementType
             >(
               element,
-              (await _child) as unknown as UnwrapAsyncAndPromise<
+              _child as unknown as UnwrapAsyncAndPromise<
                 UnwrapAsyncAndPromise<
                   UnwrapAsyncAndPromise<
                     (typeof nestedElement.children)[typeof _index]
@@ -923,8 +928,7 @@ class MainScope {
 
               Object.assign(element, newAttributes);
             }
-          }
-          {
+          } else {
             const newScope = await Object.keys(nestedElement.scope).reduce(
               async (reduced, key) => {
                 const returned = await reduced;
