@@ -1,7 +1,9 @@
-import type {
-  IMainScope,
-  IWCExtendingBaseElementScope
-} from '/remoteModules/frontend/engine/components/Main.js';
+import { IWCBaseScope } from '/remoteModules/frontend/engine/components/Main.js';
+import type { IMainScope } from '/remoteModules/frontend/engine/components/Main.js';
+
+type ILocalScope = IWCBaseScope<HTMLElement> & {
+  elementAttributes?: IWCBaseScope<HTMLElement>['attributes'];
+};
 
 const getComponent = (mainScope: IMainScope) => {
   const { o } = mainScope.useComponentsObject({
@@ -11,20 +13,20 @@ const getComponent = (mainScope: IMainScope) => {
       )
   });
 
-  return mainScope.useComponentRegister<
-    HTMLElement,
-    IWCExtendingBaseElementScope<HTMLElement>
-  >('proxy-router-view-component', (options) => {
-    options.useInitElement((scope) => {
-      options.asyncLoadComponentTemplate({
-        components: [
-          o('<router-view-component>', {
-            attributes: scope?.elementAttributes
-          })
-        ]
+  return mainScope.useComponentRegister<ILocalScope>(
+    'proxy-router-view-component',
+    (options) => {
+      options.useInitElement((scope) => {
+        options.asyncLoadComponentTemplate({
+          components: [
+            o('<router-view-component>', {
+              attributes: scope?.elementAttributes
+            })
+          ]
+        });
       });
-    });
-  });
+    }
+  );
 };
 
 let singleton: ReturnType<typeof getComponent> | undefined;

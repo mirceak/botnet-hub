@@ -2,21 +2,22 @@
   colorVars;
 @use 'src/database/seed/remote/modules/utils/assets/scss/variables/shadows' as
   shadowVars;
+@use 'sass:color' as helpers;
 
 main-component {
   auth-component {
     animation: color-change 15s linear infinite alternate;
     background: radial-gradient(
         farthest-corner at top,
-        mix(colorVars.$light-blue-6, colorVars.$deep-purple-6, 15%),
+        helpers.mix(colorVars.$light-blue-6, colorVars.$deep-purple-6, 15%),
         colorVars.$light-blue-6
       )
       top right/200% 150%;
-    color: colorVars.$deep-purple-5;
     display: flex;
     flex-direction: column;
     height: 100%;
     justify-content: center;
+    color: colorVars.$deep-purple-5;
     text-shadow: shadowVars.$shadow-text-1;
     align-items: center;
 

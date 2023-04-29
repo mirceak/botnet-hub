@@ -1,14 +1,16 @@
 import type {
-  IWCExtendingBaseElementScope,
-  IMainScope
+  IMainScope,
+  IWCBaseScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-type ILocalButtonScope = IWCExtendingBaseElementScope<HTMLButtonElement>;
+type ILocalScope = IWCBaseScope<HTMLElement> & {
+  elementAttributes?: IWCBaseScope<HTMLButtonElement>['attributes'];
+};
 
 const getComponent = async (mainScope: IMainScope) => {
   const { o } = mainScope.useComponentsObject();
 
-  return mainScope.useComponentRegister<HTMLButtonElement, ILocalButtonScope>(
+  return mainScope.useComponentRegister<ILocalScope>(
     'button-component',
     (options) => {
       options.useInitElement((scope) => {

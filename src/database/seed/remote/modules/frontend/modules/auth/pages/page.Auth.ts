@@ -23,95 +23,103 @@ const getComponent = (mainScope: IMainScope) => {
     options.useInitElement(async () => {
       options.asyncLoadComponentTemplate({
         components: [
-          o('<div>', { className: 'card glow flex justify-center-xs-min' }, [
-            o('<div>', { className: 'm-b-16' }, [
-              o('<h1>', {
-                innerText: () => mainScope.store.state.home.titleWithName
-              })
-            ]),
-            o('<div>', { className: 'content', title: 'ases' }, (x99) => {
-              console.log(-12, x99);
-              return [
-                async (x0) => {
-                  console.log(0, x0);
-                  return o('<input-component>', (x1) => {
-                    console.log(1, x1);
-                    return {
-                      attributes: async (x22) => {
-                        console.log(221, x22);
-                        return {
-                          className: 'bg-default m-b-8'
-                        };
-                      },
-                      elementAttributes: (x2) => {
-                        console.log(2, x2);
-                        return {
-                          placeholder: 'Username',
-                          handlers: {
-                            input: [
-                              {
-                                callback: async (e) => {
-                                  e.preventDefault();
-                                  mainScope.store.state.home.nameInput = (
-                                    e.target as HTMLInputElement
-                                  ).value;
+          o(
+            '<div>',
+            {
+              className: 'card glow flex justify-center-xs-min'
+            },
+            [
+              o('<div>', { className: 'm-b-16' }, [
+                o('<h1>', (xx) => {
+                  xx;
+                  return {
+                    innerText: () => mainScope.store.state.home.titleWithName
+                  };
+                })
+              ]),
+              o('<div>', { className: 'content', title: 'ases' }, (x99) => {
+                console.log(112, x99);
+                return [
+                  async (x0) => {
+                    console.log(0, x0);
+                    return o('<input-component>', (x1) => {
+                      console.log(1111, x1);
+                      return {
+                        attributes: async (x22) => {
+                          console.log(33, x22);
+                          return {
+                            className: 'bg-default m-b-8'
+                          };
+                        },
+                        elementAttributes: (x2) => {
+                          console.log(333, x2);
+                          return {
+                            placeholder: 'Username',
+                            handlers: {
+                              input: [
+                                {
+                                  callback: async (e) => {
+                                    e.preventDefault();
+                                    mainScope.store.state.home.nameInput = (
+                                      e.target as HTMLInputElement
+                                    ).value;
+                                  }
                                 }
-                              }
-                            ]
+                              ]
+                            }
+                          };
+                        }
+                      };
+                    });
+                  },
+                  o('<input-component>', {
+                    elementAttributes: {
+                      placeholder: 'Password',
+                      type: 'password',
+                      handlers: {
+                        input: [
+                          {
+                            callback: async (e) => {
+                              e.preventDefault();
+                              console.log((e.target as HTMLInputElement).value);
+                            }
                           }
-                        };
+                        ]
                       }
-                    };
-                  });
-                },
-                o('<input-component>', {
-                  elementAttributes: {
-                    placeholder: 'Password',
-                    type: 'password',
+                    },
+                    attributes: { className: 'bg-default' }
+                  })
+                ];
+              }),
+              o('<div>', { className: 'actions' }, [
+                o('<button-component>', () => ({
+                  elementAttributes: () => ({
+                    innerText: 'Log In',
                     handlers: {
-                      input: [
+                      click: [
                         {
                           callback: async (e) => {
                             e.preventDefault();
-                            console.log((e.target as HTMLInputElement).value);
+
+                            mainScope.store.modules.user.state.auth = {
+                              token: 'token'
+                            };
+
+                            void mainScope.router.push({
+                              path: 'home'
+                            });
                           }
                         }
                       ]
                     }
-                  },
-                  attributes: { className: 'bg-default' }
-                })
-              ];
-            }),
-            o('<div>', { className: 'actions' }, [
-              o('<button-component>', () => ({
-                elementAttributes: () => ({
-                  innerText: 'Log In',
-                  handlers: {
-                    click: [
-                      {
-                        callback: async (e) => {
-                          e.preventDefault();
-
-                          mainScope.store.modules.user.state.auth = {
-                            token: 'token'
-                          };
-
-                          void mainScope.router.push({
-                            path: 'home'
-                          });
-                        }
-                      }
-                    ]
+                  }),
+                  attributes: {
+                    className: 'bg-primary'
                   }
-                }),
-                attributes: {
-                  className: 'bg-primary'
-                }
-              }))
-            ])
-          ]),
-
+                }))
+              ])
+            ]
+          ),
           async () => {
             return (
               options.getScopedCss(await scopedCss) +

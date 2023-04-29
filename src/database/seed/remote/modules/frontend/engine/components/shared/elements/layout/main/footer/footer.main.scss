@@ -6,10 +6,10 @@
 
 main-component {
   footer-main-component {
-    background-color: $light-blue;
     color: #fff;
     max-height: var(--footer-height);
-    min-height: var(--footer-height);
+    misn-height: var(--footer-height);
     width: 100%;
+    background-color: $light-blue;
   }
 }

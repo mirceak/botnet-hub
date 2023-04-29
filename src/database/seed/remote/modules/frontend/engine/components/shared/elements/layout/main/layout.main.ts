@@ -24,7 +24,7 @@ const getComponent = (mainScope: IMainScope) => {
     () => import('/remoteModules/utils/assets/scss/theme/main/theme.main.scss')
   );
 
-  return mainScope.useComponentRegister<HTMLElement, ILocalScope>(
+  return mainScope.useComponentRegister<ILocalScope>(
     'layout-main-component',
     (options) => {
       options.useInitElement((scope) => {

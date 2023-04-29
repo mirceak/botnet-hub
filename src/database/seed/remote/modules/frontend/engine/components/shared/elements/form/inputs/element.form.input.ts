@@ -1,14 +1,16 @@
 import type {
   IMainScope,
-  IWCExtendingBaseElementScope
+  IWCBaseScope
 } from '/remoteModules/frontend/engine/components/Main.js';
 
-type ILocalScope = IWCExtendingBaseElementScope<HTMLInputElement>;
+type ILocalScope = IWCBaseScope<HTMLElement> & {
+  elementAttributes?: IWCBaseScope<HTMLInputElement>['attributes'];
+};
 
 const getComponent = async (mainScope: IMainScope) => {
   const { o } = mainScope.useComponentsObject();
 
-  return mainScope.useComponentRegister<HTMLInputElement, ILocalScope>(
+  return mainScope.useComponentRegister<ILocalScope>(
     'input-component',
     (options) => {
       options.useInitElement((scope) => {

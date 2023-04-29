@@ -11,6 +11,5 @@
       "/remoteModules/*": ["./src/database/seed/remote/modules/*"],
       "/node_modules/*": ["./node_modules/*"]
     }
-  },
-  "references": []
+  }
 }

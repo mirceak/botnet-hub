@@ -1,7 +1,7 @@
 {
   "extends": "../../../../../../tsconfig.json",
   "compilerOptions": {
-    "lib": ["ESNext", "dom"],
+    "lib": ["ES2022", "dom"],
     "baseUrl": ".",
     "rootDir": "../../../../../",
     "outDir": "../../../../../../build",

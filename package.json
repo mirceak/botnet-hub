@@ -80,6 +80,7 @@
     "stylelint-config-standard-scss": "^8.0.0",
     "stylelint-selector-bem-pattern": "^2.1.1",
     "ts-jest": "^29.1.0",
+    "ts-toolbelt": "^9.6.0",
     "typedoc": "^0.24.4",
     "typescript": "^5.0.4"
   },
